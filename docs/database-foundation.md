@@ -10,8 +10,9 @@ The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an a
 
 - `users`: id (UUID), email (unique), display_name, created_at. Authentication credentials and sessions must be managed by the chosen auth provider; avoid storing plaintext passwords.
 - `projects`: id, name, city, directory_visibility (`community` / `building`), created_at.
-- `buildings`: id, project_id (FK), name, floors, units_per_floor; unique (project_id, name).
-- `apartments`: id, building_id (FK), floor, number; unique (building_id, number).
+- `buildings`: id, project_id (FK), name; unique (project_id, name). Do not store `units_per_floor` as a structural assumption.
+- `floors`: id, building_id (FK), number (integer, supporting basement/ground floors); unique (building_id, number). A floor may have zero apartments.
+- `apartments`: id, floor_id (FK), number; each floor can have a different number of apartments. Apartment numbers must be unique **within the building**, not merely within a floor. Enforce this with a database-level constraint or a transaction-safe design (e.g. store `building_id` on apartments with a composite FK `(floor_id, building_id)` referencing floors and `unique (building_id, number)`).
 - `households`: id, apartment_id (FK), display_name, ownership, approval_status (`pending` / `approved` / `rejected`), created_by (FK users), created_at.
 - `contacts`: id, household_id (FK), full_name, relation, is_primary, is_child, birth_date, sort_order.
 - `contact_phones`: id, contact_id (FK), number, label, visibility (`project` / `building` / `managers`).
@@ -19,7 +20,11 @@ The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an a
 - `staff_assignments`: id, user_id (FK), project_id (FK), building_id (nullable FK), role (`project_manager` / `building_manager`); constrain building assignment to the same project.
 - `global_roles`: user_id (FK), role (`admin`).
 
-Use PostgreSQL CHECK constraints for floors and unit counts, and indexes for foreign keys and directory lookups. A household can have multiple contacts; contacts can have multiple phone numbers/emails. A phone number belonging to a child should default to `managers` visibility.
+Use PostgreSQL CHECK constraints for valid floor and apartment numbers, and indexes for foreign keys and directory lookups. The number of floors and apartments per floor is derived from rows, not fixed columns on `buildings`. A household can have multiple contacts; contacts can have multiple phone numbers/emails. A phone number belonging to a child should default to `managers` visibility.
+
+## Building creation wizard
+
+The creation UI can accept a default number of floors and apartments per floor for convenience, then allow overrides for individual floors (including floors with no apartments). These inputs are **generation parameters**, not permanent database constraints. Generate explicit floor and apartment rows in one transaction, preserving building-wide unique apartment numbering. Floor numbering must support ground and basement levels; avoid assuming all floors start at 1.
 
 ## Migration and security sequence
 
