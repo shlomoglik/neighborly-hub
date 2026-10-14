@@ -39,7 +39,8 @@
     "src/lib/i18n.tsx",
     "src/lib/mock-data.ts",
     "src/lib/utils.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "src/lib/i18n/**/*.ts"
   ],
   "exclude": [
     "node_modules",
