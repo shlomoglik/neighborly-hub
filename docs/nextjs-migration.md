@@ -1,28 +1,12 @@
-# Next.js App Router migration
+# Next.js migration status
 
-This migration lives on `migration/nextjs-app-router`. Do not merge into `main` while Lovable sync remains in use.
+The Next.js App Router UI preview was merged into `main`. The legacy Lovable, TanStack Start, Vite, and Supabase runtime source has since been removed. The application currently runs on mock data only.
 
-## Target
+## Still to implement
 
-- Next.js App Router and TypeScript
-- Preserve Tailwind design tokens, Radix-based UI, and visual components
-- Remove Lovable/TanStack Start and Supabase dependencies in later steps
-- Own backend, database, authentication, and deployment independently
+1. Automated tests for the Next.js app and formatting checks in CI.
+2. PostgreSQL + Drizzle data access and migrations.
+3. Authentication, server-side authorization and privacy enforcement.
+4. Replace mock data with real data and validate production readiness.
 
-## Current pilot
-
-- App Router root layout and `/directory` preview
-- Searchable mock households; no database or authentication connection
-- Original TanStack routes remain untouched until ported
-
-## Next steps
-
-1. Complete dependency cleanup and make Next.js the sole runtime.
-2. Port i18n, AppShell and all pages while preserving RTL and interactions.
-3. Replace Supabase data hooks with a server-side data access layer.
-4. Introduce Drizzle/PostgreSQL, authentication, authorization, and tests.
-5. Configure CI and independent deployment; cut over only after validation.
-
-## Validation status
-
-Not yet executed in CI or a local Next.js build. The repository still contains the original Vite/TanStack application and package scripts.
+See the root README for local development commands. Do not use the UI preview with real resident data before authorization and privacy checks are implemented.
