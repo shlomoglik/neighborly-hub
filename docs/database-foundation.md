@@ -13,14 +13,21 @@ The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an a
 - `buildings`: id, project_id (FK), name; unique (project_id, name). Do not store `units_per_floor` as a structural assumption.
 - `floors`: id, building_id (FK), number (integer, supporting basement/ground floors); unique (building_id, number). A floor may have zero apartments.
 - `apartments`: id, floor_id (FK), number; each floor can have a different number of apartments. Apartment numbers must be unique **within the building**, not merely within a floor. Enforce this with a database-level constraint or a transaction-safe design (e.g. store `building_id` on apartments with a composite FK `(floor_id, building_id)` referencing floors and `unique (building_id, number)`).
-- `households`: id, apartment_id (FK), display_name, ownership, approval_status (`pending` / `approved` / `rejected`), created_by (FK users), created_at.
-- `contacts`: id, household_id (FK), full_name, relation, is_primary, is_child, birth_date, sort_order.
-- `contact_phones`: id, contact_id (FK), number, label, visibility (`project` / `building` / `managers`).
-- `contact_emails`: id, contact_id (FK), email, label, visibility.
+- `households`: id, apartment_id (FK), display_name, approval_status (`pending` / `approved` / `rejected`), created_by (FK users), created_at. Enforce **at most one active household per apartment** using a database uniqueness constraint or a partial unique index on active records. Empty apartments are allowed.
+- `people`: id, full_name, birth_date, is_child, created_at. A person exists independently of residence or ownership; a person may own one apartment and live in another.
+- `household_members`: id, household_id (FK), person_id (FK), relation, is_contact_person (boolean), contact_priority (nullable integer), sort_order; unique (household_id, person_id). Multiple members, including both partners, may be contact persons with equal priority. Contact priority does **not** grant edit or administration rights.
+- `apartment_ownerships`: id, apartment_id (FK), person_id (FK), optional ownership_share; unique (apartment_id, person_id). Supports co-owners and owners who do not reside in the apartment. Ownership is independent of household membership; company ownership is outside the initial scope.
+- `contact_methods`: id, person_id (FK), kind (`phone` / `email`), value, label, visibility (`project` / `building` / `managers`). Each person may have multiple phone numbers and emails; child phone numbers default to `managers` visibility.
 - `staff_assignments`: id, user_id (FK), project_id (FK), building_id (nullable FK), role (`project_manager` / `building_manager`); constrain building assignment to the same project.
 - `global_roles`: user_id (FK), role (`admin`).
 
-Use PostgreSQL CHECK constraints for valid floor and apartment numbers, and indexes for foreign keys and directory lookups. The number of floors and apartments per floor is derived from rows, not fixed columns on `buildings`. A household can have multiple contacts; contacts can have multiple phone numbers/emails. A phone number belonging to a child should default to `managers` visibility.
+Use PostgreSQL CHECK constraints for valid floor and apartment numbers, and indexes for foreign keys and directory lookups. The number of floors and apartments per floor is derived from rows, not fixed columns on `buildings`. A household can have multiple members and multiple primary contact persons. A person can have multiple phone numbers/emails. A phone number belonging to a child should default to `managers` visibility.
+
+## Apartment and household cardinality
+
+An apartment is the smallest residential unit represented by the application. It can have **zero or one active household**, never multiple concurrent active households. If a physical unit is split into separate rentals, register separate numbered apartments instead of introducing sub-apartments. Historic/inactive household records may be retained for audit purposes without violating the active-household uniqueness constraint.
+
+Ownership is modeled independently of residency: multiple people may jointly own an apartment, and none need be members of its current household. A person may be a resident, an owner, or both. Contact persons are chosen per household and are **not** restricted to a single `is_primary` flag; two partners can both be contact persons. Access-control roles are managed separately.
 
 ## Building creation wizard
 
