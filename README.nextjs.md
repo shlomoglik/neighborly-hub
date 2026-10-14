@@ -9,7 +9,7 @@ Requirements: Node.js 22+ and npm.
 ```bash
 git fetch origin
 git switch migration/nextjs-app-router
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 
