@@ -4,7 +4,7 @@ This branch is a standalone Next.js App Router **UI-only preview**. It does not 
 
 ## Run locally
 
-Requirements: Node.js 22+ and npm.
+Requirements: Node.js 24 LTS and npm.
 
 ```bash
 git fetch origin
