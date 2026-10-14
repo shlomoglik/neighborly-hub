@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.18.3
@@ -17,6 +19,28 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Check formatting of changed source files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "Base commit not available; skipping incremental formatting check"
+            exit 0
+          fi
+          mapfile -d '' changed < <(git diff --name-only --diff-filter=ACMR -z "$BASE_SHA" HEAD)
+          files=()
+          for file in "${changed[@]}"; do
+            case "$file" in
+              *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.css|*.json)
+                files+=("$file")
+                ;;
+            esac
+          done
+          if (("${#files[@]}" == 0)); then
+            echo "No changed source files to format-check"
+          else
+            pnpm exec prettier --check --ignore-unknown "${files[@]}"
+          fi
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test

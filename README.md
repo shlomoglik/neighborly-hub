@@ -4,7 +4,7 @@
 
 ## Current status
 
-This migration branch runs an independent **Next.js 15 App Router UI preview**. The UI uses mock data only; authentication, authorization, persistence and a backend are **not yet implemented**. Do not deploy it as a production neighbors directory. The legacy Lovable/TanStack source is retained for reference but is not used by the Next.js runtime.
+The project currently runs an independent **Next.js 15 App Router UI preview**. The UI uses mock data only; authentication, authorization, persistence and a backend are **not yet implemented**. Do not deploy it as a production neighbors directory. The legacy Lovable/TanStack runtime has been removed.
 
 ## Getting started
 
@@ -43,7 +43,7 @@ pnpm format          # Apply formatting
 pnpm build           # Production build
 ```
 
-CI runs installation, typecheck, lint, unit tests and build. Formatting is not yet enforced in CI pending formatting of migrated files.
+CI runs installation, an incremental Prettier check for changed source files, typecheck, lint, unit tests and build. Existing unformatted files are not checked until changed; run `pnpm format` to format the whole project when ready.
 
 ## Localization
 
