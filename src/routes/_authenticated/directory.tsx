@@ -39,7 +39,7 @@ function Directory() {
   const [buildingId, setBuildingId] = useState("all");
   const [q, setQ] = useState("");
   useEffect(() => {
-    if (!projectId && projects?.length) setProjectId(projects[0].id);
+    if (!projectId && projects?.length) setProjectId(projects[0]!.id);
   }, [projects, projectId]);
   const { data: buildings } = useBuildings(projectId);
 
@@ -90,12 +90,12 @@ function Directory() {
     <AppShell>
       <div className="space-y-4">
         {projects && projects.length > 1 && (
-          <Select value={projectId} onValueChange={(v) => { setProjectId(v); setBuildingId("all"); }}>
+          <Select value={projectId ?? ""} onValueChange={(v) => { setProjectId(v); setBuildingId("all"); }}>
             <SelectTrigger className="h-11 rounded-xl bg-card"><SelectValue /></SelectTrigger>
             <SelectContent>{projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
         )}
-        {projects?.length === 1 && <h1 className="text-2xl font-bold">{projects[0].name}</h1>}
+        {projects?.length === 1 && <h1 className="text-2xl font-bold">{projects[0]!.name}</h1>}
 
         <section className="rounded-3xl bg-hero p-4 shadow-warm">
           <h2 className="mb-3 flex items-center gap-2 font-bold"><Cake className="h-5 w-5 text-primary" /> {t("birthdays")}</h2>

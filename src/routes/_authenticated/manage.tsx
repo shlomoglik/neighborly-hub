@@ -32,7 +32,7 @@ function Manage() {
   const { data: me } = useMe();
   const { data: projects } = useProjects();
   const [pid, setPid] = useState("");
-  useEffect(() => { if (!pid && projects?.length) setPid(projects[0].id); }, [projects, pid]);
+  useEffect(() => { if (!pid && projects?.length) setPid(projects[0]!.id); }, [projects, pid]);
   const project = projects?.find((p) => p.id === pid);
   const { data: buildings } = useBuildings(pid || undefined);
   const isPM = !!me && (me.isAdmin || me.staff.some((s) => s.project_id === pid && s.role === "project_manager"));

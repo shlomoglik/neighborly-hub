@@ -52,7 +52,7 @@ function Join() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!aid || !family.trim() || !primary.name.trim()) return toast.error(t("required"));
+    if (!aid || !family.trim() || !primary.name.trim()) { toast.error(t("required")); return; }
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();

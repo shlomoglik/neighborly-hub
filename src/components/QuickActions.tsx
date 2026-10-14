@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const base = "grid h-11 w-11 place-items-center rounded-full transition-transform active:scale-95";
 
-export function QuickActions({ phone, email, className }: { phone?: string | null; email?: string | null; className?: string }) {
+export function QuickActions({ phone, email, className }: { phone?: string | null | undefined; email?: string | null | undefined; className?: string | undefined }) {
   const { t } = useI18n();
   return (
     <div className={cn("flex gap-2", className)} onClick={(e) => e.stopPropagation()}>
