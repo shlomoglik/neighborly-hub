@@ -44,7 +44,7 @@ END;
 $$;
 
 CREATE CONSTRAINT TRIGGER parties_subtype_check
-  AFTER INSERT OR UPDATE OF kind ON parties
+  AFTER INSERT OR UPDATE ON parties
   DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION party_subtype_constraint_trigger();
 
