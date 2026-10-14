@@ -4,13 +4,14 @@ This branch is a standalone Next.js App Router **UI-only preview**. It does not 
 
 ## Run locally
 
-Requirements: Node.js 24 LTS and npm.
+Requirements: Node.js 24 LTS and pnpm 10.18.3.
 
 ```bash
 git fetch origin
 git switch migration/nextjs-app-router
-npm install --legacy-peer-deps
-npm run dev
+corepack enable
+pnpm install
+pnpm dev
 ```
 
 Open http://localhost:3000/directory
@@ -25,8 +26,9 @@ Verify:
 - Hebrew / English / Russian language switcher, RTL/LTR, mobile navigation
 
 ```bash
-npm run typecheck
-npm run build
+pnpm typecheck
+pnpm lint
+pnpm build
 ```
 
 **Warning:** No user data is persisted; no real authentication, authorization, or backend is implemented. Do not deploy this preview as a real neighbors directory. All phone numbers are fake. The original TanStack/Lovable source files remain in the branch as migration reference and are not used by the Next.js app. The migration is not yet feature-parity complete.
