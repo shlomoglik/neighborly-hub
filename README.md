@@ -36,12 +36,14 @@ ESLint 9 checks code quality, and Prettier 3 handles formatting independently. C
 ```bash
 pnpm typecheck       # TypeScript
 pnpm lint            # ESLint
+pnpm test            # Vitest unit tests
+pnpm test:watch      # Watch mode for unit tests
 pnpm format:check    # Check formatting
 pnpm format          # Apply formatting
 pnpm build           # Production build
 ```
 
-CI runs installation, typecheck, lint and build. Formatting is not yet enforced in CI pending formatting of migrated files.
+CI runs installation, typecheck, lint, unit tests and build. Formatting is not yet enforced in CI pending formatting of migrated files.
 
 ## Localization
 
