@@ -1,5 +1,6 @@
+"use client";
 import { Mail, MessageCircle, Phone } from "lucide-react";
-import { toWhatsApp } from "@/lib/data";
+import { toWhatsApp } from "@/lib/mock-data";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
