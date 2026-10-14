@@ -1,0 +1,23 @@
+# Independent PostgreSQL schema baseline
+
+This PR introduces a **standalone PostgreSQL schema and integration smoke test** for the model approved in `docs/database-foundation.md`.
+
+## Run locally
+
+With PostgreSQL 16 running and an empty database:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0001_initial.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
+```
+
+The smoke test rolls back its fixture data. The migration is intended for a **new empty database** and is not idempotent. Do not run it on an existing Supabase database or alongside `drizzle/migrations/0000_migration.sql`.
+
+## Boundaries and follow-ups
+
+- The current migration is plain PostgreSQL SQL, **not yet Drizzle-generated**. The legacy Drizzle files are retained untouched and must not be executed.
+- The next implementation PR must install `drizzle-orm`, `drizzle-kit`, and a PostgreSQL driver; regenerate the pnpm lockfile; define the same schema in Drizzle; and reconcile migration metadata. Do not claim Drizzle migrations are ready until then.
+- A `party` must have exactly one matching `people` or `organizations` subtype; that invariant is **not yet enforced in SQL** and needs a transaction-safe database enforcement strategy before enabling writes.
+- The sum of co-ownership shares is not yet enforced across rows.
+- There is no authentication, server-side authorization, or privacy-filtered query layer. Do not connect the Next.js UI to real resident data yet.
+- The independent schema deliberately does not depend on Supabase `auth.users` or Supabase roles.

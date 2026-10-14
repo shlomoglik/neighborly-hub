@@ -45,3 +45,32 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: neighborly
+          POSTGRES_PASSWORD: neighborly_test
+          POSTGRES_DB: neighborly_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neighborly -d neighborly_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: neighborly
+      PGPASSWORD: neighborly_test
+      PGDATABASE: neighborly_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply independent PostgreSQL schema
+        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0001_initial.sql
+      - name: Verify schema constraints and ownership
+        run: psql -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
