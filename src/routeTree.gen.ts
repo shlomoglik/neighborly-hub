@@ -14,6 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDirectoryRouteImport } from './routes/_authenticated/directory'
+import { Route as AuthenticatedJoinRouteImport } from './routes/_authenticated/join'
+import { Route as AuthenticatedManageRouteImport } from './routes/_authenticated/manage'
+import { Route as AuthenticatedHouseholdIdRouteImport } from './routes/_authenticated/household.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,18 +42,40 @@ const AuthenticatedDirectoryRoute = AuthenticatedDirectoryRouteImport.update({
   path: '/directory',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedJoinRoute = AuthenticatedJoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedManageRoute = AuthenticatedManageRouteImport.update({
+  id: '/manage',
+  path: '/manage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHouseholdIdRoute =
+  AuthenticatedHouseholdIdRouteImport.update({
+    id: '/household/$id',
+    path: '/household/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/directory': typeof AuthenticatedDirectoryRoute
+  '/join': typeof AuthenticatedJoinRoute
+  '/manage': typeof AuthenticatedManageRoute
+  '/household/$id': typeof AuthenticatedHouseholdIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/directory': typeof AuthenticatedDirectoryRoute
+  '/join': typeof AuthenticatedJoinRoute
+  '/manage': typeof AuthenticatedManageRoute
+  '/household/$id': typeof AuthenticatedHouseholdIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +84,29 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/directory': typeof AuthenticatedDirectoryRoute
+  '/_authenticated/join': typeof AuthenticatedJoinRoute
+  '/_authenticated/manage': typeof AuthenticatedManageRoute
+  '/_authenticated/household/$id': typeof AuthenticatedHouseholdIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/directory'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/directory'
+    | '/join'
+    | '/manage'
+    | '/household/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/directory'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/directory'
+    | '/join'
+    | '/manage'
+    | '/household/$id'
   id:
     | '__root__'
     | '/'
@@ -72,6 +114,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/directory'
+    | '/_authenticated/join'
+    | '/_authenticated/manage'
+    | '/_authenticated/household/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -118,15 +163,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDirectoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/join': {
+      id: '/_authenticated/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof AuthenticatedJoinRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manage': {
+      id: '/_authenticated/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof AuthenticatedManageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/household/$id': {
+      id: '/_authenticated/household/$id'
+      path: '/household/$id'
+      fullPath: '/household/$id'
+      preLoaderRoute: typeof AuthenticatedHouseholdIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDirectoryRoute: typeof AuthenticatedDirectoryRoute
+  AuthenticatedJoinRoute: typeof AuthenticatedJoinRoute
+  AuthenticatedManageRoute: typeof AuthenticatedManageRoute
+  AuthenticatedHouseholdIdRoute: typeof AuthenticatedHouseholdIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDirectoryRoute: AuthenticatedDirectoryRoute,
+  AuthenticatedJoinRoute: AuthenticatedJoinRoute,
+  AuthenticatedManageRoute: AuthenticatedManageRoute,
+  AuthenticatedHouseholdIdRoute: AuthenticatedHouseholdIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
