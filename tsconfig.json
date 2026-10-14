@@ -36,16 +36,13 @@
     "src/features/**/*.tsx",
     "src/components/**/*.ts",
     "src/components/**/*.tsx",
-    "src/lib/i18n.tsx",
-    "src/lib/mock-data.ts",
-    "src/lib/utils.ts",
-    ".next/types/**/*.ts",
-    "src/lib/i18n/**/*.ts"
+    "src/hooks/**/*.ts",
+    "src/hooks/**/*.tsx",
+    "src/lib/**/*.ts",
+    "src/lib/**/*.tsx",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "src/routes",
-    "src/integrations",
-    "src/test"
+    "node_modules"
   ]
 }
