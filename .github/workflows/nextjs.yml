@@ -8,7 +8,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
@@ -69,7 +69,7 @@ jobs:
       PGPASSWORD: neighborly_test
       PGDATABASE: neighborly_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Apply independent PostgreSQL schema
         run: psql -v ON_ERROR_STOP=1 -f database/migrations/0001_initial.sql
       - name: Apply party subtype integrity migration
