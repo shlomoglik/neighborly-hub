@@ -16,3 +16,5 @@ src/server.ts
 src/test
 vite.config.ts
 vitest.config.ts
+# Storybook generated output
+storybook-static/
