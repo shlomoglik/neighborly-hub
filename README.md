@@ -209,3 +209,5 @@ For setup and migration caveats, see [Database README](database/README.md) and [
 ## Next steps
 
 PostgreSQL + Drizzle and the authentication/session foundation are implemented. Complete explicit membership linking, server-side authorization and privacy enforcement before enabling real resident data. Review the previous Supabase RLS approach rather than assuming its rules apply unchanged.
+
+Resident identity provisioning and the protected directory API are documented in [resident authorization](docs/resident-authorization.md). Migration 0004 is required before using that endpoint. Resident screens continue to use synthetic data.

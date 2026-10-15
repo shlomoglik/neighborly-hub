@@ -25,3 +25,5 @@ The smoke test rolls back its fixture data. The migration is intended for a **ne
 - The sum of co-ownership shares is not yet enforced across rows.
 - Migration 0003 adds the [authentication/session foundation](../docs/authentication.md) without changing user UUIDs. Server-side resident authorization and privacy-filtered queries remain unimplemented; do not connect real resident data yet.
 - The independent schema deliberately does not depend on Supabase `auth.users` or Supabase roles.
+
+Apply `migrations/0004_resident_identity.sql` after 0003 to enable explicit user/person links. See [resident authorization](../docs/resident-authorization.md) for provisioning and directory access rules.

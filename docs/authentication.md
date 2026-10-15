@@ -47,3 +47,5 @@ Official references: [Next.js integration](https://better-auth.com/docs/integrat
 ## Existing dependency audit findings
 
 `pnpm audit --prod` currently reports two high and three moderate advisories in the existing `next → postcss@8.4.31` and Drizzle tooling/esbuild chains. The affected PostCSS/esbuild versions are unchanged from the main-branch lockfile; the new auth dependency brings the existing optional Drizzle tooling peer into the production audit graph. This PR does not claim a clean dependency audit. Address those upstream/tooling versions separately before production readiness.
+
+Explicit resident links and directory read authorization are now described in [resident authorization](resident-authorization.md). Signing in alone still grants no resident or staff permissions.
