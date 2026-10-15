@@ -113,7 +113,6 @@ export const householdMembers = pgTable("household_members", {
   relation: text("relation"),
   isContactPerson: boolean("is_contact_person").notNull().default(false),
   contactPriority: integer("contact_priority"),
-  sortOrder: integer("sort_order").notNull().default(0),
 }, (t) => [
   unique("household_members_household_id_person_id_unique").on(t.householdId, t.personId),
   index("household_members_person_id_idx").on(t.personId),
