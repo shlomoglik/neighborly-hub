@@ -56,12 +56,22 @@ export async function updateStructureRecord(input: Update) {
 }
 
 export async function deleteStructureRecord(input: Delete) {
-  const table = {
-    project: projects,
-    building: buildings,
-    floor: floors,
-    apartment: apartments,
-  }[input.entity];
-  const [row] = await db.delete(table).where(eq(table.id, input.id)).returning({ id: table.id });
-  return row ?? null;
+  switch (input.entity) {
+    case "project": {
+      const [row] = await db.delete(projects).where(eq(projects.id, input.id)).returning({ id: projects.id });
+      return row ?? null;
+    }
+    case "building": {
+      const [row] = await db.delete(buildings).where(eq(buildings.id, input.id)).returning({ id: buildings.id });
+      return row ?? null;
+    }
+    case "floor": {
+      const [row] = await db.delete(floors).where(eq(floors.id, input.id)).returning({ id: floors.id });
+      return row ?? null;
+    }
+    case "apartment": {
+      const [row] = await db.delete(apartments).where(eq(apartments.id, input.id)).returning({ id: apartments.id });
+      return row ?? null;
+    }
+  }
 }
