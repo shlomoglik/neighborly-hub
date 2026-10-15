@@ -36,10 +36,10 @@ export async function createStructureRecord(input: Create) {
       const [row] = await db
         .insert(apartments)
         .values({
-        number: input.number,
-        buildingId: input.buildingId,
-        floorId: input.floorId,
-      })
+          number: input.number,
+          buildingId: input.buildingId,
+          floorId: input.floorId,
+        })
         .returning();
       return row;
     }
