@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+# Only staged, supported files are formatted. Prettier respects .prettierignore.
+git diff --cached --name-only --diff-filter=ACMR -z |
+  node scripts/format-staged.mjs
