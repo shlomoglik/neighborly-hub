@@ -73,6 +73,118 @@ Hebrew (RTL), English (LTR), and Russian (LTR) are supported. Both client-side U
    - מנהל הפרויקט יכול להגדיר האם ספר השכנים ולוח ימי ההולדת גלויים לכלל הבניינים במתחם (נראות קהילתית פתוחה) או מוגבלים לכל בניין בנפרד.
    - אפשרות לדייר לקבוע לכל מספר טלפון האם הוא גלוי לכלל המתחם, לשכנים בבניין בלבד, או למנהלים בלבד (פרטי). מספרי טלפון של ילדים מוגנים כברירת מחדל למנהלים בלבד.
 
+## Database structure
+
+The planned PostgreSQL schema is defined in [Drizzle schema](drizzle/schema.ts), with the currently authoritative [SQL baseline](database/migrations/0001_initial.sql). The diagram below is maintained manually alongside schema changes; it is **not generated automatically**. Lines represent foreign-key relationships, except that the two composite foreign keys are explained below.
+
+```mermaid
+erDiagram
+    projects ||--o{ buildings : contains
+    buildings ||--o{ floors : contains
+    floors ||--o{ apartments : contains
+    buildings ||--o{ apartments : numbers
+    apartments ||--o{ households : history
+    app_users |o--o{ households : created_by
+
+    parties ||--o| people : person_details
+    parties ||--o| organizations : organization_details
+    parties ||--o{ contact_methods : contacts
+    parties ||--o{ apartment_ownerships : owns
+    apartments ||--o{ apartment_ownerships : owned_by
+    households ||--o{ household_members : includes
+    people ||--o{ household_members : member
+    organizations ||--o{ organization_contacts : represented_by
+    people ||--o{ organization_contacts : representative
+
+    app_users ||--o{ staff_assignments : assigned
+    projects ||--o{ staff_assignments : scoped_to
+    buildings |o--o{ staff_assignments : optional_scope
+    app_users ||--o{ global_roles : has
+
+    projects {
+      uuid id PK
+      text name
+      text directory_visibility
+    }
+    buildings {
+      uuid id PK
+      uuid project_id FK
+      text name
+    }
+    floors {
+      uuid id PK
+      uuid building_id FK
+      int number
+    }
+    apartments {
+      uuid id PK
+      uuid building_id FK
+      uuid floor_id FK
+      text number
+    }
+    households {
+      uuid id PK
+      uuid apartment_id FK
+      boolean is_active
+      text approval_status
+    }
+    parties {
+      uuid id PK
+      text kind
+    }
+    people {
+      uuid party_id PK,FK
+      text full_name
+    }
+    organizations {
+      uuid party_id PK,FK
+      text name
+      text organization_kind
+    }
+    apartment_ownerships {
+      uuid apartment_id FK
+      uuid owner_party_id FK
+      numeric ownership_share
+    }
+    household_members {
+      uuid household_id FK
+      uuid person_id FK
+      boolean is_contact_person
+      int contact_priority
+    }
+    contact_methods {
+      uuid party_id FK
+      text kind
+      text visibility
+    }
+    organization_contacts {
+      uuid organization_party_id FK
+      uuid person_party_id FK
+    }
+    app_users {
+      uuid id PK
+      text email
+    }
+    staff_assignments {
+      uuid user_id FK
+      uuid project_id FK
+      uuid building_id FK
+      text role
+    }
+    global_roles {
+      uuid user_id PK,FK
+      text role PK
+    }
+```
+
+**Contact ordering:** `household_members.contact_priority` controls the order of designated contacts (lower number first; ties are allowed). Only members with `is_contact_person = true` are designated contacts. There is no separate member sort order. The database does not currently enforce that non-contact members have a null priority.
+
+**Key constraints:** Each building can have different numbers of apartments on each floor. Apartment numbers are unique per building. At most **one active household** is allowed per apartment (historic inactive households can remain). A person or organization can own multiple apartments, and an apartment can have multiple owners. Multiple members of a household may be designated contact persons.
+
+**Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. The `parties.kind` / subtype consistency also needs enforcement before live writes.
+
+For setup and migration caveats, see [Database README](database/README.md) and [Drizzle integration](docs/drizzle-integration.md).
+
 ## Next steps
 
 Implement PostgreSQL + Drizzle, an authentication provider, server-side authorization, and privacy enforcement before enabling real resident data. Review the previous Supabase RLS approach rather than assuming its rules apply unchanged.
