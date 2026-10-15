@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookUser, Settings2, UserPlus } from "lucide-react";
+import { BookUser, CircleUserRound, Settings2, UserPlus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
@@ -17,11 +17,11 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <Link href="/directory" className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-lg text-primary-foreground">
+          <Link href="/directory" className="flex min-w-0 items-center gap-2">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-lg text-primary-foreground">
               🏡
             </span>
-            <span className="text-lg font-bold">{title ?? t("appName")}</span>
+            <span className="truncate text-lg font-bold">{title ?? t("appName")}</span>
           </Link>
           <nav className="ms-6 hidden gap-1 md:flex">
             {nav.map((n) => (
@@ -34,7 +34,14 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
               </Link>
             ))}
           </nav>
-          <div className="ms-auto">
+          <div className="ms-auto flex shrink-0 items-center gap-1">
+            <Link
+              href="/account"
+              aria-label={t("authAccount")}
+              className="grid size-11 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <CircleUserRound className="size-5" aria-hidden="true" />
+            </Link>
             <LangSwitcher />
           </div>
         </div>

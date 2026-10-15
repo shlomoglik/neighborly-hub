@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { directoryQuerySchema } from "@/lib/access/query";
 import { getCurrentUser } from "@/lib/auth/session";
 import { readDirectory } from "@/lib/access/directory";
 export const runtime = "nodejs";
@@ -12,8 +13,12 @@ export async function GET(request: Request, context: { params: Promise<{ project
     .uuid()
     .safeParse((await context.params).projectId);
   if (!parsed.success) return Response.json({ error: "NOT_FOUND" }, { status: 404, headers });
+  const query = directoryQuerySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams),
+  );
+  if (!query.success) return Response.json({ error: "INVALID_QUERY" }, { status: 400, headers });
   const { db } = await import("@/lib/db/client");
-  const result = await readDirectory(db, user.id, parsed.data);
+  const result = await readDirectory(db, user.id, parsed.data, query.data);
   return result
     ? Response.json(result, { headers })
     : Response.json({ error: "NOT_FOUND" }, { status: 404, headers });

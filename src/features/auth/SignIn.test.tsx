@@ -52,7 +52,7 @@ it("prevents repeated submissions and uses fixed same-origin destinations", asyn
   expect(social).toHaveBeenCalledTimes(1);
   expect(social).toHaveBeenCalledWith({
     provider: "google",
-    callbackURL: "/account",
+    callbackURL: "/directory",
     errorCallbackURL: "/auth?error=sign-in",
   });
 });

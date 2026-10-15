@@ -21,7 +21,7 @@ export function SignIn({
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/account",
+        callbackURL: "/directory",
         errorCallbackURL: "/auth?error=sign-in",
       });
       if (result.error) {

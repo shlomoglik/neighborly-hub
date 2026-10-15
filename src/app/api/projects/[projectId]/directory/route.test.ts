@@ -38,9 +38,55 @@ it("uses the verified identity and only serializes the authorized DTO", async ()
     email: "a@example.test",
     name: "A",
   });
-  vi.mocked(readDirectory).mockResolvedValue({ residents: [] });
+  vi.mocked(readDirectory).mockResolvedValue({ residents: [], page: 1, hasNext: false });
   const response = await call();
-  expect(readDirectory).toHaveBeenCalledWith({}, "verified", id);
-  expect(await response.json()).toEqual({ residents: [] });
+  expect(readDirectory).toHaveBeenCalledWith({}, "verified", id, {
+    query: "",
+    buildingId: "",
+    page: 1,
+  });
+  expect(await response.json()).toEqual({ residents: [], page: 1, hasNext: false });
   expect(response.headers.get("vary")).toBe("Cookie");
+});
+
+it("validates query bounds before database access", async () => {
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    id: "verified",
+    email: "a@example.test",
+    name: "A",
+  });
+  for (const query of [
+    "page=0",
+    "page=1.5",
+    "page=10001",
+    "buildingId=bad",
+    `query=${"a".repeat(101)}`,
+  ]) {
+    const response = await GET(
+      new Request(`https://example.test/api/projects/${id}/directory?${query}`),
+      { params: Promise.resolve({ projectId: id }) },
+    );
+    expect(response.status).toBe(400);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  }
+  expect(readDirectory).not.toHaveBeenCalled();
+});
+it("forwards validated server filters and pages without trusting a user parameter", async () => {
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    id: "verified",
+    email: "a@example.test",
+    name: "A",
+  });
+  vi.mocked(readDirectory).mockResolvedValue({ residents: [], page: 2, hasNext: false });
+  await GET(
+    new Request(
+      `https://example.test/api/projects/${id}/directory?page=2&query=%20hello%20&buildingId=${id}&userId=forged`,
+    ),
+    { params: Promise.resolve({ projectId: id }) },
+  );
+  expect(readDirectory).toHaveBeenCalledWith({}, "verified", id, {
+    page: 2,
+    query: "hello",
+    buildingId: id,
+  });
 });
