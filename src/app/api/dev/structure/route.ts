@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { createStructure, deleteStructure, updateStructure } from "@/lib/db/structure-input";
 
+// Node.js is required for the PostgreSQL driver.
 export const runtime = "nodejs";
+
+// Always process requests dynamically, without route caching.
 export const dynamic = "force-dynamic";
 
 function disabled() {
