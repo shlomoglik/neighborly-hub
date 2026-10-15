@@ -4,9 +4,10 @@ The Next.js App Router UI preview was merged into `main`. The legacy Lovable, Ta
 
 ## Still to implement
 
-1. Automated tests for the Next.js app and formatting checks in CI.
-2. PostgreSQL + Drizzle data access and migrations.
-3. Authentication, server-side authorization and privacy enforcement.
-4. Replace mock data with real data and validate production readiness.
+1. Connect authenticated identities to approved household membership.
+2. Enforce project/building authorization and per-contact visibility on the server.
+3. Replace mock resident data with authorized queries and validate production readiness.
+
+Automated checks, PostgreSQL/Drizzle infrastructure and the [Google authentication/session foundation](authentication.md) are implemented.
 
 See the root README for local development commands. Do not use the UI preview with real resident data before authorization and privacy checks are implemented.

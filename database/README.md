@@ -9,6 +9,8 @@ With PostgreSQL 16 running and an empty database:
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0001_initial.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0002_party_subtype_integrity.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0003_auth_sessions.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/party-integrity.sql
 ```
@@ -18,8 +20,8 @@ The smoke test rolls back its fixture data. The migration is intended for a **ne
 ## Boundaries and follow-ups
 
 - The current migration is plain PostgreSQL SQL, **not yet Drizzle-generated**. The legacy Drizzle files are retained untouched and must not be executed.
-- The next implementation PR must install `drizzle-orm`, `drizzle-kit`, and a PostgreSQL driver; regenerate the pnpm lockfile; define the same schema in Drizzle; and reconcile migration metadata. Do not claim Drizzle migrations are ready until then.
+- Drizzle and the PostgreSQL driver are installed. SQL migrations remain authoritative until Drizzle snapshots and migration metadata are reconciled.
 - The second SQL migration enforces that every `party` has exactly one subtype matching its `kind`, at transaction commit. Create a party and its subtype in the **same transaction**. Existing orphaned/mismatched rows must be cleaned before applying this migration to a populated database.
 - The sum of co-ownership shares is not yet enforced across rows.
-- There is no authentication, server-side authorization, or privacy-filtered query layer. Do not connect the Next.js UI to real resident data yet.
+- Migration 0003 adds the [authentication/session foundation](../docs/authentication.md) without changing user UUIDs. Server-side resident authorization and privacy-filtered queries remain unimplemented; do not connect real resident data yet.
 - The independent schema deliberately does not depend on Supabase `auth.users` or Supabase roles.
