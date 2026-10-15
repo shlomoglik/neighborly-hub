@@ -12,23 +12,35 @@ type Delete = z.infer<typeof deleteStructure>;
 export async function createStructureRecord(input: Create) {
   switch (input.entity) {
     case "project": {
-      const [row] = await db.insert(projects).values({ name: input.name, city: input.city }).returning();
+      const [row] = await db
+        .insert(projects)
+        .values({ name: input.name, city: input.city })
+        .returning();
       return row;
     }
     case "building": {
-      const [row] = await db.insert(buildings).values({ name: input.name, projectId: input.projectId }).returning();
+      const [row] = await db
+        .insert(buildings)
+        .values({ name: input.name, projectId: input.projectId })
+        .returning();
       return row;
     }
     case "floor": {
-      const [row] = await db.insert(floors).values({ number: input.number, buildingId: input.buildingId }).returning();
+      const [row] = await db
+        .insert(floors)
+        .values({ number: input.number, buildingId: input.buildingId })
+        .returning();
       return row;
     }
     case "apartment": {
-      const [row] = await db.insert(apartments).values({
+      const [row] = await db
+        .insert(apartments)
+        .values({
         number: input.number,
         buildingId: input.buildingId,
         floorId: input.floorId,
-      }).returning();
+      })
+        .returning();
       return row;
     }
   }
@@ -37,19 +49,35 @@ export async function createStructureRecord(input: Create) {
 export async function updateStructureRecord(input: Update) {
   switch (input.entity) {
     case "project": {
-      const [row] = await db.update(projects).set({ name: input.name, city: input.city }).where(eq(projects.id, input.id)).returning();
+      const [row] = await db
+        .update(projects)
+        .set({ name: input.name, city: input.city })
+        .where(eq(projects.id, input.id))
+        .returning();
       return row ?? null;
     }
     case "building": {
-      const [row] = await db.update(buildings).set({ name: input.name }).where(eq(buildings.id, input.id)).returning();
+      const [row] = await db
+        .update(buildings)
+        .set({ name: input.name })
+        .where(eq(buildings.id, input.id))
+        .returning();
       return row ?? null;
     }
     case "floor": {
-      const [row] = await db.update(floors).set({ number: input.number }).where(eq(floors.id, input.id)).returning();
+      const [row] = await db
+        .update(floors)
+        .set({ number: input.number })
+        .where(eq(floors.id, input.id))
+        .returning();
       return row ?? null;
     }
     case "apartment": {
-      const [row] = await db.update(apartments).set({ number: input.number }).where(eq(apartments.id, input.id)).returning();
+      const [row] = await db
+        .update(apartments)
+        .set({ number: input.number })
+        .where(eq(apartments.id, input.id))
+        .returning();
       return row ?? null;
     }
   }
@@ -58,19 +86,31 @@ export async function updateStructureRecord(input: Update) {
 export async function deleteStructureRecord(input: Delete) {
   switch (input.entity) {
     case "project": {
-      const [row] = await db.delete(projects).where(eq(projects.id, input.id)).returning({ id: projects.id });
+      const [row] = await db
+        .delete(projects)
+        .where(eq(projects.id, input.id))
+        .returning({ id: projects.id });
       return row ?? null;
     }
     case "building": {
-      const [row] = await db.delete(buildings).where(eq(buildings.id, input.id)).returning({ id: buildings.id });
+      const [row] = await db
+        .delete(buildings)
+        .where(eq(buildings.id, input.id))
+        .returning({ id: buildings.id });
       return row ?? null;
     }
     case "floor": {
-      const [row] = await db.delete(floors).where(eq(floors.id, input.id)).returning({ id: floors.id });
+      const [row] = await db
+        .delete(floors)
+        .where(eq(floors.id, input.id))
+        .returning({ id: floors.id });
       return row ?? null;
     }
     case "apartment": {
-      const [row] = await db.delete(apartments).where(eq(apartments.id, input.id)).returning({ id: apartments.id });
+      const [row] = await db
+        .delete(apartments)
+        .where(eq(apartments.id, input.id))
+        .returning({ id: apartments.id });
       return row ?? null;
     }
   }
