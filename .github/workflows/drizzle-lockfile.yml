@@ -10,7 +10,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/drizzle-postgres-integration'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: true
