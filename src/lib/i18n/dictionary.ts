@@ -6,6 +6,31 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  refreshDirectory: { he: "רענון הספר", en: "Refresh directory", ru: "Обновить справочник" },
+  chooseProject: { he: "בחירת פרויקט", en: "Choose a project", ru: "Выберите проект" },
+  directoryUnlinked: {
+    he: "עדיין אין לך גישה לספר הדיירים. יש לפנות למנהל הקהילה לאימות השיוך ולאישור משק הבית.",
+    en: "You do not have directory access yet. Contact your community manager to verify your resident link and approve your household.",
+    ru: "У вас пока нет доступа к справочнику. Обратитесь к управляющему для проверки вашей привязки к жильцу и одобрения домохозяйства.",
+  },
+  directoryAccessChanged: {
+    he: "הגישה לפרויקט השתנתה. המידע הקודם הוסר. אפשר לרענן או לבחור פרויקט אחר שזמין לך.",
+    en: "Your project access has changed. Previous data was removed. Refresh or choose another available project.",
+    ru: "Ваш доступ к проекту изменился. Прежние данные удалены. Обновите справочник или выберите другой доступный проект.",
+  },
+  directorySessionExpired: {
+    he: "ההתחברות הסתיימה. יש להתחבר מחדש כדי לצפות בספר הדיירים.",
+    en: "Your session has ended. Sign in again to view the directory.",
+    ru: "Сеанс завершён. Войдите снова, чтобы открыть справочник.",
+  },
+  directoryPage: { he: "עמוד {n}", en: "Page {n}", ru: "Страница {n}" },
+  directoryPagination: {
+    he: "דפדוף בספר הדיירים",
+    en: "Directory pages",
+    ru: "Страницы справочника",
+  },
+  directoryPrevious: { he: "העמוד הקודם", en: "Previous page", ru: "Предыдущая страница" },
+  directoryNext: { he: "העמוד הבא", en: "Next page", ru: "Следующая страница" },
   appName: { he: "ספר השכנים", en: "Neighbors Book", ru: "Книга соседей" },
   tagline: {
     he: "כל השכנים, אנשי הקשר וימי ההולדת – במקום אחד חם וקהילתי",
@@ -267,6 +292,9 @@ export const dict = {
   stepMembers: { he: "בני בית", en: "Members", ru: "Состав семьи" },
   stepReview: { he: "בדיקה ושליחה", en: "Review and submit", ru: "Проверка и отправка" },
   previewNeighbor: { he: "תצוגה כשכן", en: "Preview as neighbor", ru: "Посмотреть как сосед" },
+  demoProject: { he: "קהילת הגנים", en: "Garden community", ru: "Сообщество «Сады»" },
+  demoBuilding: { he: "בניין 1", en: "Building 1", ru: "Дом 1" },
+  demoPersonTwo: { he: "דנה לוי", en: "Dana Levi", ru: "Дана Леви" },
   demoFamily: { he: "משפחת כהן", en: "Cohen family", ru: "Семья Коэн" },
   demoFamilyTwo: { he: "משפחת לוי", en: "Levi family", ru: "Семья Леви" },
   demoPerson: { he: "נועה מזרחי", en: "Noa Mizrahi", ru: "Ноа Мизрахи" },

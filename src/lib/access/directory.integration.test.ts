@@ -4,6 +4,7 @@ import postgres from "postgres";
 import * as schema from "../../../drizzle/schema";
 vi.mock("server-only", () => ({}));
 import { readDirectory } from "./directory";
+import { readDirectoryProjects } from "./projects";
 const url = process.env.AUTH_TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL resident authorization", () => {
   const ids = Array.from({ length: 20 }, () => crypto.randomUUID());
@@ -28,6 +29,7 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     child,
     pendingPerson,
   ] = ids;
+  const extraPeople: string[] = [];
   let client: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof schema>>;
   beforeAll(async () => {
@@ -106,11 +108,28 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     try {
       await client`DELETE FROM user_person_links WHERE user_id IN ${client([resident, pending])}`;
       await client`DELETE FROM projects WHERE id IN ${client([project, otherProject])}`;
-      await client`DELETE FROM parties WHERE id IN ${client([personA, personB, child, pendingPerson])}`;
+      await client`DELETE FROM parties WHERE id IN ${client([personA, personB, child, pendingPerson, ...extraPeople])}`;
       await client`DELETE FROM app_users WHERE id IN ${client([admin, resident, pending, manager, outsider])}`;
     } finally {
       await client.end();
     }
+  });
+  it("discovers only authorized projects and buildings without exposing role metadata", async () => {
+    expect(await readDirectoryProjects(db, outsider)).toEqual([]);
+    expect(await readDirectoryProjects(db, pending)).toEqual([]);
+    expect(await readDirectoryProjects(db, resident)).toEqual([
+      {
+        id: project,
+        name: "Access fixture",
+        buildings: [
+          { id: a, name: "A" },
+          { id: b, name: "B" },
+        ],
+      },
+    ]);
+    expect(await readDirectoryProjects(db, manager)).toEqual([
+      { id: project, name: "Access fixture", buildings: [{ id: a, name: "A" }] },
+    ]);
   });
   it("denies missing links, pending residents and household creators", async () => {
     expect(await readDirectory(db, outsider, project)).toBeNull();
@@ -161,7 +180,11 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     expect((await readDirectory(db, manager, project))?.residents).toHaveLength(3);
     expect(await readDirectory(db, manager, otherProject)).toBeNull();
     await db.insert(schema.globalRoles).values({ userId: admin, role: "admin" });
-    expect(await readDirectory(db, admin, otherProject)).toEqual({ residents: [] });
+    expect(await readDirectory(db, admin, otherProject)).toEqual({
+      residents: [],
+      page: 1,
+      hasNext: false,
+    });
     expect(
       (await readDirectory(db, admin, project))?.residents.find((r) => r.personId === personB)
         ?.contacts.length,
@@ -187,6 +210,61 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     expect(await readDirectory(db, resident, project)).toBeNull();
     await client`UPDATE households SET is_active = true WHERE id = ${homeA}`;
   });
+  it("paginates identities before contacts and treats search wildcards literally", async () => {
+    extraPeople.push(...Array.from({ length: 21 }, () => crypto.randomUUID()));
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.parties).values(extraPeople.map((id) => ({ id, kind: "person" })));
+      await tx.insert(schema.people).values(
+        extraPeople.map((id, i) => ({
+          partyId: id,
+          fullName: `Paging ${String(i).padStart(2, "0")}`,
+        })),
+      );
+    });
+    await db
+      .insert(schema.householdMembers)
+      .values(extraPeople.map((personId) => ({ householdId: homeA, personId })));
+    await db.insert(schema.contactMethods).values(
+      extraPeople.flatMap((partyId) =>
+        ["project", "building", "managers"].map((visibility) => ({
+          partyId,
+          kind: "phone",
+          value: `${partyId}:${visibility}`,
+          visibility,
+        })),
+      ),
+    );
+    const first = await readDirectory(db, resident, project, {
+      query: "pAgInG",
+      buildingId: a,
+      page: 1,
+    });
+    const second = await readDirectory(db, resident, project, {
+      query: "Paging",
+      buildingId: a,
+      page: 2,
+    });
+    expect(first?.residents).toHaveLength(20);
+    expect(first?.hasNext).toBe(true);
+    expect(second?.residents).toHaveLength(1);
+    expect(second?.hasNext).toBe(false);
+    expect(new Set([...first!.residents, ...second!.residents].map((r) => r.personId)).size).toBe(
+      21,
+    );
+    expect(first?.residents.every((r) => r.contacts.length === 2)).toBe(true);
+    for (const query of ["%", "_", "\\", "PRIVATE CHILD", personB, `${personA}:managers`]) {
+      expect(
+        (await readDirectory(db, resident, project, { query, buildingId: "", page: 1 }))?.residents,
+      ).toEqual([]);
+    }
+    expect(
+      (await readDirectory(db, resident, project, { query: "Paging", buildingId: b, page: 1 }))
+        ?.residents,
+    ).toEqual([]);
+    expect((await readDirectoryProjects(db, resident))[0].buildings).toEqual([
+      { id: a, name: "A" },
+    ]);
+  });
   it("enforces identity uniqueness, verifier provenance and referential integrity", async () => {
     await expect(
       db
@@ -205,5 +283,6 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     ).rejects.toThrow();
     await client`DELETE FROM user_person_links WHERE user_id = ${resident}`;
     expect(await readDirectory(db, resident, project)).toBeNull();
+    expect(await readDirectoryProjects(db, resident)).toEqual([]);
   });
 });

@@ -32,7 +32,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 
 ## Deliberate access boundary
 
-Logging in creates an identity, **not** project membership, household association or a staff role. This PR does not infer `people`/`household_members` links, approve join requests or expose real resident records. Existing directory/household/management screens remain synthetic previews. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
+Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). Household details, joining and management screens remain synthetic previews. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
 
 The next PR must implement explicit user/person/membership links, project/building/approval checks and contact visibility filtering on the server before connecting resident data. Do not use `households.created_by` as the sole proof of residency.
 
@@ -49,3 +49,5 @@ Official references: [Next.js integration](https://better-auth.com/docs/integrat
 `pnpm audit --prod` currently reports two high and three moderate advisories in the existing `next → postcss@8.4.31` and Drizzle tooling/esbuild chains. The affected PostCSS/esbuild versions are unchanged from the main-branch lockfile; the new auth dependency brings the existing optional Drizzle tooling peer into the production audit graph. This PR does not claim a clean dependency audit. Address those upstream/tooling versions separately before production readiness.
 
 Explicit resident links and directory read authorization are now described in [resident authorization](resident-authorization.md). Signing in alone still grants no resident or staff permissions.
+
+Successful Google sign-in now returns to `/directory`; `/account` remains available from the header for profile and sign-out. The directory explains missing resident access without offering an unimplemented self-claim flow.

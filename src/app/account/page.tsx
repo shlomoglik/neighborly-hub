@@ -1,6 +1,7 @@
 import { requireCurrentUser } from "@/lib/auth/session";
 import { translate, DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n/dictionary";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { SignOut } from "@/features/auth/SignOut";
 export const dynamic = "force-dynamic";
 export default async function AccountPage() {
@@ -18,6 +19,12 @@ export default async function AccountPage() {
           <bdi dir="ltr">{user.email}</bdi>
         </p>
         <p className="text-sm text-muted-foreground">{translate(lang, "authAccessNotice")}</p>
+        <Link
+          href="/directory"
+          className="inline-flex min-h-11 items-center text-primary underline"
+        >
+          {translate(lang, "openBook")}
+        </Link>
         <SignOut />
       </div>
     </main>
