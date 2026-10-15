@@ -167,6 +167,21 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
         ?.contacts.length,
     ).toBe(3);
   });
+  it("combines residency and staff grants without widening manager-only contacts", async () => {
+    await client`UPDATE projects SET directory_visibility = 'community' WHERE id = ${project}`;
+    await db
+      .insert(schema.staffAssignments)
+      .values({ userId: resident, projectId: project, buildingId: b, role: "building_manager" });
+    const result = await readDirectory(db, resident, project);
+    expect(result?.residents.find((r) => r.personId === personA)?.contacts).toHaveLength(2);
+    expect(result?.residents.find((r) => r.personId === personB)?.contacts).toHaveLength(3);
+    await client`DELETE FROM staff_assignments WHERE user_id = ${resident}`;
+    expect(
+      (await readDirectory(db, resident, project))?.residents.find((r) => r.personId === personB)
+        ?.contacts,
+    ).toHaveLength(1);
+    await client`UPDATE projects SET directory_visibility = 'building' WHERE id = ${project}`;
+  });
   it("revokes resident access when the household becomes inactive", async () => {
     await client`UPDATE households SET is_active = false WHERE id = ${homeA}`;
     expect(await readDirectory(db, resident, project)).toBeNull();
