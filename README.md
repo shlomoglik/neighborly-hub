@@ -177,6 +177,8 @@ erDiagram
     }
 ```
 
+**Contact ordering:** `household_members.contact_priority` controls the order of designated contacts (lower number first; ties are allowed). Only members with `is_contact_person = true` are designated contacts. There is no separate member sort order. The database does not currently enforce that non-contact members have a null priority.
+
 **Key constraints:** Each building can have different numbers of apartments on each floor. Apartment numbers are unique per building. At most **one active household** is allowed per apartment (historic inactive households can remain). A person or organization can own multiple apartments, and an apartment can have multiple owners. Multiple members of a household may be designated contact persons.
 
 **Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. The `parties.kind` / subtype consistency also needs enforcement before live writes.
