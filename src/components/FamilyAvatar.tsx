@@ -28,7 +28,7 @@ export function FamilyAvatar({
   return (
     <div
       className={cn(
-        "shrink-0 overflow-hidden rounded-2xl grid place-items-center font-bold",
+        "community-enter font-heading shrink-0 overflow-hidden rounded-2xl grid place-items-center font-bold",
         !src && tone,
         className,
       )}

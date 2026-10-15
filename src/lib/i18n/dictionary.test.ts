@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LANG, LANG_COOKIE, dict, directionFor, isLang, translate } from "./dictionary";
+import {
+  DEFAULT_LANG,
+  LANG_COOKIE,
+  dict,
+  directionFor,
+  isLang,
+  pluralText,
+  translate,
+} from "./dictionary";
 
 describe("localization", () => {
   it("defaults to Hebrew and stores the expected cookie name", () => {
@@ -32,5 +40,21 @@ describe("localization", () => {
     expect(translate("he", "appName")).toBe(dict.appName.he);
     expect(translate("en", "appName")).toBe(dict.appName.en);
     expect(translate("ru", "appName")).toBe(dict.appName.ru);
+  });
+});
+
+describe("dictionary interpolation and plurals", () => {
+  it("keeps interpolation placeholders consistent across languages", () => {
+    for (const entry of Object.values(dict)) {
+      const expected = [...entry.en.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+      for (const lang of ["he", "ru"] as const)
+        expect([...entry[lang].matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()).toEqual(expected);
+    }
+  });
+  it("uses Russian one, few and many forms", () => {
+    expect(pluralText("ru", "families", 1)).toBe("1 семья");
+    expect(pluralText("ru", "families", 2)).toBe("2 семьи");
+    expect(pluralText("ru", "families", 5)).toBe("5 семей");
+    expect(pluralText("ru", "families", 21)).toBe("21 семья");
   });
 });

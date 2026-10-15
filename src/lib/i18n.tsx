@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   DEFAULT_LANG,
@@ -9,15 +9,9 @@ import {
   type Lang,
   type TKey,
 } from "./i18n/dictionary";
+import { I18nContext } from "./i18n/context";
+export { useI18n } from "./i18n/context";
 export type { Lang, TKey } from "./i18n/dictionary";
-
-type Ctx = {
-  lang: Lang;
-  setLang: (l: Lang) => void;
-  t: (k: TKey, vars?: Record<string, string | number>) => string;
-  dir: "rtl" | "ltr";
-};
-const I18nContext = createContext<Ctx | null>(null);
 
 export function I18nProvider({
   children,
@@ -45,10 +39,4 @@ export function I18nProvider({
   };
   const t = (key: TKey, vars?: Record<string, string | number>) => translate(lang, key, vars);
   return <I18nContext.Provider value={{ lang, setLang, t, dir }}>{children}</I18nContext.Provider>;
-}
-
-export function useI18n() {
-  const context = useContext(I18nContext);
-  if (!context) throw new Error("useI18n outside provider");
-  return context;
 }
