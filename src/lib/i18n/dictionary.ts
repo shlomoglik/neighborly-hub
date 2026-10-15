@@ -186,6 +186,113 @@ export const dict = {
   edit: { he: "עריכה", en: "Edit", ru: "Изменить" },
   done: { he: "סיום", en: "Done", ru: "Готово" },
   phonePlaceholder: { he: "050-1234567", en: "+972 50 123 4567", ru: "+972 50 123 4567" },
+  contactHidden: {
+    he: "פרטי קשר מוסתרים",
+    en: "Contact details hidden",
+    ru: "Контактные данные скрыты",
+  },
+  visibilityQuestion: {
+    he: "מי יראה את הפרטים?",
+    en: "Who can see these details?",
+    ru: "Кто видит эти данные?",
+  },
+  approved: { he: "מאושר", en: "Approved", ru: "Одобрено" },
+  occupied: { he: "מאוכלסת", en: "Occupied", ru: "Заселена" },
+  vacant: { he: "פנויה", en: "Vacant", ru: "Свободна" },
+  myHome: { he: "הבית שלי", en: "My home", ru: "Мой дом" },
+  home: { he: "בית", en: "Home", ru: "Главная" },
+  birthdaysShort: { he: "ימי הולדת", en: "Birthdays", ru: "Дни рожд." },
+  navigation: { he: "ניווט ראשי", en: "Main navigation", ru: "Основная навигация" },
+  greet: { he: "ברכה", en: "Send wishes", ru: "Поздравить" },
+  tomorrow: { he: "מחר", en: "Tomorrow", ru: "Завтра" },
+  loadError: {
+    he: "לא הצלחנו לטעון את הנתונים",
+    en: "Could not load the data",
+    ru: "Не удалось загрузить данные",
+  },
+  staleData: {
+    he: "מוצגים נתונים מהביקור הקודם",
+    en: "Showing data from your previous visit",
+    ru: "Показаны данные прошлого посещения",
+  },
+  privateDetails: {
+    he: "הפרטים אינם גלויים לך",
+    en: "These details are private",
+    ru: "Эти данные вам недоступны",
+  },
+  retry: { he: "נסו שוב", en: "Try again", ru: "Повторить" },
+  clear: { he: "ניקוי", en: "Clear", ru: "Сбросить" },
+  filterResidents: { he: "סינון דיירים", en: "Filter residents", ru: "Фильтр жильцов" },
+  filterBuilding: { he: "סינון לפי בניין", en: "Filter by building", ru: "Фильтр по дому" },
+  results_one: { he: "{n} תוצאה", en: "{n} result", ru: "{n} результат" },
+  results_few: { he: "{n} תוצאות", en: "{n} results", ru: "{n} результата" },
+  results_many: { he: "{n} תוצאות", en: "{n} results", ru: "{n} результатов" },
+  results_other: { he: "{n} תוצאות", en: "{n} results", ru: "{n} результата" },
+  families_one: { he: "{n} משפחה", en: "{n} family", ru: "{n} семья" },
+  families_few: { he: "{n} משפחות", en: "{n} families", ru: "{n} семьи" },
+  families_many: { he: "{n} משפחות", en: "{n} families", ru: "{n} семей" },
+  families_other: { he: "{n} משפחות", en: "{n} families", ru: "{n} семьи" },
+  conflictWarning: {
+    he: "בדירה רשומה גם {name}. יש לבדוק לפני אישור.",
+    en: "{name} is also registered in this apartment. Review before approving.",
+    ru: "В этой квартире также зарегистрирована семья {name}. Проверьте перед одобрением.",
+  },
+  close: { he: "סגירה", en: "Close", ru: "Закрыть" },
+  details: { he: "פרטי משפחה", en: "Household details", ru: "Данные семьи" },
+  viewDetails: { he: "הצגת פרטים", en: "View details", ru: "Подробнее" },
+  privacyPolicy: {
+    he: "נראות כפופה למדיניות המתחם",
+    en: "Visibility is limited by community policy",
+    ru: "Видимость ограничена правилами квартала",
+  },
+  phoneInvalid: {
+    he: "מספר נייד ישראלי צריך להכיל 10 ספרות",
+    en: "An Israeli mobile number must contain 10 digits",
+    ru: "Израильский мобильный номер должен содержать 10 цифр",
+  },
+  emailInvalid: {
+    he: "כתובת אימייל לא תקינה",
+    en: "Enter a valid email address",
+    ru: "Введите корректный адрес эл. почты",
+  },
+  adult: { he: "מבוגר/ת", en: "Adult", ru: "Взрослый" },
+  memberType: { he: "סוג בן/בת בית", en: "Member type", ru: "Тип члена семьи" },
+  birthdayPublic: {
+    he: "יום הולדת ביומן הקהילה",
+    en: "Birthday in community calendar",
+    ru: "День рождения в календаре квартала",
+  },
+  joinSteps: { he: "שלבי ההצטרפות", en: "Join progress", ru: "Этапы вступления" },
+  stepDetails: { he: "פרטים", en: "Details", ru: "Данные" },
+  stepMembers: { he: "בני בית", en: "Members", ru: "Состав семьи" },
+  stepReview: { he: "בדיקה ושליחה", en: "Review and submit", ru: "Проверка и отправка" },
+  previewNeighbor: { he: "תצוגה כשכן", en: "Preview as neighbor", ru: "Посмотреть как сосед" },
+  demoFamily: { he: "משפחת כהן", en: "Cohen family", ru: "Семья Коэн" },
+  demoFamilyTwo: { he: "משפחת לוי", en: "Levi family", ru: "Семья Леви" },
+  demoPerson: { he: "נועה מזרחי", en: "Noa Mizrahi", ru: "Ноа Мизрахи" },
+  demoCount: {
+    he: "4 דיירים רשומים",
+    en: "4 registered residents",
+    ru: "4 зарегистрированных жильца",
+  },
+  acceptTerms: { he: "אישור תנאים", en: "Accept terms", ru: "Принять условия" },
+  foundations: { he: "יסודות עיצוב", en: "Design foundations", ru: "Основы дизайна" },
+  palette: { he: "צבעים סמנטיים", en: "Semantic colors", ru: "Семантические цвета" },
+  typography: { he: "טיפוגרפיה", en: "Typography", ru: "Типографика" },
+  spacing: { he: "ריווח ופינות", en: "Spacing and corners", ru: "Отступы и скругления" },
+  loadingSubmit: { he: "שולח…", en: "Sending…", ru: "Отправка…" },
+  undo: { he: "ביטול פעולה", en: "Undo", ru: "Отменить действие" },
+  successMessage: { he: "הפעולה הושלמה", en: "Action completed", ru: "Действие выполнено" },
+  demoMixedName: { he: "אורי Коэн", en: "אורי Коэн", ru: "אורי Коэн" },
+  demoRussianName: { he: "Козлов", en: "Козлов", ru: "Козлов" },
+  demoEnglishName: { he: "Smith", en: "Smith", ru: "Smith" },
+  demoHebrewName: { he: "אורי", en: "אורי", ru: "אורי" },
+  demoRussianPerson: { he: "Дана", en: "Дана", ru: "Дана" },
+  demoMixedNames: {
+    he: "משפחת לוי · Smith · Семья Козлов",
+    en: "משפחת לוי · Smith · Семья Козлов",
+    ru: "משפחת לוי · Smith · Семья Козлов",
+  },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
@@ -195,4 +302,10 @@ export function translate(lang: Lang, key: TKey, vars?: Record<string, string | 
     for (const [name, value] of Object.entries(vars))
       result = result.replaceAll(`{${name}}`, String(value));
   return result;
+}
+
+export function pluralText(lang: Lang, noun: "results" | "families", n: number): string {
+  const category = new Intl.PluralRules(lang).select(n);
+  const form = category === "one" || category === "few" || category === "many" ? category : "other";
+  return translate(lang, `${noun}_${form}`, { n });
 }
