@@ -42,3 +42,6 @@ dist-ssr
 !.env.*.example
 # Storybook generated output
 storybook-static/
+
+# Generated visual review captures
+artifacts/storybook/
