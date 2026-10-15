@@ -40,3 +40,5 @@ dist-ssr
 .env.*
 !.env.example
 !.env.*.example
+# Storybook generated output
+storybook-static/
