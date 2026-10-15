@@ -26,6 +26,8 @@ See [ui-component-roadmap.md](ui-component-roadmap.md) for coverage and intentio
 
 ## Review screenshots
 
-The Next.js checks workflow captures twelve real browser PNGs after a successful Storybook build, using an isolated pinned Playwright installation. Download the `storybook-screenshots` artifact from the workflow run. Captures cover Hebrew/English/Russian, mobile/tablet/desktop detail panels, privacy/forms, the apartment map and skeletons. They use synthetic story data and wait for local fonts; screenshots are review material rather than baseline comparison tests.
+Screenshots run only on request, through the separate **Storybook screenshots** workflow. Automatic PR/push checks still build Storybook, but do not install a browser or capture images.
+
+After this workflow is merged into the default branch, open **Actions → Storybook screenshots → Run workflow**, select the branch to review, and run it. The workflow builds that branch’s Storybook and captures twelve real browser PNGs using an isolated pinned Playwright installation. Download the `storybook-screenshots` artifact from the workflow run. Captures cover Hebrew/English/Russian, mobile/tablet/desktop detail panels, privacy/forms, the apartment map and skeletons. They use synthetic story data and wait for local fonts; screenshots are review material rather than baseline comparison tests.
 
 To run with a locally installed Playwright package, serve `storybook-static` on port 6006 and run `node scripts/capture-storybook.mjs`. Set `PLAYWRIGHT_MODULE_PATH` to its absolute `index.mjs` path when the tool lives outside this project.
