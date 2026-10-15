@@ -26,4 +26,4 @@ Real Chromium captures of synthetic Storybook fixtures. These show individual bu
 
 ![Hebrew apartment map](04-apartment-map-he-desktop.png)
 
-Future CI runs upload fresh captures as the `storybook-screenshots` artifact. This gallery is a fixed review snapshot; it is not a pixel comparison baseline.
+Manual **Storybook screenshots** workflow runs upload fresh captures as the `storybook-screenshots` artifact. This gallery is a fixed review snapshot; it is not a pixel comparison baseline.

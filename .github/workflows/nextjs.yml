@@ -47,22 +47,6 @@ jobs:
       - run: pnpm build
       - name: Verify Storybook static build
         run: pnpm storybook:build
-      - name: Install isolated screenshot tooling
-        run: |
-          npm install --prefix "$RUNNER_TEMP/neighborly-capture" --no-save --ignore-scripts playwright@1.56.1
-          node "$RUNNER_TEMP/neighborly-capture/node_modules/playwright/cli.js" install --with-deps chromium
-      - name: Capture localized Storybook screenshots
-        run: |
-          python3 -m http.server 6006 --bind 127.0.0.1 --directory storybook-static > "$RUNNER_TEMP/storybook-server.log" 2>&1 &
-          export PLAYWRIGHT_MODULE_PATH="$RUNNER_TEMP/neighborly-capture/node_modules/playwright/index.mjs"
-          node scripts/capture-storybook.mjs
-      - name: Upload Storybook screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: storybook-screenshots
-          path: artifacts/storybook
-          if-no-files-found: error
-          retention-days: 14
 
   database:
     runs-on: ubuntu-latest
