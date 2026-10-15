@@ -23,3 +23,9 @@ Stories own transient state, use synthetic fixtures and do not call APIs or impo
 `pnpm test` covers locale rendering, interpolation/plurals, contact privacy, child defaults, controlled callbacks, filtering/reset, apartment selection, resident/admin navigation, request busy state, modal Escape behavior and skeleton replacement. Rendering/build success alone is not a visual or full accessibility audit.
 
 See [ui-component-roadmap.md](ui-component-roadmap.md) for coverage and intentionally deferred product assumptions.
+
+## Review screenshots
+
+The Next.js checks workflow captures twelve real browser PNGs after a successful Storybook build, using an isolated pinned Playwright installation. Download the `storybook-screenshots` artifact from the workflow run. Captures cover Hebrew/English/Russian, mobile/tablet/desktop detail panels, privacy/forms, the apartment map and skeletons. They use synthetic story data and wait for local fonts; screenshots are review material rather than baseline comparison tests.
+
+To run with a locally installed Playwright package, serve `storybook-static` on port 6006 and run `node scripts/capture-storybook.mjs`. Set `PLAYWRIGHT_MODULE_PATH` to its absolute `index.mjs` path when the tool lives outside this project.
