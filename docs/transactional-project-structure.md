@@ -11,9 +11,7 @@ Example request:
   "buildings": [
     {
       "name": "A",
-      "floors": [
-        { "number": 0, "apartments": [{ "number": "1" }, { "number": "2" }] }
-      ]
+      "floors": [{ "number": 0, "apartments": [{ "number": "1" }, { "number": "2" }] }]
     }
   ]
 }

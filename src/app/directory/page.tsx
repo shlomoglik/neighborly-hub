@@ -1,2 +1,4 @@
 import { DirectoryPreview } from "@/features/directory/DirectoryPreview";
-export default function DirectoryPage() { return <DirectoryPreview />; }
+export default function DirectoryPage() {
+  return <DirectoryPreview />;
+}
