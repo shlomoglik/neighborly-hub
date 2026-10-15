@@ -351,3 +351,22 @@ export const globalRoles = pgTable(
     check("global_roles_role_check", sql`${t.role} IN ('admin')`),
   ],
 );
+
+// An explicit administrator-verified identity link; never inferred from email.
+export const userPersonLinks = pgTable(
+  "user_person_links",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .unique()
+      .references(() => people.partyId, { onDelete: "cascade" }),
+    verifiedBy: uuid("verified_by")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "restrict" }),
+    createdAt: createdAt(),
+  },
+  (t) => [check("user_person_links_no_self_verification", sql`${t.userId} <> ${t.verifiedBy}`)],
+);
