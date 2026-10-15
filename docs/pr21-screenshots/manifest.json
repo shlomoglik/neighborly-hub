@@ -1,0 +1,74 @@
+[
+  {
+    "file": "01-household-he-mobile.png",
+    "story": "features-community-building-blocks--household",
+    "lang": "he",
+    "width": 390
+  },
+  {
+    "file": "02-privacy-he-mobile.png",
+    "story": "features-community-building-blocks--privacy",
+    "lang": "he",
+    "width": 390
+  },
+  {
+    "file": "03-member-form-ru-mobile.png",
+    "story": "features-community-composites--member-form",
+    "lang": "ru",
+    "width": 390
+  },
+  {
+    "file": "04-apartment-map-he-desktop.png",
+    "story": "features-community-building-blocks--building-map",
+    "lang": "he",
+    "width": 1280
+  },
+  {
+    "file": "05-directory-en-desktop.png",
+    "story": "features-directory-filters--interactive",
+    "lang": "en",
+    "width": 1280
+  },
+  {
+    "file": "06-child-privacy-he-mobile.png",
+    "story": "features-community-composites--child-privacy",
+    "lang": "he",
+    "width": 390
+  },
+  {
+    "file": "07-navigation-ru-mobile.png",
+    "story": "features-community-composites--manager-navigation",
+    "lang": "ru",
+    "width": 390
+  },
+  {
+    "file": "08-loading-details-he-mobile.png",
+    "story": "features-community-loading-and-motion--details",
+    "lang": "he",
+    "width": 390
+  },
+  {
+    "file": "09-loading-map-en-desktop.png",
+    "story": "features-community-loading-and-motion--building-map",
+    "lang": "en",
+    "width": 1280
+  },
+  {
+    "file": "10-details-he-mobile.png",
+    "story": "features-community-composites--responsive-details",
+    "lang": "he",
+    "width": 390
+  },
+  {
+    "file": "11-details-en-tablet.png",
+    "story": "features-community-composites--responsive-details",
+    "lang": "en",
+    "width": 768
+  },
+  {
+    "file": "12-details-en-desktop.png",
+    "story": "features-community-composites--responsive-details",
+    "lang": "en",
+    "width": 1280
+  }
+]
