@@ -91,7 +91,6 @@ CREATE TABLE household_members (
   relation text,
   is_contact_person boolean NOT NULL DEFAULT false,
   contact_priority integer CHECK (contact_priority IS NULL OR contact_priority >= 0),
-  sort_order integer NOT NULL DEFAULT 0,
   UNIQUE (household_id, person_id)
 );
 CREATE INDEX household_members_person_id_idx ON household_members(person_id);
