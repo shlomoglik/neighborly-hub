@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "storybook:build": "storybook build"
+    "storybook:build": "storybook build",
+    "prepare": "node scripts/install-git-hooks.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.1",
