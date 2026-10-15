@@ -45,6 +45,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      - name: Verify Storybook static build
+        run: pnpm storybook:build
 
   database:
     runs-on: ubuntu-latest

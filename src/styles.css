@@ -1,6 +1,7 @@
 @import "tailwindcss";
-@source "../src";
 @import "tw-animate-css";
+
+@source "../src";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -105,7 +106,12 @@
   --sidebar-accent-foreground: oklch(0.32 0.04 45);
   --sidebar-border: oklch(0.89 0.025 75);
   --sidebar-ring: oklch(0.62 0.15 42);
-  --gradient-hero: linear-gradient(160deg, oklch(0.93 0.06 60), oklch(0.96 0.03 90) 55%, oklch(0.92 0.05 140));
+  --gradient-hero: linear-gradient(
+    160deg,
+    oklch(0.93 0.06 60),
+    oklch(0.96 0.03 90) 55%,
+    oklch(0.92 0.05 140)
+  );
   --shadow-warm: 0 8px 24px -12px oklch(0.5 0.12 45 / 0.35);
 }
 

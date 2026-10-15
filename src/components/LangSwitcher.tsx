@@ -11,7 +11,10 @@ const langs: { id: Lang; label: string }[] = [
 export function LangSwitcher({ className }: { className?: string }) {
   const { lang, setLang } = useI18n();
   return (
-    <div className={cn("inline-flex rounded-full bg-secondary p-0.5 text-xs font-semibold", className)} dir="ltr">
+    <div
+      className={cn("inline-flex rounded-full bg-secondary p-0.5 text-xs font-semibold", className)}
+      dir="ltr"
+    >
       {langs.map((l) => (
         <button
           key={l.id}

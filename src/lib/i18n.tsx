@@ -1,16 +1,36 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { DEFAULT_LANG, LANG_COOKIE, directionFor, translate, type Lang, type TKey } from "./i18n/dictionary";
+import {
+  DEFAULT_LANG,
+  LANG_COOKIE,
+  directionFor,
+  translate,
+  type Lang,
+  type TKey,
+} from "./i18n/dictionary";
 export type { Lang, TKey } from "./i18n/dictionary";
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: TKey, vars?: Record<string, string | number>) => string; dir: "rtl" | "ltr" };
+type Ctx = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (k: TKey, vars?: Record<string, string | number>) => string;
+  dir: "rtl" | "ltr";
+};
 const I18nContext = createContext<Ctx | null>(null);
 
-export function I18nProvider({ children, initialLang = DEFAULT_LANG }: { children: ReactNode; initialLang?: Lang }) {
+export function I18nProvider({
+  children,
+  initialLang = DEFAULT_LANG,
+}: {
+  children: ReactNode;
+  initialLang?: Lang;
+}) {
   const [lang, setLangState] = useState<Lang>(initialLang);
   const router = useRouter();
-  useEffect(() => { setLangState(initialLang); }, [initialLang]);
+  useEffect(() => {
+    setLangState(initialLang);
+  }, [initialLang]);
   const dir = directionFor(lang);
   useEffect(() => {
     document.documentElement.lang = lang;

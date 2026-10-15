@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { I18nProvider } from "@/lib/i18n";
-import { DEFAULT_LANG, LANG_COOKIE, directionFor, isLang, translate, type Lang } from "@/lib/i18n/dictionary";
+import {
+  DEFAULT_LANG,
+  LANG_COOKIE,
+  directionFor,
+  isLang,
+  translate,
+  type Lang,
+} from "@/lib/i18n/dictionary";
 import "./globals.css";
 
 async function getLanguage(): Promise<Lang> {
@@ -17,5 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const lang = await getLanguage();
-  return <html lang={lang} dir={directionFor(lang)}><body><I18nProvider initialLang={lang}>{children}</I18nProvider></body></html>;
+  return (
+    <html lang={lang} dir={directionFor(lang)}>
+      <body>
+        <I18nProvider initialLang={lang}>{children}</I18nProvider>
+      </body>
+    </html>
+  );
 }
