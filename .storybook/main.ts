@@ -9,8 +9,10 @@ const config: StorybookConfig = {
     viteConfig.resolve ??= {};
     viteConfig.resolve.alias = {
       ...(Array.isArray(viteConfig.resolve.alias)
-        ? Object.fromEntries(viteConfig.resolve.alias.map(({ find, replacement }) => [find, replacement]))
-        : viteConfig.resolve.alias ?? {}),
+        ? Object.fromEntries(
+            viteConfig.resolve.alias.map(({ find, replacement }) => [find, replacement]),
+          )
+        : (viteConfig.resolve.alias ?? {})),
       "@": fileURLToPath(new URL("../src", import.meta.url)),
     };
     viteConfig.plugins = [

@@ -23,7 +23,11 @@ const preview: Preview = {
       const locale = String(context.globals.locale ?? "he");
       const direction = locale === "he" ? "rtl" : "ltr";
       return (
-        <div lang={locale} dir={direction} className="min-h-screen bg-background p-6 text-foreground">
+        <div
+          lang={locale}
+          dir={direction}
+          className="min-h-screen bg-background p-6 text-foreground"
+        >
           <Story />
         </div>
       );
