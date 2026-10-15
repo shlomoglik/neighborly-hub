@@ -6,26 +6,29 @@ const id = "550e8400-e29b-41d4-a716-446655440000";
 describe("structure input", () => {
   it("validates all create entity types", () => {
     expect(createStructure.parse({ entity: "project", name: " North " }).name).toBe("North");
-    expect(createStructure.safeParse({ entity: "building", name: "A", projectId: id }).success).toBe(
-      true,
-    );
-    expect(createStructure.safeParse({ entity: "floor", buildingId: id, number: 0 }).success).toBe(
-      true,
-    );
-    expect(
-      createStructure.safeParse({ entity: "apartment", buildingId: id, floorId: id, number: "12A" })
-        .success,
-    ).toBe(true);
+    const building = createStructure.safeParse({ entity: "building", name: "A", projectId: id });
+    expect(building.success).toBe(true);
+    const floor = createStructure.safeParse({ entity: "floor", buildingId: id, number: 0 });
+    expect(floor.success).toBe(true);
+    const apartment = createStructure.safeParse({
+      entity: "apartment",
+      buildingId: id,
+      floorId: id,
+      number: "12A",
+    });
+    expect(apartment.success).toBe(true);
   });
 
   it("rejects invalid references, empty names, and fractional floor numbers", () => {
-    expect(
-      createStructure.safeParse({ entity: "building", projectId: "invalid", name: "A" }).success,
-    ).toBe(false);
+    const invalidBuilding = createStructure.safeParse({
+      entity: "building",
+      projectId: "invalid",
+      name: "A",
+    });
+    expect(invalidBuilding.success).toBe(false);
     expect(createStructure.safeParse({ entity: "project", name: "  " }).success).toBe(false);
-    expect(
-      createStructure.safeParse({ entity: "floor", buildingId: id, number: 1.5 }).success,
-    ).toBe(false);
+    const invalidFloor = createStructure.safeParse({ entity: "floor", buildingId: id, number: 1.5 });
+    expect(invalidFloor.success).toBe(false);
   });
 
   it("requires valid ids for update and delete", () => {
