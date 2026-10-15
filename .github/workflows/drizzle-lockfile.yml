@@ -1,0 +1,40 @@
+name: Refresh Drizzle lockfile
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+permissions:
+  contents: write
+jobs:
+  refresh:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/drizzle-postgres-integration'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Generate deterministic lockfile without install scripts
+        run: pnpm install --lockfile-only --ignore-scripts
+      - name: Format Drizzle schema with project Prettier
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm exec prettier --write drizzle/schema.ts
+      - name: Commit updated lockfile and formatting to PR branch
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml drizzle/schema.ts; then
+            echo "Lockfile already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml drizzle/schema.ts
+          git commit -m "chore: format Drizzle schema and synchronize lockfile"
+          git push origin "HEAD:${{ github.head_ref }}"
