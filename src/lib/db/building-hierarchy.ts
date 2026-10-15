@@ -1,9 +1,8 @@
 import "server-only";
 import { asc, eq } from "drizzle-orm";
-import { db } from "./client";
 import { apartments, buildings, floors, projects } from "../../../drizzle/schema";
+import { db } from "./client";
 import { toBuildingHierarchy } from "./building-hierarchy-model";
-
 
 /**
  * Internal read model for the residential structure.
@@ -36,4 +35,3 @@ export async function getProjectStructure(projectId: string) {
 
   return { ...project, buildings: toBuildingHierarchy(rows) };
 }
-
