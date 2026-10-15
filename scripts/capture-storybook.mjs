@@ -36,7 +36,18 @@ try {
       await page.getByRole("button").first().click();
       await page.getByRole(width < 1024 ? "dialog" : "complementary").waitFor();
     }
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      // Entry transitions may start after React effects or the detail panel mounts.
+      // Let finite animations settle; never wait for an infinite skeleton pulse.
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+          .map((animation) => animation.finished.catch(() => {})),
+      );
+    });
     if (errors.length) throw new Error(`${name}: ${errors.join("; ")}`);
     if (await page.locator(".sb-errordisplay").isVisible())
       throw new Error(`Story failed: ${story}`);
