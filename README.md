@@ -4,7 +4,7 @@
 
 ## Current status
 
-The project currently runs an independent **Next.js 15 App Router UI preview**. The UI uses mock data only; authentication, authorization, persistence and a backend are **not yet implemented**. Do not deploy it as a production neighbors directory. The legacy Lovable/TanStack runtime has been removed.
+The project currently runs an independent **Next.js 15 App Router UI preview**. Resident screens use mock data. Google sign-in and database-backed sessions are implemented as an opt-in foundation; resident authorization and privacy-filtered production data access are **not yet implemented**. See [authentication setup](docs/authentication.md). Do not deploy it as a production neighbors directory. The legacy Lovable/TanStack runtime has been removed.
 
 ## Getting started
 
@@ -27,7 +27,8 @@ Open http://localhost:3000/directory
 - `/household/1` — example household details
 - `/join` — demo registration form (no persistence)
 - `/manage` — demo management interface
-- `/auth` and `/reset-password` — visual-only authentication forms
+- `/auth` — Google sign-in when configured; `/reset-password` redirects here
+- `/account` and `/api/me` — protected current-user profile
 
 ## Development and code quality
 
@@ -101,6 +102,8 @@ erDiagram
     projects ||--o{ staff_assignments : scoped_to
     buildings |o--o{ staff_assignments : optional_scope
     app_users ||--o{ global_roles : has
+    app_users ||--o{ auth_sessions : authenticates
+    app_users ||--o{ auth_accounts : identities
 
     projects {
       uuid id PK
@@ -166,6 +169,23 @@ erDiagram
       uuid id PK
       text email
     }
+    auth_sessions {
+      uuid id PK
+      uuid user_id FK
+      text token UK
+      timestamptz expires_at
+    }
+    auth_accounts {
+      uuid id PK
+      uuid user_id FK
+      text provider_id
+      text account_id
+    }
+    auth_verifications {
+      uuid id PK
+      text identifier
+      timestamptz expires_at
+    }
     staff_assignments {
       uuid user_id FK
       uuid project_id FK
@@ -188,4 +208,4 @@ For setup and migration caveats, see [Database README](database/README.md) and [
 
 ## Next steps
 
-Implement PostgreSQL + Drizzle, an authentication provider, server-side authorization, and privacy enforcement before enabling real resident data. Review the previous Supabase RLS approach rather than assuming its rules apply unchanged.
+PostgreSQL + Drizzle and the authentication/session foundation are implemented. Complete explicit membership linking, server-side authorization and privacy enforcement before enabling real resident data. Review the previous Supabase RLS approach rather than assuming its rules apply unchanged.

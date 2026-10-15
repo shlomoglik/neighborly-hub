@@ -2,13 +2,13 @@
 
 ## Current blockers
 
-The existing `drizzle/migrations/0000_migration.sql` is a **legacy Supabase migration**, not a safe bootstrap for an independent PostgreSQL instance. It references `auth.users`, Supabase roles (`authenticated`, `service_role`), and Supabase-specific authorization policies/functions. The current `drizzle/schema.ts` is empty and its migration snapshot has no tables. **Do not run the legacy migration against a new database.**
+The existing `drizzle/migrations/0000_migration.sql` is a **legacy Supabase migration**, not a safe bootstrap for an independent PostgreSQL instance. It references `auth.users`, Supabase roles (`authenticated`, `service_role`), and Supabase-specific authorization policies/functions. The active `drizzle/schema.ts` now maps the independent SQL schema; the legacy migration snapshot must not be used. **Do not run the legacy migration against a new database.**
 
 The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an approved independent database configuration.
 
 ## Proposed schema (application-owned tables)
 
-- `users`: id (UUID), email (unique), display_name, created_at. Authentication credentials and sessions must be managed by the chosen auth provider; avoid storing plaintext passwords.
+- `users`: id (UUID), email (unique), display_name, created_at. Better Auth now uses `app_users` directly, with separate session/account/verification tables; see [authentication.md](authentication.md). Password login is disabled.
 - `projects`: id, name, city, directory_visibility (`community` / `building`), created_at.
 - `buildings`: id, project_id (FK), name; unique (project_id, name). Do not store `units_per_floor` as a structural assumption.
 - `floors`: id, building_id (FK), number (integer, supporting basement/ground floors); unique (building_id, number). A floor may have zero apartments.
@@ -42,10 +42,10 @@ The creation UI can accept a default number of floors and apartments per floor f
 2. Add `drizzle-orm`, `drizzle-kit`, and a PostgreSQL driver with a reproducible lockfile update. Replace the Lovable URL with a server-only `DATABASE_URL`, and supply a sanitized `.env.example`.
 3. Define the schema in `drizzle/schema.ts` and generate a fresh initial migration **from that schema**. Never mix the legacy empty Drizzle snapshot with a new migration journal.
 4. Add an ephemeral PostgreSQL integration test that runs migrations from scratch, validates foreign keys, uniqueness, and approval defaults.
-5. Select an authentication provider and define how its user IDs map to `users` before enabling registration.
+5. Better Auth maps its UUID user ID directly to `app_users.id`; configure Google and apply migration 0003 before enabling sign-in.
 6. Enforce role checks, approval status, building/project scope, and per-contact visibility **in server-side queries** before replacing mock data or deploying. Never rely on hidden UI controls as authorization.
 7. Add audited administrator workflows for membership approval and privacy-sensitive updates.
 
 ## Deployment boundary
 
-The current Next.js UI remains mock-only. This document does not add a live database connection, authentication, or permissions. No real resident data should be entered until server-side authorization and privacy tests are implemented.
+The current Next.js UI remains mock-only. The database connection and Google authentication/session foundation now exist; this document does not implement resident authorization or privacy-filtered queries. No real resident data should be entered until server-side authorization and privacy tests are implemented.

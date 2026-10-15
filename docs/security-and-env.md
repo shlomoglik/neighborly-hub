@@ -1,6 +1,6 @@
 # Environment configuration and repository security
 
-The Next.js UI preview currently uses mock data and requires **no** Supabase or database environment variables.
+The resident UI previews use mock data and require **no** Supabase or database variables. Google sign-in is opt-in and requires the server-only settings in [.env.example](../.env.example); see [authentication.md](authentication.md). Missing auth configuration disables sign-in and never grants access.
 
 ## Local environment files
 

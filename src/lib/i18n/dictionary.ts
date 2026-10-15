@@ -293,6 +293,32 @@ export const dict = {
     en: "משפחת לוי · Smith · Семья Козлов",
     ru: "משפחת לוי · Smith · Семья Козлов",
   },
+  authIntro: {
+    he: "כניסה לחשבון באמצעות Google",
+    en: "Sign in to your account with Google",
+    ru: "Войдите в аккаунт через Google",
+  },
+  authUnavailable: {
+    he: "ההתחברות עדיין אינה זמינה. יש להשלים את הגדרת השירות.",
+    en: "Sign-in is not available yet. Service setup is required.",
+    ru: "Вход пока недоступен. Необходимо завершить настройку сервиса.",
+  },
+  authFailed: {
+    he: "לא הצלחנו להתחבר. נסו שוב.",
+    en: "Could not sign in. Please try again.",
+    ru: "Не удалось войти. Попробуйте ещё раз.",
+  },
+  authAccessNotice: {
+    he: "כניסה לחשבון אינה מעניקה גישה אוטומטית לספר השכנים. השיוך וההרשאות מנוהלים בנפרד.",
+    en: "Signing in does not automatically grant access to the neighbors directory. Membership and permissions are managed separately.",
+    ru: "Вход в аккаунт не предоставляет автоматический доступ к справочнику соседей. Участие и права доступа настраиваются отдельно.",
+  },
+  authSignOutFailed: {
+    he: "לא הצלחנו לצאת מהחשבון. נסו שוב.",
+    en: "Could not sign out. Please try again.",
+    ru: "Не удалось выйти. Попробуйте ещё раз.",
+  },
+  authAccount: { he: "החשבון שלי", en: "My account", ru: "Мой аккаунт" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
