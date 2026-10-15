@@ -40,7 +40,12 @@ export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthCo
       accountLinking: { enabled: false, disableImplicitLinking: true },
       storeStateStrategy: "database",
     },
-    advanced: { database: { generateId: () => crypto.randomUUID() } },
+    advanced: {
+      database: { generateId: () => crypto.randomUUID() },
+      // The library otherwise skips origin checks in test environments.
+      disableOriginCheck: false,
+      disableCSRFCheck: false,
+    },
     rateLimit: { enabled: true },
     telemetry: { enabled: false },
   });

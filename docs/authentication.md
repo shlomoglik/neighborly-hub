@@ -27,7 +27,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 - `getCurrentUser(headers)` verifies the session through Better Auth and returns only `{ id, email, name }`. It does not trust a user ID from headers, query strings or local storage. Database failures propagate; they do not grant access.
 - `requireCurrentUser()` protects server pages with a redirect for anonymous users. `/account` uses this guard; `/api/me` returns the current identity or an uncached 401. It accepts no target-user ID and sends `Cache-Control: private, no-store` with `Vary: Cookie`.
 - Session cookies use the library's HttpOnly/SameSite defaults and Secure cookies on HTTPS. Database sessions last seven days with the library's one-day refresh interval. Cookie session caching is disabled, so deleted/revoked sessions cannot continue authenticating through a cached cookie payload.
-- Origin/CSRF checks remain enabled. Only the configured origin is trusted. Built-in rate limiting is enabled; its default in-process storage must be revisited before running multiple application instances.
+- Origin/CSRF checks are explicitly enabled in every environment, including tests (the library otherwise skips origin checks under test mode). Only the configured origin is trusted. Built-in rate limiting is enabled; its default in-process storage must be revisited before running multiple application instances.
 - Client sign-in uses fixed same-origin success/error destinations. Errors shown to users are localized and do not expose provider/database details. Loading buttons prevent duplicate operations.
 
 ## Deliberate access boundary

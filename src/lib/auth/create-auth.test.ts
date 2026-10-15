@@ -18,4 +18,6 @@ it("initializes the existing app_users adapter and secure cookie settings withou
   });
   expect(context.trustedOrigins).toContain("https://neighborly.test");
   expect("test" in context).toBe(false);
+  expect(context.skipOriginCheck).toBe(false);
+  expect(context.skipCSRFCheck).toBe(false);
 });
