@@ -5,7 +5,9 @@ const id = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("structure input", () => {
   it("accepts all entity types", () => {
-    expect(createStructure.parse({ entity: "project", name: " North " }).name).toBe("North");
+    const project = createStructure.parse({ entity: "project", name: " North " });
+    if (project.entity !== "project") throw new Error("Expected project");
+    expect(project.name).toBe("North");
 
     const building = { entity: "building", name: "A", projectId: id };
     expect(createStructure.safeParse(building).success).toBe(true);
