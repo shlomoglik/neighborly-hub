@@ -88,20 +88,29 @@ export function ProjectSetupWizard() {
               </label>
               <label className="block space-y-2">
                 <span>{t("city")}</span>
-                <Input required value={city} onChange={(e) => setCity(e.target.value)} />
+                <Input
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
               </label>
             </>
           )}
           {step === 1 && (
             <>
               {buildings.map((b) => (
-                <div key={b.id} className="space-y-3 rounded-2xl border border-border p-4">
+                <div
+                  key={b.id}
+                  className="space-y-3 rounded-2xl border border-border p-4"
+                >
                   <label className="block space-y-2">
                     <span>{t("building")}</span>
                     <Input
                       required
                       value={b.name}
-                      onChange={(e) => updateBuilding(b.id, { name: e.target.value })}
+                      onChange={(e) =>
+                        updateBuilding(b.id, { name: e.target.value })
+                      }
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -174,7 +183,9 @@ export function ProjectSetupWizard() {
                   {t("units")}
                 </div>
               ))}
-              <p className="text-sm text-muted-foreground">{t("previewNeighbor")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("previewNeighbor")}
+              </p>
             </div>
           )}
         </section>
