@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { staffHref } from "@/lib/access/staff-contracts";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -144,6 +145,11 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
               {t("managementCounts", data.counts)}
             </p>
             <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
+            {discovery?.canCreateProject && (
+              <Button variant="outline" asChild>
+                <Link href={staffHref(data.id)}>{t("staffManagement")}</Link>
+              </Button>
+            )}
           </header>
           <div ref={buildingControls}>
             <BuildingSelector
