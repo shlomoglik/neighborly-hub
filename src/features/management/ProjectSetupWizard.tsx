@@ -29,9 +29,7 @@ export function ProjectSetupWizard() {
   const [buildings, setBuildings] = useState<BuildingDraft[]>([initialBuilding()]);
   const steps = [t("project"), t("buildings"), t("stepReview")];
   const updateBuilding = (id: number, patch: Partial<BuildingDraft>) =>
-    setBuildings((items) =>
-      items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
+    setBuildings((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   const valid =
     step === 0
       ? Boolean(projectName.trim() && city.trim())
@@ -88,29 +86,20 @@ export function ProjectSetupWizard() {
               </label>
               <label className="block space-y-2">
                 <span>{t("city")}</span>
-                <Input
-                  required
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
+                <Input required value={city} onChange={(e) => setCity(e.target.value)} />
               </label>
             </>
           )}
           {step === 1 && (
             <>
               {buildings.map((b) => (
-                <div
-                  key={b.id}
-                  className="space-y-3 rounded-2xl border border-border p-4"
-                >
+                <div key={b.id} className="space-y-3 rounded-2xl border border-border p-4">
                   <label className="block space-y-2">
                     <span>{t("building")}</span>
                     <Input
                       required
                       value={b.name}
-                      onChange={(e) =>
-                        updateBuilding(b.id, { name: e.target.value })
-                      }
+                      onChange={(e) => updateBuilding(b.id, { name: e.target.value })}
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -121,9 +110,7 @@ export function ProjectSetupWizard() {
                         min={1}
                         max={200}
                         value={b.floors}
-                        onChange={(e) =>
-                          updateBuilding(b.id, { floors: Number(e.target.value) })
-                        }
+                        onChange={(e) => updateBuilding(b.id, { floors: Number(e.target.value) })}
                       />
                     </label>
                     <label className="space-y-2">
@@ -149,9 +136,7 @@ export function ProjectSetupWizard() {
                       variant="outline"
                       type="button"
                       onClick={() =>
-                        setBuildings((items) =>
-                          items.filter((item) => item.id !== b.id),
-                        )
+                        setBuildings((items) => items.filter((item) => item.id !== b.id))
                       }
                     >
                       {t("remove")}
@@ -183,13 +168,10 @@ export function ProjectSetupWizard() {
               </p>
               {buildings.map((b) => (
                 <div key={b.id} className="rounded-xl bg-muted p-3">
-                  {b.name}: {b.floors} {t("floors")} · {b.floors * b.unitsPerFloor}{" "}
-                  {t("units")}
+                  {b.name}: {b.floors} {t("floors")} · {b.floors * b.unitsPerFloor} {t("units")}
                 </div>
               ))}
-              <p className="text-sm text-muted-foreground">
-                {t("previewNeighbor")}
-              </p>
+              <p className="text-sm text-muted-foreground">{t("previewNeighbor")}</p>
             </div>
           )}
         </section>
@@ -203,11 +185,7 @@ export function ProjectSetupWizard() {
             {t("back")}
           </Button>
           {step < 2 ? (
-            <Button
-              type="button"
-              disabled={!valid}
-              onClick={() => setStep((s) => s + 1)}
-            >
+            <Button type="button" disabled={!valid} onClick={() => setStep((s) => s + 1)}>
               {steps[step + 1]}
             </Button>
           ) : (
