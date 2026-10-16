@@ -6,6 +6,47 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  setupCreated: { he: "הפרויקט נוצר בהצלחה", en: "Project created", ru: "Проект создан" },
+  setupCreatedDetails: {
+    he: "נשמרו {n} בניינים ו־{units} דירות.",
+    en: "Saved {n} buildings and {units} apartments.",
+    ru: "Сохранено домов: {n}, квартир: {units}.",
+  },
+  setupReviewHint: {
+    he: "יצירה תשמור את הפרויקט, הבניינים, הקומות והדירות יחד.",
+    en: "Create saves the project, buildings, floors and apartments together.",
+    ru: "Создание сохранит проект, дома, этажи и квартиры вместе.",
+  },
+  setupNumbering: {
+    he: "הקומות ממוספרות מ־0 (קרקע). הדירות ממוספרות ברצף מ־1 בכל בניין.",
+    en: "Floors start at 0 (ground floor). Apartments are numbered consecutively from 1 in each building.",
+    ru: "Этажи начинаются с 0 (первый уровень). Квартиры нумеруются подряд с 1 в каждом доме.",
+  },
+  setupBuildingsInvalid: {
+    he: "יש להזין שמות בניינים ייחודיים ומספרים שלמים בין 1 ל־200. עד {buildings} בניינים, {floors} קומות ו־{units} דירות בפרויקט.",
+    en: "Use unique building names and whole numbers from 1 to 200. Limit: {buildings} buildings, {floors} floors and {units} apartments per project.",
+    ru: "Укажите уникальные названия домов и целые числа от 1 до 200. Лимит на проект: {buildings} домов, {floors} этажей и {units} квартир.",
+  },
+  setupInvalid: {
+    he: "פרטי הפרויקט אינם תקינים. חזרו ובדקו את השדות.",
+    en: "Project details are invalid. Go back and check the fields.",
+    ru: "Некорректные данные проекта. Вернитесь и проверьте поля.",
+  },
+  setupForbidden: {
+    he: "יצירת פרויקט זמינה למנהלי המערכת בלבד. ההרשאות נבדקות מחדש בכל שליחה.",
+    en: "Only system administrators can create projects. Permissions are checked on every submission.",
+    ru: "Только администраторы системы могут создавать проекты. Права проверяются при каждой отправке.",
+  },
+  setupExpired: {
+    he: "ההתחברות הסתיימה. התחברו מחדש לפני יצירת הפרויקט.",
+    en: "Your session has ended. Sign in again before creating the project.",
+    ru: "Сеанс завершён. Войдите снова перед созданием проекта.",
+  },
+  setupFailed: {
+    he: "לא ניתן לאשר שהפרויקט נוצר. בדקו בספר הפרויקטים לפני ניסיון נוסף כדי למנוע כפילות.",
+    en: "Creation could not be confirmed. Check the project list in the directory before trying again to avoid duplicates.",
+    ru: "Не удалось подтвердить создание. Перед повторной попыткой проверьте список проектов в справочнике, чтобы избежать дубликатов.",
+  },
   refreshDirectory: { he: "רענון הספר", en: "Refresh directory", ru: "Обновить справочник" },
   chooseProject: { he: "בחירת פרויקט", en: "Choose a project", ru: "Выберите проект" },
   directoryUnlinked: {

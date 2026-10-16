@@ -3,12 +3,15 @@ name: Storybook screenshots
 # Visual review is explicitly requested, never part of automatic PR checks.
 on:
   workflow_dispatch:
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
 jobs:
   capture:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'screenshots'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
