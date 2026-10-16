@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   managementHref,
@@ -25,11 +26,37 @@ export type ManagementWorkspaceProps = {
 export function ManagementWorkspace(p: ManagementWorkspaceProps) {
   const { t } = useI18n();
   const { discovery, data, status } = p;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const buildingControls = useRef<HTMLDivElement>(null);
+  const restoreFocus = useRef<"building" | "heading" | null>(null);
+  useEffect(() => {
+    if (status === "loading" || !restoreFocus.current) return;
+    const target =
+      restoreFocus.current === "building" && status === "ready"
+        ? buildingControls.current?.querySelector<HTMLInputElement>("input:checked")
+        : null;
+    (target ?? heading.current)?.focus();
+    restoreFocus.current = null;
+  }, [status, data]);
+  const refresh = () => {
+    restoreFocus.current = "heading";
+    p.onRefresh();
+  };
+  const changePage = (page: number) => {
+    restoreFocus.current = "heading";
+    p.onPageChange(page);
+  };
+  const changeBuilding = (id: string) => {
+    restoreFocus.current = "building";
+    p.onBuildingChange(id);
+  };
   return (
     <section className="space-y-5" aria-label={t("manage")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t("manage")}</h1>
-        <Button variant="outline" onClick={p.onRefresh} disabled={status === "loading"}>
+        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
+          {t("manage")}
+        </h1>
+        <Button variant="outline" onClick={refresh} disabled={status === "loading"}>
           {t("refreshManagement")}
         </Button>
         {discovery?.canCreateProject && (
@@ -63,7 +90,7 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
             <Button
               variant="outline"
               disabled={discovery.page <= 1}
-              onClick={() => p.onPageChange(discovery.page - 1)}
+              onClick={() => changePage(discovery.page - 1)}
             >
               {t("directoryPrevious")}
             </Button>
@@ -71,7 +98,7 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
             <Button
               variant="outline"
               disabled={!discovery.hasNext}
-              onClick={() => p.onPageChange(discovery.page + 1)}
+              onClick={() => changePage(discovery.page + 1)}
             >
               {t("directoryNext")}
             </Button>
@@ -79,19 +106,15 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
         </nav>
       )}
       {status === "loading" && <CommunitySkeleton variant="map" />}
-      {status === "error" && <SystemFeedback kind="error" onRetry={p.onRefresh} />}
+      {status === "error" && <SystemFeedback kind="error" onRetry={refresh} />}
       {status === "empty" && <SystemFeedback kind="empty" message={t("managementEmpty")} />}
       {status === "forbidden" && (
-        <SystemFeedback kind="private" message={t("managementForbidden")} onRetry={p.onRefresh} />
+        <SystemFeedback kind="private" message={t("managementForbidden")} onRetry={refresh} />
       )}
       {status === "unavailable" && (
         <div className="space-y-3">
-          <SystemFeedback
-            kind="private"
-            message={t("managementUnavailable")}
-            onRetry={p.onRefresh}
-          />
-          <Button variant="outline" onClick={() => p.onBuildingChange("")}>
+          <SystemFeedback kind="private" message={t("managementUnavailable")} onRetry={refresh} />
+          <Button variant="outline" onClick={() => changeBuilding("")}>
             {t("allBuildings")}
           </Button>
           <Link href="/manage" className="block text-primary underline">
@@ -122,11 +145,13 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
             </p>
             <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
           </header>
-          <BuildingSelector
-            buildings={data.buildings}
-            value={p.buildingId}
-            onChange={p.onBuildingChange}
-          />
+          <div ref={buildingControls}>
+            <BuildingSelector
+              buildings={data.buildings}
+              value={p.buildingId}
+              onChange={changeBuilding}
+            />
+          </div>
           {!data.buildings.length && (
             <SystemFeedback kind="empty" message={t("managementNoBuildings")} />
           )}

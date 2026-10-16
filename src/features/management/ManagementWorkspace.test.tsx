@@ -39,7 +39,7 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
     onRefresh: vi.fn(),
     ...overrides,
   };
-  render(
+  const view = (value: ManagementWorkspaceProps) => (
     <I18nContext.Provider
       value={{
         lang,
@@ -48,10 +48,15 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
         t: (key, vars) => translate(lang, key, vars),
       }}
     >
-      <ManagementWorkspace {...props} />
-    </I18nContext.Provider>,
+      <ManagementWorkspace {...value} />
+    </I18nContext.Provider>
   );
-  return props;
+  const rendered = render(view(props));
+  return {
+    ...props,
+    update: (changes: Partial<ManagementWorkspaceProps>) =>
+      rendered.rerender(view({ ...props, ...changes })),
+  };
 }
 it.each(["he", "en", "ru"] as const)(
   "renders saved structure, scoped counts, neutral apartments and empty floors in %s",
@@ -129,4 +134,18 @@ it("renders an empty saved project and provides explicit discovery pagination", 
   expect(screen.getByText(translate("en", "managementNoBuildings"))).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: translate("en", "directoryNext") }));
   expect(p.onPageChange).toHaveBeenCalledWith(3);
+});
+
+it("restores keyboard focus after building loads and refresh", () => {
+  const p = mount();
+  fireEvent.click(screen.getByRole("radio", { name: "Building" }));
+  p.update({ status: "loading", data: null, discovery: null, buildingId: "b" });
+  p.update({ status: "ready", buildingId: "b" });
+  expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Building" }));
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "refreshManagement") }));
+  p.update({ status: "loading", data: null, discovery: null });
+  p.update({ status: "ready" });
+  expect(document.activeElement).toBe(
+    screen.getByRole("heading", { name: translate("en", "manage") }),
+  );
 });

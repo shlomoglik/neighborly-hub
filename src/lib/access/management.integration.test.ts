@@ -116,6 +116,7 @@ describe.skipIf(!url)("PostgreSQL management authorization and authenticated rou
   afterAll(async () => {
     if (!fixture) return;
     try {
+      await fixture.db.delete(s.userPersonLinks).where(eq(s.userPersonLinks.userId, resident));
       await fixture.db.delete(s.projects).where(inArray(s.projects.id, [projectId, otherId]));
       await fixture.db.delete(s.appUsers).where(inArray(s.appUsers.id, users));
       await fixture.db.delete(s.parties).where(eq(s.parties.id, party));

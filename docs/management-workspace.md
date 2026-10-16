@@ -19,7 +19,7 @@ DTOs contain no residents, households, contacts, ownership, identity links, raw 
 
 The API adapter, `useManagement` coordinator and pure `ManagementWorkspace` presentation are separate. All request keys immediately invalidate the previous discovery/hierarchy during render. Obsolete requests are aborted and late responses ignored even if a transport ignores cancellation. Errors never fall back to mocks or another project. A revoked selected building shows an unavailable state until the user explicitly changes selection.
 
-Revalidation follows the directory approach: refresh action, focus, visible-tab polling every 30 seconds, visibility and page lifecycle events. Hidden/cached pages clear data and reload on return. Expired sessions show a sign-in action; network/server failures have explicit retry. Initial and selection changes use existing reduced-motion-aware skeletons and transitions. Hebrew RTL, English and Russian share typed dictionaries.
+Revalidation follows the directory approach: refresh action, focus, visible-tab polling every 30 seconds, visibility and page lifecycle events. Hidden/cached pages clear data and reload on return. Expired sessions show a sign-in action; network/server failures have explicit retry. Initial and selection changes use existing reduced-motion-aware skeletons and transitions. User-triggered loading restores keyboard focus to the selected building or workspace heading. Hebrew RTL, English and Russian share typed dictionaries.
 
 Storybook mounts only synthetic presentation fixtures; it never calls authenticated APIs. Screenshots remain on demand.
 
