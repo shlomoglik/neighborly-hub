@@ -27,4 +27,4 @@ Storybook mounts only synthetic presentation fixtures; it never calls authentica
 
 `management.integration.test.ts` runs against migrated disposable PostgreSQL in the database CI job. It exercises verified sessions, forged identity claims, the authorization matrix, multiple grants, cross-project isolation, scoped counts, actual hierarchy reads, resident-directory separation, pagination, empty structures, ordering and revocation/expiry. Setup integration additionally reads the created structure through the management service. Client tests cover stale-response suppression, invalidation, revalidation, localized states, capability-based creation and direct setup navigation.
 
-This feature is structural browsing only. Structural editing, staff provisioning/assignment, resident onboarding, approval mutations and approval counts remain outside this workflow.
+This feature is structural browsing only. Global administrators can now provision and revoke scoped staff assignments for existing registered accounts; see [staff management](staff-management.md). Structural editing, resident onboarding, approval mutations and approval counts remain outside this workflow.
