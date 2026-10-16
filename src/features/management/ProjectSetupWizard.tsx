@@ -134,7 +134,9 @@ export function ProjectSetupWizard() {
                         max={200}
                         value={b.unitsPerFloor}
                         onChange={(e) =>
-                          updateBuilding(b.id, { unitsPerFloor: Number(e.target.value) })
+                          updateBuilding(b.id, {
+                            unitsPerFloor: Number(e.target.value),
+                          })
                         }
                       />
                     </label>
@@ -147,7 +149,9 @@ export function ProjectSetupWizard() {
                       variant="outline"
                       type="button"
                       onClick={() =>
-                        setBuildings((items) => items.filter((item) => item.id !== b.id))
+                        setBuildings((items) =>
+                          items.filter((item) => item.id !== b.id),
+                        )
                       }
                     >
                       {t("remove")}
