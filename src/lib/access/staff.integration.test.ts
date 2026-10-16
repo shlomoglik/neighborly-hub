@@ -232,16 +232,14 @@ describe.skipIf(!url)("PostgreSQL administrator staff assignment lifecycle", () 
       name: `Page ${String(i).padStart(2, "0")}`,
     }));
     await fixture.db.insert(s.buildings).values(buildings);
-    await fixture.db
-      .insert(s.staffAssignments)
-      .values(
-        buildings.map((b) => ({
-          userId: target,
-          projectId: project,
-          role: "building_manager",
-          buildingId: b.id,
-        })),
-      );
+    await fixture.db.insert(s.staffAssignments).values(
+      buildings.map((b) => ({
+        userId: target,
+        projectId: project,
+        role: "building_manager",
+        buildingId: b.id,
+      })),
+    );
     const first = await readProjectStaff(fixture.db, admin, project);
     const next = await readProjectStaff(fixture.db, admin, project, 2);
     expect(first.assignments).toHaveLength(20);
