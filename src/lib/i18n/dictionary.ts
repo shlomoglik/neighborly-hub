@@ -6,6 +6,66 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  saving: { he: "שומר…", en: "Saving…", ru: "Сохранение…" },
+  staffRole: { he: "תפקיד", en: "Role", ru: "Роль" },
+  staffManagement: { he: "ניהול מנהלים", en: "Manage staff", ru: "Управление назначениями" },
+  backToProject: { he: "חזרה לפרויקט", en: "Back to project", ru: "Вернуться к проекту" },
+  staffAdd: { he: "הוספת מינוי", en: "Add assignment", ru: "Добавить назначение" },
+  staffAssignments: { he: "מינויים קיימים", en: "Current assignments", ru: "Текущие назначения" },
+  staffRegisteredHint: {
+    he: "הזינו כתובת אימייל מדויקת של משתמש שכבר נרשם. המינוי מעניק גישה בהיקף שנבחר, ואינו משייך דייר או מעניק הרשאת מנהל מערכת.",
+    en: "Enter the exact email of an existing registered user. The assignment grants the selected scope; it does not link a resident or grant system administration.",
+    ru: "Введите точный email уже зарегистрированного пользователя. Назначение предоставляет доступ в выбранных пределах, без привязки жильца и без прав администратора системы.",
+  },
+  staffAdminOnly: {
+    he: "ניהול מינויים זמין למנהלי מערכת בלבד.",
+    en: "Only system administrators can manage staff assignments.",
+    ru: "Только администраторы системы могут управлять назначениями.",
+  },
+  staffEmpty: {
+    he: "אין מינויים בעמוד זה.",
+    en: "No assignments on this page.",
+    ru: "На этой странице нет назначений.",
+  },
+  staffRevoke: { he: "ביטול מינוי", en: "Revoke assignment", ru: "Отозвать назначение" },
+  staffRevokeFor: {
+    he: "ביטול המינוי של {email} — {scope}",
+    en: "Revoke assignment for {email} — {scope}",
+    ru: "Отозвать назначение {email} — {scope}",
+  },
+  staffRevokeConfirm: {
+    he: "לבטל את המינוי של {email} עבור {scope}? הרשאה זו תוסר; הרשאות עצמאיות אחרות יישארו בתוקף.",
+    en: "Revoke the assignment for {email} in {scope}? This grant will be removed; other independent grants will remain.",
+    ru: "Отозвать назначение {email} для {scope}? Это разрешение будет удалено; остальные независимые разрешения сохранятся.",
+  },
+  staffAdded: { he: "המינוי נשמר.", en: "Assignment saved.", ru: "Назначение сохранено." },
+  staffRemoved: { he: "המינוי בוטל.", en: "Assignment revoked.", ru: "Назначение отозвано." },
+  staffDuplicate: {
+    he: "המינוי הזה כבר קיים.",
+    en: "This assignment already exists.",
+    ru: "Такое назначение уже существует.",
+  },
+  staffUserUnavailable: {
+    he: "לא נמצא משתמש רשום יחיד בכתובת זו. ודאו שנרשם ובדקו את כתובת האימייל.",
+    en: "No unique registered user matches this email. Check the email and ask the user to sign in first.",
+    ru: "Не найден единственный зарегистрированный пользователь с этим email. Проверьте адрес и попросите пользователя сначала войти.",
+  },
+  staffInvalid: {
+    he: "יש לבדוק את כתובת האימייל, התפקיד והבניין שנבחרו.",
+    en: "Check the email, role and selected building.",
+    ru: "Проверьте email, роль и выбранный дом.",
+  },
+  staffAccessChanged: {
+    he: "הפעולה לא בוצעה כי הגישה או היעד אינם זמינים. יש לרענן ולבדוק הרשאות.",
+    en: "The action could not be completed because access or the target is unavailable. Refresh and check permissions.",
+    ru: "Действие не выполнено: доступ или объект недоступен. Обновите страницу и проверьте права.",
+  },
+  staffUncertain: {
+    he: "לא ניתן לאשר שהפעולה הושלמה. רעננו ובדקו את המינויים לפני ניסיון נוסף.",
+    en: "The result could not be confirmed. Refresh and inspect assignments before trying again.",
+    ru: "Не удалось подтвердить результат. Обновите список назначений перед повторной попыткой.",
+  },
+
   demoCity: { he: "עיר לדוגמה", en: "Example city", ru: "Пример города" },
   apartments: { he: "דירות", en: "Apartments", ru: "Квартиры" },
   openProjectManagement: {

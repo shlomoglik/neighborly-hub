@@ -149,3 +149,12 @@ it("restores keyboard focus after building loads and refresh", () => {
     screen.getByRole("heading", { name: translate("en", "manage") }),
   );
 });
+
+it("shows staff management only for the server-derived global administrator capability", () => {
+  const p = mount();
+  expect(screen.queryByRole("link", { name: translate("en", "staffManagement") })).toBeNull();
+  p.update({ discovery: { ...p.discovery!, canCreateProject: true } });
+  expect(
+    screen.getByRole("link", { name: translate("en", "staffManagement") }).getAttribute("href"),
+  ).toBe("/manage/staff/p");
+});
