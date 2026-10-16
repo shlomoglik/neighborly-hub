@@ -23,4 +23,4 @@ The server validates the nested input with Zod, then inserts the project, buildi
 
 The endpoint returns 404 outside `NODE_ENV=development`; it is not authenticated and must never be exposed with real resident data. The existing per-entity CRUD remains available for editing individual records.
 
-Tests cover input validation. **A live PostgreSQL integration test exercising this TypeScript transaction and rollback is still required**; the existing SQL smoke tests do not exercise this code path.
+The same hierarchy writer is used by the [authenticated setup workflow](project-setup.md), which owns a separate admin authorization boundary and accepts a compact, bounded payload. `src/lib/access/project-setup.integration.test.ts` exercises this TypeScript transaction against PostgreSQL, including rollback when a later building has duplicate apartment numbers. CI runs this suite against its disposable migrated database.
