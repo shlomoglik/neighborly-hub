@@ -6,6 +6,60 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  demoCity: { he: "עיר לדוגמה", en: "Example city", ru: "Пример города" },
+  apartments: { he: "דירות", en: "Apartments", ru: "Квартиры" },
+  openProjectManagement: {
+    he: "לניהול הפרויקט",
+    en: "Open project management",
+    ru: "Открыть управление проектом",
+  },
+  refreshManagement: { he: "רענון הניהול", en: "Refresh management", ru: "Обновить управление" },
+  managementEmpty: {
+    he: "אין פרויקטים בעמוד זה.",
+    en: "No projects on this page.",
+    ru: "На этой странице нет проектов.",
+  },
+  managementForbidden: {
+    he: "אין לך הרשאות ניהול. יש לפנות למנהל המערכת לקבלת גישה.",
+    en: "You have no management access. Contact a system administrator.",
+    ru: "У вас нет прав управления. Обратитесь к администратору системы.",
+  },
+  managementUnavailable: {
+    he: "הפרויקט או הבניין אינם זמינים. ייתכן שהגישה השתנתה. המידע הקודם הוסר.",
+    en: "This project or building is unavailable. Access may have changed. Previous data was removed.",
+    ru: "Проект или дом недоступен. Возможно, права изменились. Прежние данные удалены.",
+  },
+  managementExpired: {
+    he: "ההתחברות הסתיימה. יש להתחבר מחדש כדי לצפות בניהול.",
+    en: "Your session has ended. Sign in again to view management.",
+    ru: "Сеанс завершён. Войдите снова для управления.",
+  },
+  managementCounts: {
+    he: "בגישה שלך: {buildings} בניינים · {floors} קומות · {apartments} דירות",
+    en: "In your scope: {buildings} buildings · {floors} floors · {apartments} apartments",
+    ru: "В вашем доступе: {buildings} домов · {floors} этажей · {apartments} квартир",
+  },
+  managementStructureHint: {
+    he: "תצוגת מבנה בלבד. אין כאן מידע על אכלוס הדירות.",
+    en: "Structure only. Apartment occupancy is not shown here.",
+    ru: "Только структура. Информация о заселённости квартир здесь не отображается.",
+  },
+  managementNoBuildings: {
+    he: "עדיין אין בניינים בפרויקט.",
+    en: "This project has no buildings yet.",
+    ru: "В этом проекте пока нет домов.",
+  },
+  managementNoFloors: {
+    he: "עדיין אין קומות בבניין.",
+    en: "This building has no floors yet.",
+    ru: "В этом доме пока нет этажей.",
+  },
+  managementNoApartments: {
+    he: "עדיין אין דירות בקומה.",
+    en: "This floor has no apartments yet.",
+    ru: "На этом этаже пока нет квартир.",
+  },
+
   setupCreated: { he: "הפרויקט נוצר בהצלחה", en: "Project created", ru: "Проект создан" },
   setupCreatedDetails: {
     he: "נשמרו {n} בניינים ו־{units} דירות.",

@@ -8,6 +8,7 @@ import * as s from "../../../drizzle/schema";
 import { createAuth } from "../auth/create-auth";
 import { createProjectStructure } from "../db/project-structure";
 import { canCreateProject } from "./project-setup";
+import { readManagementHierarchy } from "./management";
 import { readDirectoryProjects } from "./projects";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/server", () => ({ getAuth: async () => fixture.auth }));
@@ -117,6 +118,10 @@ describe.skipIf(!url)("PostgreSQL authenticated project setup", () => {
     const response = await call("created", admin);
     expect(response.status).toBe(201);
     const { projectId } = await response.json();
+    expect(await readManagementHierarchy(fixture.db, admin, projectId)).toMatchObject({
+      id: projectId,
+      counts: { buildings: 2, floors: 3, apartments: 8 },
+    });
     expect(await projectsNamed("created")).toMatchObject([{ id: projectId, city: "Sderot" }]);
     const rows = await fixture.db
       .select({ building: s.buildings.name, floor: s.floors.number, unit: s.apartments.number })

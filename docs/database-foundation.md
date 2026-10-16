@@ -48,4 +48,4 @@ The creation UI can accept a default number of floors and apartments per floor f
 
 ## Deployment boundary
 
-The current Next.js UI remains mock-only. The database connection and Google authentication/session foundation now exist; this document does not implement resident authorization or privacy-filtered queries. No real resident data should be entered until server-side authorization and privacy tests are implemented.
+The directory now uses authenticated, privacy-filtered resident reads; see [resident authorization](resident-authorization.md). The management workspace uses authenticated structural reads; see [management workspace](management-workspace.md). Household details and joining remain synthetic previews.
