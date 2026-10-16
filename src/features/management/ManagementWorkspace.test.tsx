@@ -1,0 +1,132 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { I18nContext } from "@/lib/i18n/context";
+import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
+import { ManagementWorkspace, type ManagementWorkspaceProps } from "./ManagementWorkspace";
+afterEach(cleanup);
+function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> = {}) {
+  const props: ManagementWorkspaceProps = {
+    status: "ready",
+    selectedProjectId: "p",
+    buildingId: "",
+    discovery: {
+      projects: [{ id: "p", name: "Saved project", city: "Sderot" }],
+      page: 1,
+      hasNext: false,
+      canCreateProject: false,
+      hasManagementAccess: true,
+    },
+    data: {
+      id: "p",
+      name: "Saved project",
+      city: "Sderot",
+      buildings: [
+        { id: "a", name: "Empty building", floors: [] },
+        {
+          id: "b",
+          name: "Building",
+          floors: [
+            { id: "f", number: 0, apartments: [] },
+            { id: "g", number: 1, apartments: [{ id: "u", number: "2" }] },
+          ],
+        },
+      ],
+      counts: { buildings: 2, floors: 2, apartments: 1 },
+    },
+    onBuildingChange: vi.fn(),
+    onPageChange: vi.fn(),
+    onRefresh: vi.fn(),
+    ...overrides,
+  };
+  render(
+    <I18nContext.Provider
+      value={{
+        lang,
+        dir: directionFor(lang),
+        setLang: () => {},
+        t: (key, vars) => translate(lang, key, vars),
+      }}
+    >
+      <ManagementWorkspace {...props} />
+    </I18nContext.Provider>,
+  );
+  return props;
+}
+it.each(["he", "en", "ru"] as const)(
+  "renders saved structure, scoped counts, neutral apartments and empty floors in %s",
+  (lang) => {
+    const props = mount(lang);
+    expect(screen.getByText(translate(lang, "managementCounts", props.data!.counts))).toBeTruthy();
+    expect(screen.getByText(translate(lang, "managementNoFloors"))).toBeTruthy();
+    expect(screen.getByText(translate(lang, "managementNoApartments"))).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.queryByText(translate(lang, "vacant"))).toBeNull();
+    expect(screen.queryByText(translate(lang, "noPending"))).toBeNull();
+    expect(screen.queryByRole("link", { name: translate(lang, "newProject") })).toBeNull();
+    const link = screen.getByRole("link", { name: /Saved project/ });
+    expect(link.getAttribute("href")).toBe("/manage?project=p");
+    expect(link.getAttribute("aria-current")).toBe("page");
+    fireEvent.click(screen.getByRole("radio", { name: "Building" }));
+    expect(props.onBuildingChange).toHaveBeenCalledWith("b");
+  },
+);
+it("shows the creation link exclusively for the server capability", () => {
+  mount("en", {
+    discovery: {
+      projects: [],
+      page: 1,
+      hasNext: false,
+      canCreateProject: true,
+      hasManagementAccess: true,
+    },
+    status: "empty",
+    data: null,
+  });
+  expect(
+    screen.getByRole("link", { name: translate("en", "newProject") }).getAttribute("href"),
+  ).toBe("/manage/setup");
+});
+it.each(["he", "en", "ru"] as const)("localizes all asynchronous states in %s", (lang) => {
+  for (const [status, key] of [
+    ["empty", "managementEmpty"],
+    ["forbidden", "managementForbidden"],
+    ["unavailable", "managementUnavailable"],
+    ["expired", "managementExpired"],
+    ["error", "loadError"],
+    ["loading", "loading"],
+  ] as const) {
+    const p = mount(lang, { status, discovery: null, data: null });
+    expect(screen.getByText(translate(lang, key))).toBeTruthy();
+    if (["error", "forbidden", "unavailable"].includes(status)) {
+      fireEvent.click(screen.getByRole("button", { name: translate(lang, "retry") }));
+      expect(p.onRefresh).toHaveBeenCalledOnce();
+    }
+    if (status === "expired")
+      expect(
+        screen.getByRole("link", { name: translate(lang, "signIn") }).getAttribute("href"),
+      ).toBe("/auth");
+    cleanup();
+  }
+});
+it("renders an empty saved project and provides explicit discovery pagination", () => {
+  const p = mount("en", {
+    data: {
+      id: "p",
+      name: "Empty project",
+      city: null,
+      buildings: [],
+      counts: { buildings: 0, floors: 0, apartments: 0 },
+    },
+    discovery: {
+      projects: [],
+      page: 2,
+      hasNext: true,
+      canCreateProject: false,
+      hasManagementAccess: true,
+    },
+  });
+  expect(screen.getByText(translate("en", "managementNoBuildings"))).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "directoryNext") }));
+  expect(p.onPageChange).toHaveBeenCalledWith(3);
+});

@@ -60,8 +60,10 @@ it.each(["he", "en", "ru"] as const)(
       buildings: [{ name: "A", floors: 2, unitsPerFloor: 3 }],
     });
     expect(
-      screen.getByRole("link", { name: translate(lang, "openBook") }).getAttribute("href"),
-    ).toBe("/directory");
+      screen
+        .getByRole("link", { name: translate(lang, "openProjectManagement") })
+        .getAttribute("href"),
+    ).toBe(`/manage?project=${result.projectId}`);
     expect(screen.queryByRole("button", { name: translate(lang, "create") })).toBeNull();
   },
 );

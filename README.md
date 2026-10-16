@@ -213,3 +213,5 @@ For setup and migration caveats, see [Database README](database/README.md) and [
 The authenticated directory is connected to server-authorized data. Next: scoped manager workflows for joining, verifying resident links and approving households. Household details, editing, birthdays and organization directories require dedicated authorized endpoints; their existing previews are not live-data features.
 
 Resident identity provisioning, deployment prerequisites and revocation behavior are documented in [resident authorization](docs/resident-authorization.md). Screenshots remain on demand only.
+
+See [Live management workspace](docs/management-workspace.md) for authenticated project discovery, structural browsing and management authorization.

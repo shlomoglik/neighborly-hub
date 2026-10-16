@@ -17,6 +17,7 @@ import {
   type ProjectSetupInput,
   type ProjectSetupResult,
 } from "@/lib/db/project-setup-input";
+import { managementHref } from "@/lib/access/management-contracts";
 import { createProject, ProjectSetupRequestError } from "./project-setup-api";
 
 type BuildingDraft = {
@@ -118,8 +119,11 @@ export function ProjectSetupWizard({
               units: buildings.reduce((total, b) => total + b.floors * b.unitsPerFloor, 0),
             })}
           </p>
-          <Link href="/directory" className="inline-block text-primary underline">
-            {t("openBook")}
+          <Link
+            href={managementHref(result.projectId)}
+            className="inline-block text-primary underline"
+          >
+            {t("openProjectManagement")}
           </Link>
         </section>
       </AppShell>

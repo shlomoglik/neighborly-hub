@@ -32,7 +32,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 
 ## Deliberate access boundary
 
-Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). Household details, joining and management screens remain synthetic previews. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
+Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). The management workspace uses separately authorized structural reads described in [management workspace](management-workspace.md). Household details and joining remain synthetic previews. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
 
 The next PR must implement explicit user/person/membership links, project/building/approval checks and contact visibility filtering on the server before connecting resident data. Do not use `households.created_by` as the sole proof of residency.
 
