@@ -30,6 +30,7 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     pendingPerson,
   ] = ids;
   const extraPeople: string[] = [];
+  const crossProjectPeople: string[] = [];
   let client: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle<typeof schema>>;
   beforeAll(async () => {
@@ -108,7 +109,7 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
     try {
       await client`DELETE FROM user_person_links WHERE user_id IN ${client([resident, pending])}`;
       await client`DELETE FROM projects WHERE id IN ${client([project, otherProject])}`;
-      await client`DELETE FROM parties WHERE id IN ${client([personA, personB, child, pendingPerson, ...extraPeople])}`;
+      await client`DELETE FROM parties WHERE id IN ${client([personA, personB, child, pendingPerson, ...extraPeople, ...crossProjectPeople])}`;
       await client`DELETE FROM app_users WHERE id IN ${client([admin, resident, pending, manager, outsider])}`;
     } finally {
       await client.end();
@@ -133,7 +134,7 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
       { length: 5 },
       () => crypto.randomUUID(),
     );
-    extraPeople.push(otherPerson);
+    crossProjectPeople.push(otherPerson);
     await db
       .insert(schema.buildings)
       .values({ id: otherBuilding, projectId: otherProject, name: "Elsewhere" });
