@@ -58,7 +58,7 @@ Requires Docker Compose, Node 24 and pnpm 10.18.3. `compose.pilot.yml` exposes P
 2. Run `pnpm pilot:db`.
 3. Configure `.env.local` using `.env.example`, with `DATABASE_URL=postgresql://neighborly:<local-password>@127.0.0.1:55432/neighborly_pilot`, `BETTER_AUTH_URL=http://localhost:3000`, an independent auth secret and real local Google OAuth settings. Both local files are ignored by Git. Never overwrite an existing `.env.local` containing another environment's settings.
 4. Start `pnpm dev --hostname 127.0.0.1`; use the localhost OAuth callback described in [authentication](authentication.md). Provision an actual verified administrator UUID as above.
-5. Stop with `docker compose --env-file .env.pilot.local -f compose.pilot.yml stop`. Keep the volume if retaining the pilot. New migrations must be applied explicitly to an existing volume; startup does not rerun them.
+5. Stop with `docker compose --env-file .env.pilot.local -f compose.pilot.yml stop`. Keep the volume if retaining the pilot. New migrations must be applied explicitly to an existing volume; startup does not rerun them. Hosted Production builds use the [deployment migration gate](deployment-migrations.md), which requires one-time history adoption for databases originally initialized manually.
 
 No reset/delete-volume command runs automatically. A local loopback address is not reachable from a physical phone; use the separate public HTTPS pilot for device checks.
 

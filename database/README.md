@@ -2,6 +2,10 @@
 
 This PR introduces a **standalone PostgreSQL schema and integration smoke test** for the model approved in `docs/database-foundation.md`.
 
+## Deployment automation
+
+Production Vercel builds now apply pending migrations with checksummed history and a transaction lock before publication. Existing manually initialized databases require explicit one-time adoption. See [deployment migrations](../docs/deployment-migrations.md) for activation, failure handling and rollback constraints. Do not mix manual SQL application with the runner after adoption.
+
 ## Run locally
 
 With PostgreSQL 16 running and an empty database:
