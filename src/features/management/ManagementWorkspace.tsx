@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { invitationAdminHref } from "@/lib/access/invitation-contracts";
 import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
 import { staffHref } from "@/lib/access/staff-contracts";
 import { useEffect, useRef } from "react";
@@ -152,6 +153,9 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
               {t("managementCounts", data.counts)}
             </p>
             <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
+            <Button variant="outline" asChild>
+              <Link href={invitationAdminHref(data.id)}>{t("inviteManagement")}</Link>
+            </Button>
             {discovery?.canCreateProject && (
               <Button variant="outline" asChild>
                 <Link href={staffHref(data.id)}>{t("staffManagement")}</Link>

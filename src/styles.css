@@ -240,3 +240,26 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media print {
+  body:has(.invitation-print) * {
+    visibility: hidden !important;
+  }
+  body:has(.invitation-print) .invitation-print,
+  body:has(.invitation-print) .invitation-print * {
+    visibility: visible !important;
+  }
+  body:has(.invitation-print) .invitation-print {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: white;
+    color: black;
+    border: 0;
+    box-shadow: none;
+  }
+  body:has(.invitation-print) .invitation-no-print,
+  body:has(.invitation-print) .invitation-no-print * {
+    display: none !important;
+  }
+}

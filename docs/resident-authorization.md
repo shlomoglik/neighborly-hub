@@ -6,7 +6,7 @@ Apply `database/migrations/0004_resident_identity.sql` after migration 0003, usi
 
 `user_person_links` maps one authenticated `app_users.id` to one `people.party_id`. Both columns are unique; deleting either identity removes the link. The required `verified_by` records a different existing user; deleting that verifier is restricted while links reference them.
 
-There is deliberately no public link-creation API. A trusted database administrator must verify identity outside the application and provision the link using parameterized SQL with the intended user, person and verifier UUIDs. The verifier column records provenance, not a database role check: the application database credential must remain server-only and restricted to trusted operators. Do not infer links from email, names, apartment ownership or `households.created_by`. An authenticated user cannot claim a resident by supplying a UUID. A future manager workflow must authorize the actor and scope before any mutation.
+There is no arbitrary public identity-link API. A trusted database administrator can provision verified links using parameterized SQL, or an authorized manager can verify and approve an invitation request through the scoped [onboarding workflow](invitation-onboarding.md). Approval reuses an existing linked person, or creates a new person and records the reviewing manager as verifier. The verifier column records provenance, not a database role check: the application database credential must remain server-only and restricted to trusted operators. Do not infer links from email, names, apartment ownership or `households.created_by`. An authenticated user cannot claim a resident by supplying a UUID. Invitation approval authorizes actor and scope before any mutation. Existing people are never claimed by name, email or supplied person UUID.
 
 ## Read boundary
 
@@ -27,7 +27,7 @@ This endpoint is a directory, not a moderation queue: even managers see only act
 
 ## Verification and scope
 
-Unit tests cover the scope rules and HTTP identity/cache/error boundary. `AUTH_TEST_DATABASE_URL` enables integration tests against an explicitly disposable PostgreSQL database after all four migrations. CI runs both auth and directory integration suites. Fixtures verify actual joins, visibility filtering, identity constraints and immediate changes to approval/settings/roles/links. Tests remove only their fixture UUIDs.
+Unit tests cover the scope rules and HTTP identity/cache/error boundary. `AUTH_TEST_DATABASE_URL` enables integration tests against an explicitly disposable PostgreSQL database after all current migrations. CI runs both auth and directory integration suites. Fixtures verify actual joins, visibility filtering, identity constraints and immediate changes to approval/settings/roles/links. Tests remove only their fixture UUIDs.
 
 ## Live directory
 

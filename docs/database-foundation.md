@@ -23,6 +23,8 @@ The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an a
 - `organization_contacts`: id, organization_party_id (FK organizations.party_id), person_party_id (FK people.party_id), role_label, is_primary_contact (boolean); unique (organization_party_id, person_party_id). Contact representatives do not inherit apartment ownership or management permissions.
 - `staff_assignments`: id, user_id (FK), project_id (FK), building_id (nullable FK), role (`project_manager` / `building_manager`); constrain building assignment to the same project.
 - `global_roles`: user_id (FK), role (`admin`).
+- `invitations`: scoped resident/staff invitation, optional verified recipient restriction, hash-only token, issuer, expiry/revocation/consumption timestamps.
+- `join_requests`: account-owned pending/approved/rejected request, optional resident payload, reviewer and review timestamp. Pending requests grant no access; see [invitation onboarding](invitation-onboarding.md).
 
 Use PostgreSQL CHECK constraints for valid floor and apartment numbers, and indexes for foreign keys and directory lookups. The number of floors and apartments per floor is derived from rows, not fixed columns on `buildings`. A household can have multiple members and multiple primary contact persons. A person can have multiple phone numbers/emails. A phone number belonging to a child should default to `managers` visibility.
 
@@ -48,4 +50,4 @@ The creation UI can accept a default number of floors and apartments per floor f
 
 ## Deployment boundary
 
-The directory now uses authenticated, privacy-filtered resident reads; see [resident authorization](resident-authorization.md). The management workspace uses authenticated structural reads; see [management workspace](management-workspace.md). Household details and joining remain synthetic previews.
+The directory now uses authenticated, privacy-filtered resident reads; see [resident authorization](resident-authorization.md). The management workspace uses authenticated structural reads; see [management workspace](management-workspace.md). Invitation joining and scoped approval now persist; see [invitation onboarding](invitation-onboarding.md). Household detail previews remain synthetic.

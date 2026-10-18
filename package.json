@@ -68,7 +68,8 @@
     "next": "15.5.28",
     "drizzle-orm": "0.45.4",
     "postgres": "3.4.9",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "qrcode": "1.5.4"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -92,7 +93,8 @@
     "drizzle-kit": "0.31.11",
     "@storybook/addon-a11y": "9.1.17",
     "@storybook/react-vite": "9.1.17",
-    "storybook": "9.1.17"
+    "storybook": "9.1.17",
+    "@types/qrcode": "1.5.6"
   },
   "packageManager": "pnpm@10.18.3",
   "engines": {

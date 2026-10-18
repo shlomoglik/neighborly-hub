@@ -28,13 +28,13 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 - `requireCurrentUser()` protects server pages with a redirect for anonymous users. `/account` uses this guard; `/api/me` returns the current identity or an uncached 401. It accepts no target-user ID and sends `Cache-Control: private, no-store` with `Vary: Cookie`.
 - Session cookies use the library's HttpOnly/SameSite defaults and Secure cookies on HTTPS. Database sessions last seven days with the library's one-day refresh interval. Cookie session caching is disabled, so deleted/revoked sessions cannot continue authenticating through a cached cookie payload.
 - Origin/CSRF checks are explicitly enabled in every environment, including tests (the library otherwise skips origin checks under test mode). Only the configured origin is trusted. Built-in rate limiting is enabled; its default in-process storage must be revisited before running multiple application instances.
-- Client sign-in uses fixed same-origin success/error destinations. Errors shown to users are localized and do not expose provider/database details. Loading buttons prevent duplicate operations.
+- Client sign-in uses validated same-origin success/error destinations, allowing only `/join` or `/join/<64 lowercase hex>` as invitation return paths. Errors shown to users are localized and do not expose provider/database details. Loading buttons prevent duplicate operations.
 
 ## Deliberate access boundary
 
-Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). The management workspace uses separately authorized structural reads described in [management workspace](management-workspace.md). Household details and joining remain synthetic previews. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
+Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). The management workspace uses separately authorized structural reads described in [management workspace](management-workspace.md). Invitation joining requires separate manager approval; see [invitation onboarding](invitation-onboarding.md). Household detail previews remain synthetic. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
 
-The next PR must implement explicit user/person/membership links, project/building/approval checks and contact visibility filtering on the server before connecting resident data. Do not use `households.created_by` as the sole proof of residency.
+Explicit user/person links and scoped directory authorization are implemented, and invitation approval can provision a link after manager verification. Do not use `households.created_by` as the sole proof of residency.
 
 ## Verification
 

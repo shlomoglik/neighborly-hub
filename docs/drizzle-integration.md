@@ -6,7 +6,7 @@ This repository now has a **server-only** Drizzle/PostgreSQL client in `src/lib/
 
 1. Provision a **new empty** PostgreSQL 16+ database.
 2. Set `DATABASE_URL` in an ignored local `.env` or deployment secrets (see `.env.example`). Do not use `NEXT_PUBLIC_`.
-3. Apply SQL migrations 0001, 0002 and 0003 in order using `psql` as documented in `database/README.md`.
+3. Apply SQL migrations 0001–0005 in order using `psql` as documented in `database/README.md`.
 4. Use `db` only in server-side modules. Importing the client without `DATABASE_URL` will throw.
 
 ## Important migration boundary
@@ -17,7 +17,7 @@ Before enabling Drizzle migrations, reconcile the SQL baseline with generated sn
 
 ## Security
 
-Authentication and sessions are described in [authentication.md](authentication.md). Subtype enforcement is provided by SQL migration 0002. Server-side resident authorization, ownership/visibility checks and real resident data reads remain unimplemented. Do not expose real resident records through UI or API routes.
+Authentication and sessions are described in [authentication.md](authentication.md). Subtype enforcement is provided by SQL migration 0002. Authorized resident directory reads, management and invitation onboarding are implemented with separate server scope checks; see [resident authorization](resident-authorization.md), [management](management-workspace.md) and [onboarding](invitation-onboarding.md). Ownership and household detail previews require dedicated APIs.
 
 ## Lockfile
 
