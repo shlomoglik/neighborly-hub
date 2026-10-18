@@ -5,6 +5,8 @@ vi.mock("@/lib/access/management", () => ({
   readManagementHierarchy: vi.fn(),
 }));
 vi.mock("@/lib/db/client", () => ({ db: {} }));
+vi.mock("@/lib/access/management-read-error", () => ({ logManagementReadError: vi.fn() }));
+import { logManagementReadError } from "@/lib/access/management-read-error";
 import { getCurrentUser } from "@/lib/auth/session";
 import { readManagementHierarchy, readManagementProjects } from "@/lib/access/management";
 import { GET } from "./route";
@@ -72,4 +74,14 @@ it("keeps successful detail and all server failures private without leaking exce
     privateResponse(response, 500);
     expect(await response.json()).toEqual({ error: "INTERNAL_ERROR" });
   }
+});
+
+it("records the operation for failed management reads", async () => {
+  const failure = new Error("sensitive database details");
+  vi.mocked(readManagementProjects).mockRejectedValue(failure);
+  vi.mocked(readManagementHierarchy).mockRejectedValue(failure);
+  await GET(request());
+  await detail(request(), context());
+  expect(logManagementReadError).toHaveBeenNthCalledWith(1, "projects", failure);
+  expect(logManagementReadError).toHaveBeenNthCalledWith(2, "hierarchy", failure);
 });
