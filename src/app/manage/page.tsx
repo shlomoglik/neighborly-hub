@@ -9,6 +9,9 @@ export default async function ManagePage({
   await requireCurrentUser();
   const { project } = await searchParams;
   return (
-    <LiveManagement projectId={typeof project === "string" ? project : project ? "invalid" : ""} />
+    <LiveManagement
+      key={typeof project === "string" ? project : ""}
+      projectId={typeof project === "string" ? project : project ? "invalid" : ""}
+    />
   );
 }

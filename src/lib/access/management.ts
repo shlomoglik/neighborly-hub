@@ -79,7 +79,12 @@ export async function readManagementHierarchy(
   return db.transaction(async (tx) => {
     const scope = managementScope(tx, userId);
     const [project] = await tx
-      .select({ id: s.projects.id, name: s.projects.name, city: s.projects.city })
+      .select({
+        id: s.projects.id,
+        name: s.projects.name,
+        city: s.projects.city,
+        canAddBuilding: sql<boolean>`${scope.admin} or exists (select 1 from ${s.staffAssignments} where ${s.staffAssignments.userId} = ${userId} and ${s.staffAssignments.projectId} = ${projectId} and ${s.staffAssignments.role} = 'project_manager')`,
+      })
       .from(s.projects)
       .where(and(eq(s.projects.id, projectId), scope.project));
     if (!project) return null;

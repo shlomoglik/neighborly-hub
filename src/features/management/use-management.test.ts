@@ -8,6 +8,7 @@ const project = { id: "p", name: "Saved project", city: "City" };
 const data: ManagementHierarchy = {
   ...project,
   buildings: [{ id: "b", name: "Building", floors: [] }],
+  canAddBuilding: false,
   counts: { buildings: 1, floors: 0, apartments: 0 },
 };
 const discovery = {
@@ -159,4 +160,25 @@ it("clears hidden and cached pages, revalidates on visibility, polls visible tab
   unmount();
   expect(signal.aborted).toBe(true);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it("cannot restore old hierarchy after a mutation invalidates access during a concurrent read", async () => {
+  const adapter = service();
+  const { result } = renderHook(() => useManagement("p", adapter));
+  await tick();
+  let finish!: (value: ManagementHierarchy) => void;
+  vi.mocked(adapter.hierarchy).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  act(() => result.current.onRefresh());
+  await tick();
+  const signal = vi.mocked(adapter.hierarchy).mock.calls.at(-1)![1];
+  act(() => result.current.onAccessLost(404));
+  expect(signal.aborted).toBe(true);
+  await act(async () => finish(data));
+  expect(result.current.status).toBe("unavailable");
+  expect(result.current.data).toBeNull();
 });
