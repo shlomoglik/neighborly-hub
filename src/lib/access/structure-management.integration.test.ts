@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { betterAuth } from "better-auth";
 import { testUtils } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import postgres from "postgres";
 import * as s from "../../../drizzle/schema";
 import { createAuth } from "../auth/create-auth";
@@ -354,15 +354,13 @@ describe.skipIf(!url)("PostgreSQL authorized structural mutations", () => {
         .update(s.invitations)
         .set({ apartmentId: null })
         .where(eq(s.invitations.id, invitation.id));
-      await fixture.db
-        .insert(s.joinRequests)
-        .values({
-          invitationId: invitation.id,
-          userId: resident,
-          apartmentId: linked.id,
-          fullName: "Fixture",
-          householdName: "Fixture",
-        });
+      await fixture.db.insert(s.joinRequests).values({
+        invitationId: invitation.id,
+        userId: resident,
+        apartmentId: linked.id,
+        fullName: "Fixture",
+        householdName: "Fixture",
+      });
       check(await put(targets(data, 0), admin), 409);
       const forged = {
         buildings: [
@@ -375,7 +373,11 @@ describe.skipIf(!url)("PostgreSQL authorized structural mutations", () => {
       };
       check(await put(forged, admin), 404);
       check(await put({ buildings: [...single.buildings, ...single.buildings] }, admin), 400);
-      await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.userId, bm));
+      await fixture.db
+        .delete(s.staffAssignments)
+        .where(
+          and(eq(s.staffAssignments.userId, bm), eq(s.staffAssignments.projectId, layoutProject)),
+        );
       check(
         await put(
           { buildings: [{ ...single.buildings[0], expectedVersion: data.buildings[0].version! }] },
