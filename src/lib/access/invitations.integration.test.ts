@@ -626,7 +626,11 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
         ?.invitationActive,
     ).toBe(false);
     check(await decide(pendingId), 409);
-    check(await apply(i.token, staffTarget), 404);
+    expect(await (await apply(i.token, staffTarget)).json()).toMatchObject({
+      id: pendingId,
+      status: "pending",
+    });
+    check(await apply(i.token, claimant), 404);
     await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.userId, bm));
     check(await discover(await request("GET", bm), ctx()), 404);
     const signed = await (await fixture.auth.$context).test.login({ userId: admin });
