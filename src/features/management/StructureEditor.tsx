@@ -19,7 +19,7 @@ export type StructureEditorProps = {
   busy: boolean;
   refreshing?: boolean;
   error: TKey | null;
-  onSave: (value: string) => Promise<void>;
+  onSave: (value: string, address?: string) => Promise<void>;
   onClose: () => void;
   onReload: () => void;
   onRestoreFocus?: () => void;
@@ -27,13 +27,19 @@ export type StructureEditorProps = {
 export function StructureEditor(p: StructureEditorProps) {
   const { t, dir } = useI18n();
   const [value, setValue] = useState(p.target.mode === "update" ? String(p.target.expected) : "");
+  const [address, setAddress] = useState(
+    p.target.mode === "update" && p.target.entity === "building" ? (p.target.address ?? "") : "",
+  );
   let valid = true;
   try {
-    structurePayload(p.target, value);
+    structurePayload(p.target, value, p.target.entity === "building" ? address : undefined);
   } catch {
     valid = false;
   }
-  const unchanged = p.target.mode === "update" && String(p.target.expected) === value.trim();
+  const unchanged =
+    p.target.mode === "update" &&
+    String(p.target.expected) === value.trim() &&
+    (p.target.entity !== "building" || (p.target.address ?? "") === address.trim());
   const blocked = p.busy || !!p.refreshing;
   const title = t(p.target.mode === "create" ? "structureAdd" : "structureEdit");
   return (
@@ -66,7 +72,10 @@ export function StructureEditor(p: StructureEditorProps) {
           className="space-y-4"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (valid && !blocked && !unchanged) await p.onSave(value);
+            if (valid && !blocked && !unchanged) {
+              if (p.target.entity === "building") await p.onSave(value, address);
+              else await p.onSave(value);
+            }
           }}
         >
           <label className="block space-y-2">
@@ -84,6 +93,18 @@ export function StructureEditor(p: StructureEditorProps) {
               onChange={(event) => setValue(event.target.value)}
             />
           </label>
+          {p.target.entity === "building" && (
+            <label className="block space-y-2">
+              <span>{t("buildingAddress")}</span>
+              <Input
+                maxLength={500}
+                value={address}
+                disabled={blocked}
+                onChange={(e) => setAddress(e.target.value)}
+                autoComplete="street-address"
+              />
+            </label>
+          )}
           {p.target.entity === "floor" && (
             <p className="text-sm text-muted-foreground">{t("structureFloorHint")}</p>
           )}

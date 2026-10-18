@@ -1,3 +1,5 @@
+import { buildingLayoutInput } from "@/lib/access/building-layout-contracts";
+import { updateBuildingLayouts } from "@/lib/access/building-layout";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/session";
 import { readAuthConfig } from "@/lib/auth/config";
@@ -28,7 +30,7 @@ async function body(request: Request) {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 4096) {
+      if (size > (request.method === "PUT" ? 128 * 1024 : 4096)) {
         await reader.cancel();
         throw new StructureManagementError(413, "PAYLOAD_TOO_LARGE");
       }
@@ -57,6 +59,11 @@ async function write(request: Request, context: Context, update: boolean) {
     if (!projectId.success) return respond({ error: "NOT_FOUND" }, 404);
     const value = await body(request);
     const { db } = await import("@/lib/db/client");
+    if (request.method === "PUT") {
+      const input = buildingLayoutInput.safeParse(value);
+      if (!input.success) return respond({ error: "INVALID_INPUT" }, 400);
+      return respond(await updateBuildingLayouts(db, user.id, projectId.data, input.data));
+    }
     if (update) {
       const input = updateManagedStructure.safeParse(value);
       if (!input.success) return respond({ error: "INVALID_INPUT" }, 400);
@@ -73,3 +80,5 @@ async function write(request: Request, context: Context, update: boolean) {
 }
 export const POST = (request: Request, context: Context) => write(request, context, false);
 export const PATCH = (request: Request, context: Context) => write(request, context, true);
+
+export const PUT = (request: Request, context: Context) => write(request, context, true);

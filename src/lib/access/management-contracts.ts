@@ -16,6 +16,8 @@ export type ManagementProjects = {
   hasManagementAccess: boolean;
 };
 export type ManagementBuilding = {
+  address?: string | null;
+  version?: string;
   id: string;
   name: string;
   floors: { id: string; number: number; apartments: { id: string; number: string }[] }[];

@@ -11,7 +11,7 @@ export class StructureRequestError extends Error {
     super(code);
   }
 }
-export function structurePayload(target: StructureEditTarget, value: string) {
+export function structurePayload(target: StructureEditTarget, value: string, address?: string) {
   const field =
     target.entity === "building"
       ? { name: value }
@@ -22,6 +22,9 @@ export function structurePayload(target: StructureEditTarget, value: string) {
       id: target.id,
       expected: target.expected,
       ...field,
+      ...(target.entity === "building" && address !== undefined
+        ? { address, expectedAddress: target.address ?? null }
+        : {}),
     });
   const parent =
     target.entity === "floor"
@@ -29,13 +32,19 @@ export function structurePayload(target: StructureEditTarget, value: string) {
       : target.entity === "apartment"
         ? { floorId: target.floorId }
         : {};
-  return createManagedStructure.parse({ entity: target.entity, ...parent, ...field });
+  return createManagedStructure.parse({
+    entity: target.entity,
+    ...parent,
+    ...field,
+    ...(target.entity === "building" && address !== undefined ? { address } : {}),
+  });
 }
 export async function saveStructure(
   projectId: string,
   target: StructureEditTarget,
   value: string,
   signal: AbortSignal,
+  address?: string,
 ) {
   const response = await fetch(
     `/api/management/projects/${encodeURIComponent(projectId)}/structure`,
@@ -45,7 +54,7 @@ export async function saveStructure(
       credentials: "same-origin",
       cache: "no-store",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify(structurePayload(target, value)),
+      body: JSON.stringify(structurePayload(target, value, address)),
     },
   );
   if (!response.ok) {

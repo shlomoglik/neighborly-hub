@@ -84,6 +84,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f database/migrations/0005_invitations.sql
       - name: Apply private family and household invitation migration
         run: psql -v ON_ERROR_STOP=1 -f database/migrations/0006_household_members.sql
+      - name: Apply building address migration
+        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0007_building_addresses.sql
       - name: Verify authentication constraints
         run: psql -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
       - name: Verify schema constraints and ownership
