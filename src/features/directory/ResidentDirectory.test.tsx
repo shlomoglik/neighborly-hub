@@ -55,7 +55,9 @@ it.each(["he", "en", "ru"] as const)(
       "tel:0501234567",
     );
     expect(screen.getByLabelText(translate(lang, "project"))).toBeTruthy();
-    expect(screen.queryByRole("link", { name: translate(lang, "viewDetails") })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: translate(lang, "homeOpen") }).getAttribute("href"),
+    ).toBe("/household/home");
   },
 );
 it("forwards user interactions without doing API work", () => {

@@ -4,7 +4,7 @@
 
 ## Current status
 
-The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household detail previews remain synthetic. Configure [authentication](docs/authentication.md), apply migrations 0001–0005 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
+The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household profiles and self-service contacts now use authorized live data. Configure [authentication](docs/authentication.md), apply migrations 0001–0005 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
 
 ## Getting started
 
@@ -26,7 +26,8 @@ Open http://localhost:3000. `/directory` requires configured authentication; com
 - `/directory` — protected live directory, authorized project/building selection, server search and pagination
 - `/api/directory/projects` — authorized project/building metadata
 - `/api/projects/:projectId/directory` — private paginated adult resident DTOs
-- `/household/1` — example household details
+- `/household` — caller-owned approved households
+- `/household/:id` — live authorized adult household details and self-service contacts
 - `/join` — authenticated request history; `/join/:token` — invitation claim
 - `/manage` — live scoped management, structure, staff and invitations
 - `/auth` — Google sign-in when configured; `/reset-password` redirects here
@@ -246,7 +247,7 @@ For setup and migration caveats, see [Database README](database/README.md) and [
 
 ## Next steps
 
-The authenticated directory, management workspace and invitation/approval flow are connected to server-authorized data. Next: joining existing households, family membership and contact management. Household details, editing, birthdays and organization directories require dedicated authorized endpoints; their existing previews are not live-data features.
+The authenticated directory, management workspace, invitation/approval flow and household profiles use server-authorized data. Linked adults can manage their own global contacts; contact representatives can rename their own household. Next: joining existing households, family membership, birthdays and organization directories. These require separate authorized workflows.
 
 Resident identity provisioning, deployment prerequisites and revocation behavior are documented in [resident authorization](docs/resident-authorization.md). Screenshots remain on demand only.
 
@@ -257,3 +258,7 @@ See [Staff management](docs/staff-management.md) for administrator-only project/
 See [Structure management](docs/structure-management.md) for scoped additions and safe label changes without deleting or moving existing records.
 
 See [Invitation onboarding](docs/invitation-onboarding.md) for multi-project account separation, scoped approval and printable QR/WhatsApp/email sharing.
+
+### Household profiles
+
+Approved residents can open My households, view live adult family details, and manage their own contact values/visibility. Linked contact representatives can also rename their household. Directory links respect existing privacy and project/building scope. See [household profiles](docs/household-profile.md) for permissions, global contact semantics, API contracts and verification.

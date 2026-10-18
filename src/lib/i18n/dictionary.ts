@@ -6,6 +6,92 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  homeDuplicate: {
+    he: "פרט הקשר כבר קיים. יש לרענן ולערוך אותו במקום להוסיף שוב.",
+    en: "This contact already exists. Refresh and edit it instead of adding it again.",
+    ru: "Этот контакт уже существует. Обновите страницу и отредактируйте его вместо повторного добавления.",
+  },
+  homeMine: { he: "המשפחה שלי", en: "My households", ru: "Мои семьи" },
+  homeOpen: {
+    he: "פתיחת פרטי המשפחה",
+    en: "Open household details",
+    ru: "Открыть сведения о семье",
+  },
+  homeUnavailable: {
+    he: "המשפחה אינה זמינה או שהגישה השתנתה.",
+    en: "The household is unavailable or your access has changed.",
+    ru: "Семья недоступна или ваши права доступа изменились.",
+  },
+  homeNone: {
+    he: "אין משפחות מאושרות המשויכות לחשבון. אפשר לבדוק את בקשות ההצטרפות או לפנות למנהל.",
+    en: "No approved households are linked to your account. Check your join requests or contact a manager.",
+    ru: "К вашему аккаунту не привязаны одобренные семьи. Проверьте заявки или обратитесь к управляющему.",
+  },
+  homeAdultsOnly: {
+    he: "כאן מוצגים בני משפחה מבוגרים בלבד.",
+    en: "Only adult household members are shown here.",
+    ru: "Здесь показаны только взрослые члены семьи.",
+  },
+  homeRename: { he: "עריכת שם המשפחה", en: "Edit household name", ru: "Изменить название семьи" },
+  homeMyContacts: { he: "פרטי הקשר שלי", en: "My contact details", ru: "Мои контактные данные" },
+  homeGlobalContacts: {
+    he: "פרטי הקשר והגדרות החשיפה משויכים אליך ומשפיעים על כל הפרויקטים שבהם את/ה מופיע/ה. כל אדם עורך את פרטי הקשר של עצמו. ניתן לשמור עד 10 פרטי קשר.",
+    en: "Your contact details and visibility settings apply across all projects where you appear. Each person edits their own contacts. You can save up to 10 contacts.",
+    ru: "Контакты и настройки видимости действуют во всех проектах, где вы состоите. Каждый человек редактирует свои контакты. Можно сохранить до 10 контактов.",
+  },
+  homeNoContacts: {
+    he: "עדיין לא הוספת פרטי קשר.",
+    en: "You have not added any contact details yet.",
+    ru: "Вы ещё не добавили контактные данные.",
+  },
+  homeAddContact: { he: "הוספת פרט קשר", en: "Add contact detail", ru: "Добавить контакт" },
+  homeEditContact: { he: "עריכת {value}", en: "Edit {value}", ru: "Изменить {value}" },
+  homeDeleteContact: { he: "מחיקת {value}", en: "Delete {value}", ru: "Удалить {value}" },
+  homeContactEditor: {
+    he: "עריכת פרט קשר",
+    en: "Edit contact detail",
+    ru: "Редактировать контакт",
+  },
+  homeContactKind: { he: "סוג פרט הקשר", en: "Contact type", ru: "Тип контакта" },
+  homeContactLabel: { he: "תווית (רשות)", en: "Label (optional)", ru: "Метка (необязательно)" },
+  homeInvalid: {
+    he: "יש להזין שם תקין, כתובת אימייל תקינה או טלפון בן 5–40 תווים המכיל ספרות וסימני טלפון בלבד.",
+    en: "Enter a valid name, email address, or phone number of 5–40 characters containing only digits and phone punctuation.",
+    ru: "Введите корректное имя, email или номер телефона длиной 5–40 символов, содержащий только цифры и телефонные знаки.",
+  },
+  homeStale: {
+    he: "הפרטים השתנו מאז פתיחת העריכה. יש לרענן, לבטל את העריכה ולפתוח אותה מחדש לפני שמירה.",
+    en: "These details changed since editing began. Refresh, cancel editing and reopen the editor before saving.",
+    ru: "Данные изменились после начала редактирования. Обновите страницу, отмените редактирование и откройте форму заново перед сохранением.",
+  },
+  homeContactLimit: {
+    he: "אפשר לשמור עד 10 פרטי קשר. יש למחוק פרט קיים לפני הוספת חדש.",
+    en: "You can save up to 10 contacts. Delete an existing one before adding another.",
+    ru: "Можно сохранить до 10 контактов. Удалите один из существующих перед добавлением нового.",
+  },
+  homeUncertain: {
+    he: "לא ניתן לאשר שהשינוי נשמר. יש לרענן ולבדוק את הפרטים לפני ניסיון נוסף.",
+    en: "The change could not be confirmed. Refresh and inspect the saved details before trying again.",
+    ru: "Не удалось подтвердить сохранение. Обновите страницу и проверьте данные перед повторной попыткой.",
+  },
+  homeSaved: { he: "השינויים נשמרו.", en: "Changes saved.", ru: "Изменения сохранены." },
+  homeDeleteTitle: {
+    he: "למחוק את פרט הקשר?",
+    en: "Delete this contact detail?",
+    ru: "Удалить этот контакт?",
+  },
+  homeDeleteHint: {
+    he: "המחיקה תסיר את פרט הקשר מכל הפרויקטים שבהם את/ה מופיע/ה.",
+    en: "This removes the contact detail from all projects where you appear.",
+    ru: "Контакт будет удалён из всех проектов, где вы состоите.",
+  },
+  homeMembersPages: {
+    he: "עמודי בני המשפחה",
+    en: "Household member pages",
+    ru: "Страницы членов семьи",
+  },
+  homePages: { he: "עמודי המשפחות שלי", en: "My household pages", ru: "Страницы моих семей" },
+
   confirm: { he: "אישור", en: "Confirm", ru: "Подтвердить" },
   inviteManagement: {
     he: "הזמנות ובקשות הצטרפות",
