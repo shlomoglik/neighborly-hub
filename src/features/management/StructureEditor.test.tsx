@@ -39,7 +39,7 @@ it.each(["he", "en", "ru"] as const)(
       target: { value: " New building " },
     });
     fireEvent.submit(save.closest("form")!);
-    await waitFor(() => expect(p.onSave).toHaveBeenCalledExactlyOnceWith(" New building "));
+    await waitFor(() => expect(p.onSave).toHaveBeenCalledExactlyOnceWith(" New building ", ""));
     expect(screen.getByRole("alertdialog").textContent).toContain(
       translate(lang, "structureEditHint"),
     );
@@ -90,4 +90,21 @@ it("blocks submission, cancellation and Escape while saving", () => {
   fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
   expect(p.onClose).not.toHaveBeenCalled();
   expect(p.onSave).not.toHaveBeenCalled();
+});
+
+it("saves an address change without requiring a name change", async () => {
+  const p = mount("en", {
+    target: {
+      mode: "update",
+      entity: "building",
+      id: "c44c9aec-f8e4-46b3-9957-12ceba088994",
+      expected: "A",
+      address: "Old street",
+    },
+  });
+  fireEvent.change(screen.getByLabelText("Building address"), {
+    target: { value: "New street 10" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(p.onSave).toHaveBeenCalledExactlyOnceWith("A", "New street 10"));
 });

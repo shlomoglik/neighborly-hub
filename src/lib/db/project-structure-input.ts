@@ -8,6 +8,7 @@ const floor = z.object({
 });
 const building = z.object({
   name,
+  address: z.string().trim().max(500).nullable().optional(),
   floors: z.array(floor),
 });
 

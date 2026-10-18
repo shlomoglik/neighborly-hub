@@ -102,3 +102,34 @@ it("rejects normalized Unicode duplicates and generates contiguous floors and ap
     { name: "B", floors: [{ number: 0, apartments: [{ number: "1" }] }] },
   ]);
 });
+
+it("supports empty ground floors, variable counts and continuous apartment numbers with addresses", () => {
+  const input = projectSetupInput.parse({
+    ...valid,
+    buildings: [
+      { name: "A", address: " Street 10 ", floors: 3, unitsPerFloor: 4, floorUnits: [0, 2, 1] },
+    ],
+  });
+  expect(toProjectStructure(input).buildings[0]).toEqual({
+    name: "A",
+    address: "Street 10",
+    floors: [
+      { number: 0, apartments: [] },
+      { number: 1, apartments: [{ number: "1" }, { number: "2" }] },
+      { number: 2, apartments: [{ number: "3" }] },
+    ],
+  });
+  for (const floorUnits of [[1], [-1, 2, 3], [1, 2.5, 3], [1, 201, 3]])
+    expect(
+      projectSetupInput.safeParse({
+        ...valid,
+        buildings: [{ name: "A", floors: 3, unitsPerFloor: 4, floorUnits }],
+      }).success,
+    ).toBe(false);
+  expect(
+    projectSetupInput.safeParse({
+      ...valid,
+      buildings: [{ name: "A", floors: 100, unitsPerFloor: 1, floorUnits: Array(100).fill(200) }],
+    }).success,
+  ).toBe(false);
+});

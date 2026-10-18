@@ -53,3 +53,5 @@ The creation UI can accept a default number of floors and apartments per floor f
 The directory now uses authenticated, privacy-filtered resident reads; see [resident authorization](resident-authorization.md). The management workspace uses authenticated structural reads; see [management workspace](management-workspace.md). Invitation joining and scoped approval now persist; see [invitation onboarding](invitation-onboarding.md). Household detail previews remain synthetic.
 
 Migration 0006 adds household-scoped private child-profile provenance (`is_managed_child`), per-household creation keys and household-bound adult invitations. The composite invitation/household apartment FK prevents invitation reassignment to another household. See [family membership](family-membership.md) for privacy and mutation rules.
+
+Migration 0007 adds nullable `buildings.address` (maximum 500 characters). Addresses are independent of project city and building name. Floor counts are derived from explicit apartment rows, never persisted as an independent count. See [flexible building layouts](building-layouts.md).

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { betterAuth } from "better-auth";
 import { testUtils } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import postgres from "postgres";
 import * as s from "../../../drizzle/schema";
 import { createAuth } from "../auth/create-auth";
@@ -17,7 +17,7 @@ vi.mock("@/lib/db/client", () => ({
     return fixture.db;
   },
 }));
-import { POST, PATCH } from "@/app/api/management/projects/[projectId]/structure/route";
+import { PUT, POST, PATCH } from "@/app/api/management/projects/[projectId]/structure/route";
 const config = {
   baseURL: "https://structure.test",
   secret: "structure-integration-only-32-character-secret",
@@ -195,6 +195,198 @@ describe.skipIf(!url)("PostgreSQL authorized structural mutations", () => {
       expect(
         Object.keys(await (await call({ entity: "floor", buildingId, number: 4 }, actor)).json()),
       ).toEqual(["id"]);
+    }
+  });
+  it("updates addresses in place and detects stale address edits", async () => {
+    const created = await call(
+      { entity: "building", name: "Address fixture", address: "Street 1" },
+      admin,
+    );
+    check(created, 201);
+    const id = (await created.json()).id;
+    check(
+      await call(
+        {
+          entity: "building",
+          id,
+          name: "Address fixture",
+          expected: "Address fixture",
+          address: "Street 2",
+          expectedAddress: "Street 1",
+        },
+        admin,
+        true,
+      ),
+      200,
+    );
+    check(
+      await call(
+        {
+          entity: "building",
+          id,
+          name: "Address fixture",
+          expected: "Address fixture",
+          address: "Overwrite",
+          expectedAddress: "Street 1",
+        },
+        admin,
+        true,
+      ),
+      409,
+    );
+    expect(
+      (await readManagementHierarchy(fixture.db, admin, project))!.buildings.find(
+        (b) => b.id === id,
+      )?.address,
+    ).toBe("Street 2");
+  });
+  it("atomically edits multiple layouts, isolates grants, rejects stale state and preserves linked units", async () => {
+    const { projectId: layoutProject } = await createProjectStructure(
+      {
+        name: "Bulk layout",
+        buildings: [
+          {
+            name: "Layout A",
+            address: "Street A",
+            floors: [
+              { number: 0, apartments: [{ number: "1" }, { number: "2" }] },
+              { number: 1, apartments: [{ number: "3" }] },
+            ],
+          },
+          { name: "Layout B", floors: [{ number: 0, apartments: [{ number: "1" }] }] },
+        ],
+      },
+      fixture.db,
+    );
+    const read = () => readManagementHierarchy(fixture.db, admin, layoutProject);
+    async function put(value: unknown, actor?: string, origin = config.baseURL) {
+      const headers = new Headers(
+        actor
+          ? (await (await fixture.auth.$context).test.login({ userId: actor })).headers
+          : undefined,
+      );
+      headers.set("origin", origin);
+      headers.set("content-type", "application/json");
+      return PUT(
+        new Request(config.baseURL, { method: "PUT", headers, body: JSON.stringify(value) }),
+        { params: Promise.resolve({ projectId: layoutProject }) },
+      );
+    }
+    try {
+      let data = (await read())!;
+      const A = data.buildings[0],
+        B = data.buildings[1];
+      const targets = (data: NonNullable<Awaited<ReturnType<typeof read>>>, units: number) => ({
+        buildings: data.buildings.map((b) => ({
+          id: b.id,
+          expectedVersion: b.version!,
+          floors: [{ id: b.floors[0].id, units }],
+        })),
+      });
+      const before = targets(data, 3);
+      check(await put(before), 401);
+      check(await put(before, resident), 404);
+      check(await put(before, pm), 404);
+      check(await put(before, admin, "https://evil.test"), 403);
+      await fixture.db.insert(s.staffAssignments).values({
+        userId: bm,
+        projectId: layoutProject,
+        buildingId: A.id,
+        role: "building_manager",
+      });
+      check(await put(before, bm), 404); // An authorized target cannot turn a mixed-scope batch into partial writes.
+      expect((await read())!.counts.apartments).toBe(4);
+      check(await put(before, admin), 200);
+      data = (await read())!;
+      expect(data.buildings.map((b) => b.floors[0].apartments.length)).toEqual([3, 3]);
+      expect(data.buildings[0].floors[0].apartments.slice(0, 2).map((a) => a.id)).toEqual(
+        A.floors[0].apartments.map((a) => a.id),
+      );
+      expect(data.buildings[0].floors[1]).toEqual(A.floors[1]);
+      expect(data.buildings[0].address).toBe("Street A");
+      check(await put(before, admin), 409);
+      const concurrent = targets(data, 4);
+      const concurrentResults = await Promise.all([put(concurrent, admin), put(concurrent, admin)]);
+      expect(concurrentResults.map((r) => r.status).sort()).toEqual([200, 409]);
+      data = (await read())!;
+      const single = {
+        buildings: [
+          {
+            id: A.id,
+            expectedVersion: data.buildings[0].version!,
+            floors: [{ id: A.floors[0].id, units: 2 }],
+          },
+        ],
+      };
+      check(await put(single, bm), 200); // Only unreferenced excess unit removed.
+      expect((await read())!.buildings[1]).toEqual(data.buildings[1]);
+      data = (await read())!;
+      const linked = data.buildings[1].floors[0].apartments.at(-1)!;
+      await fixture.db
+        .insert(s.households)
+        .values({ apartmentId: linked.id, displayName: "Protected household" });
+      const blocked = await put(targets(data, 0), admin);
+      check(blocked, 409);
+      expect(await blocked.json()).toEqual({ error: "LINKED_APARTMENTS" });
+      expect(await read()).toEqual(data); // Even the earlier, removable target rolls back.
+      await fixture.db.delete(s.households).where(eq(s.households.apartmentId, linked.id));
+      await fixture.db
+        .insert(s.apartmentOwnerships)
+        .values({ apartmentId: linked.id, ownerPartyId: party });
+      check(await put(targets(data, 0), admin), 409);
+      await fixture.db
+        .delete(s.apartmentOwnerships)
+        .where(eq(s.apartmentOwnerships.apartmentId, linked.id));
+      const [invitation] = await fixture.db
+        .insert(s.invitations)
+        .values({
+          projectId: layoutProject,
+          buildingId: B.id,
+          apartmentId: linked.id,
+          kind: "resident",
+          tokenHash: "c".repeat(64),
+          createdBy: admin,
+          expiresAt: new Date(Date.now() + 86400000),
+        })
+        .returning();
+      check(await put(targets(data, 0), admin), 409);
+      await fixture.db
+        .update(s.invitations)
+        .set({ apartmentId: null })
+        .where(eq(s.invitations.id, invitation.id));
+      await fixture.db.insert(s.joinRequests).values({
+        invitationId: invitation.id,
+        userId: resident,
+        apartmentId: linked.id,
+        fullName: "Fixture",
+        householdName: "Fixture",
+      });
+      check(await put(targets(data, 0), admin), 409);
+      const forged = {
+        buildings: [
+          {
+            id: A.id,
+            expectedVersion: data.buildings[0].version!,
+            floors: [{ id: B.floors[0].id, units: 1 }],
+          },
+        ],
+      };
+      check(await put(forged, admin), 404);
+      check(await put({ buildings: [...single.buildings, ...single.buildings] }, admin), 400);
+      await fixture.db
+        .delete(s.staffAssignments)
+        .where(
+          and(eq(s.staffAssignments.userId, bm), eq(s.staffAssignments.projectId, layoutProject)),
+        );
+      check(
+        await put(
+          { buildings: [{ ...single.buildings[0], expectedVersion: data.buildings[0].version! }] },
+          bm,
+        ),
+        404,
+      );
+    } finally {
+      await fixture.db.delete(s.projects).where(eq(s.projects.id, layoutProject));
     }
   });
   it("updates labels in place without changing household, ownership, identity or staff relationships", async () => {

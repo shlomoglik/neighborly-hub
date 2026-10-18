@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../../../drizzle/schema";
 import {
@@ -20,7 +20,7 @@ export class StructureManagementError extends Error {
 }
 const unavailable = () => new StructureManagementError(404, "NOT_FOUND");
 /** Grants are locked before structural writes, so revocation and mutation serialize. */
-async function lockScope(tx: Transaction, actorId: string, projectId: string) {
+export async function lockScope(tx: Transaction, actorId: string, projectId: string) {
   const admins = await tx
     .select({ role: s.globalRoles.role })
     .from(s.globalRoles)
@@ -40,7 +40,7 @@ async function lockScope(tx: Transaction, actorId: string, projectId: string) {
   if (!all && !buildings.length) throw unavailable();
   return { all, buildings };
 }
-async function lockBuilding(
+export async function lockBuilding(
   tx: Transaction,
   projectId: string,
   id: string,
@@ -124,7 +124,7 @@ export function createManagementStructure(
         if (!project) throw unavailable();
         const [row] = await tx
           .insert(s.buildings)
-          .values({ projectId, name: input.name })
+          .values({ projectId, name: input.name, address: input.address || null })
           .returning({ id: s.buildings.id });
         return row;
       }
@@ -160,14 +160,22 @@ export function updateManagementStructure(
     switch (input.entity) {
       case "building": {
         await lockBuilding(tx, projectId, input.id, scope);
+        if (input.address !== undefined && input.expectedAddress === undefined)
+          throw new StructureManagementError(400, "INVALID_INPUT");
         rows = await tx
           .update(s.buildings)
-          .set({ name: input.name })
+          .set({
+            name: input.name,
+            ...(input.address !== undefined ? { address: input.address || null } : {}),
+          })
           .where(
             and(
               eq(s.buildings.id, input.id),
               eq(s.buildings.projectId, projectId),
               eq(s.buildings.name, input.expected),
+              input.address !== undefined
+                ? sql`${s.buildings.address} is not distinct from ${input.expectedAddress}`
+                : undefined,
             ),
           )
           .returning({ id: s.buildings.id });

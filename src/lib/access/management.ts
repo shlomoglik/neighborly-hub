@@ -1,4 +1,5 @@
 import "server-only";
+import { buildingVersion } from "./building-version";
 import { and, eq, exists, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../../../drizzle/schema";
@@ -92,6 +93,7 @@ export async function readManagementHierarchy(
       .select({
         buildingId: s.buildings.id,
         buildingName: s.buildings.name,
+        buildingAddress: s.buildings.address,
         floorId: s.floors.id,
         floorNumber: s.floors.number,
         apartmentId: s.apartments.id,
@@ -123,7 +125,13 @@ export async function readManagementHierarchy(
         );
     return {
       ...project,
-      buildings,
+      buildings: buildings.map((b) => {
+        const building = {
+          ...b,
+          address: rows.find((row) => row.buildingId === b.id)?.buildingAddress ?? null,
+        };
+        return { ...building, version: buildingVersion(building) };
+      }),
       counts: {
         buildings: buildings.length,
         floors: buildings.reduce((n, b) => n + b.floors.length, 0),

@@ -26,6 +26,7 @@ export type ManagementWorkspaceProps = {
   onRefresh: () => void;
   onEdit?: (target: StructureEditTarget) => void;
   editingBusy?: boolean;
+  onLayout?: (buildingId: string) => void;
 };
 /** Pure presentation; stories never mount the live request coordinator. */
 export function ManagementWorkspace(p: ManagementWorkspaceProps) {
@@ -191,8 +192,22 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
                 <h3 className="font-bold">
                   {t("building")} <bdi>{b.name}</bdi>
                 </h3>
+                {b.address && (
+                  <p className="text-sm text-muted-foreground">
+                    <bdi>{b.address}</bdi>
+                  </p>
+                )}
                 {p.onEdit && (
                   <div className="flex flex-wrap gap-2">
+                    {p.onLayout && (
+                      <Button
+                        variant="outline"
+                        disabled={p.editingBusy}
+                        onClick={() => p.onLayout?.(b.id)}
+                      >
+                        {t("layoutEdit")}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       disabled={p.editingBusy}
@@ -202,6 +217,7 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
                           entity: "building",
                           id: b.id,
                           expected: b.name,
+                          address: b.address,
                         })
                       }
                     >

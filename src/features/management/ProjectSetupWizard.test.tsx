@@ -128,3 +128,35 @@ it("uses shared bounds and rejects duplicate building names before review", () =
     screen.getByRole("button", { name: translate("en", "stepReview") }).hasAttribute("disabled"),
   ).toBe(true);
 });
+
+it("copies only the layout, retains individual addresses and accepts a floor override", async () => {
+  const create = vi.fn().mockResolvedValue(result);
+  mount(create);
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Community" } });
+  fireEvent.change(screen.getByLabelText("City"), { target: { value: "Sderot" } });
+  fireEvent.click(screen.getByRole("button", { name: "Buildings" }));
+  fireEvent.change(screen.getByLabelText("Building"), { target: { value: "A" } });
+  fireEvent.change(screen.getByLabelText("Building address"), { target: { value: "Street 1" } });
+  fireEvent.change(screen.getByLabelText(translate("en", "floors")), { target: { value: "2" } });
+  fireEvent.change(
+    screen.getByLabelText(translate("en", "layoutFloorCount", { floor: 0, building: "A" })),
+    { target: { value: "0" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "addBuilding") }));
+  fireEvent.change(screen.getAllByLabelText("Building")[1], { target: { value: "B" } });
+  fireEvent.change(screen.getAllByLabelText("Building address")[1], {
+    target: { value: "Street 2" },
+  });
+  fireEvent.click(screen.getAllByRole("button", { name: translate("en", "layoutCopyAll") })[0]);
+  fireEvent.change(
+    screen.getByLabelText(translate("en", "layoutFloorCount", { floor: 1, building: "B" })),
+    { target: { value: "3" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "stepReview") }));
+  fireEvent.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(create).toHaveBeenCalledOnce());
+  expect(create.mock.calls[0][0].buildings).toEqual([
+    { name: "A", address: "Street 1", floors: 2, unitsPerFloor: 1, floorUnits: [0, 1] },
+    { name: "B", address: "Street 2", floors: 2, unitsPerFloor: 1, floorUnits: [0, 3] },
+  ]);
+});
