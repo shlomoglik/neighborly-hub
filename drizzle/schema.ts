@@ -144,6 +144,7 @@ export const apartments = pgTable(
     number: text("number").notNull(),
   },
   (t) => [
+    unique("apartments_id_building_id_unique").on(t.id, t.buildingId),
     // The matching composite foreign key is defined in the SQL baseline.
     unique("apartments_building_id_number_unique").on(t.buildingId, t.number),
     index("apartments_floor_id_idx").on(t.floorId),
@@ -369,4 +370,55 @@ export const userPersonLinks = pgTable(
     createdAt: createdAt(),
   },
   (t) => [check("user_person_links_no_self_verification", sql`${t.userId} <> ${t.verifiedBy}`)],
+);
+
+// Composite structural scope FKs and CHECKs are authoritative in migration 0005.
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: id(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    buildingId: uuid("building_id"),
+    apartmentId: uuid("apartment_id"),
+    kind: text("kind").notNull(),
+    recipientEmail: text("recipient_email"),
+    recipientUserId: uuid("recipient_user_id").references(() => appUsers.id, {
+      onDelete: "restrict",
+    }),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "restrict" }),
+    createdAt: createdAt(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  },
+  (t) => [index("invitations_scope_idx").on(t.projectId, t.buildingId, t.createdAt, t.id)],
+);
+export const joinRequests = pgTable(
+  "join_requests",
+  {
+    id: id(),
+    invitationId: uuid("invitation_id")
+      .notNull()
+      .references(() => invitations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    apartmentId: uuid("apartment_id").references(() => apartments.id, { onDelete: "cascade" }),
+    fullName: text("full_name"),
+    householdName: text("household_name"),
+    status: text("status").notNull().default("pending"),
+    reviewedBy: uuid("reviewed_by").references(() => appUsers.id, { onDelete: "restrict" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("join_requests_invitation_id_user_id_key").on(t.invitationId, t.userId),
+    index("join_requests_user_idx").on(t.userId, t.createdAt, t.id),
+    index("join_requests_invitation_status_idx").on(t.invitationId, t.status, t.createdAt, t.id),
+  ],
 );

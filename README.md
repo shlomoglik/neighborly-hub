@@ -4,7 +4,7 @@
 
 ## Current status
 
-The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; household details, join and management routes remain synthetic previews. Configure [authentication](docs/authentication.md), apply migrations 0001–0004 and provision verified links before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
+The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household detail previews remain synthetic. Configure [authentication](docs/authentication.md), apply migrations 0001–0005 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
 
 ## Getting started
 
@@ -27,8 +27,8 @@ Open http://localhost:3000. `/directory` requires configured authentication; com
 - `/api/directory/projects` — authorized project/building metadata
 - `/api/projects/:projectId/directory` — private paginated adult resident DTOs
 - `/household/1` — example household details
-- `/join` — demo registration form (no persistence)
-- `/manage` — demo management interface
+- `/join` — authenticated request history; `/join/:token` — invitation claim
+- `/manage` — live scoped management, structure, staff and invitations
 - `/auth` — Google sign-in when configured; `/reset-password` redirects here
 - `/account` and `/api/me` — protected current-user profile
 
@@ -103,6 +103,15 @@ erDiagram
     app_users ||--o{ staff_assignments : assigned
     projects ||--o{ staff_assignments : scoped_to
     buildings |o--o{ staff_assignments : optional_scope
+    app_users ||--o{ invitations : issues
+    app_users |o--o{ invitations : restricted_recipient
+    projects ||--o{ invitations : scopes
+    buildings |o--o{ invitations : optional_building
+    apartments |o--o{ invitations : optional_apartment
+    invitations ||--o{ join_requests : receives
+    app_users ||--o{ join_requests : requests
+    app_users |o--o{ join_requests : reviews
+    apartments |o--o{ join_requests : requested_apartment
     app_users ||--o{ global_roles : has
     app_users ||--o{ auth_sessions : authenticates
     app_users ||--o{ auth_accounts : identities
@@ -194,6 +203,33 @@ erDiagram
       uuid building_id FK
       text role
     }
+    invitations {
+      uuid id PK
+      uuid project_id FK
+      uuid building_id FK
+      uuid apartment_id FK
+      text kind
+      text token_hash UK
+      uuid created_by FK
+      text recipient_email
+      uuid recipient_user_id FK
+      timestamptz created_at
+      timestamptz expires_at
+      timestamptz revoked_at
+      timestamptz consumed_at
+    }
+    join_requests {
+      uuid id PK
+      uuid invitation_id FK
+      uuid user_id FK
+      uuid apartment_id FK
+      text full_name
+      text household_name
+      text status
+      uuid reviewed_by FK
+      timestamptz reviewed_at
+      timestamptz created_at
+    }
     global_roles {
       uuid user_id PK,FK
       text role PK
@@ -204,13 +240,13 @@ erDiagram
 
 **Key constraints:** Each building can have different numbers of apartments on each floor. Apartment numbers are unique per building. At most **one active household** is allowed per apartment (historic inactive households can remain). A person or organization can own multiple apartments, and an apartment can have multiple owners. Multiple members of a household may be designated contact persons.
 
-**Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. Party/subtype consistency is enforced by migration 0002.
+**Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. Invitation scope additionally uses `(building_id, project_id)` and `(apartment_id, building_id)` composite foreign keys from migration 0005. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. Party/subtype consistency is enforced by migration 0002.
 
 For setup and migration caveats, see [Database README](database/README.md) and [Drizzle integration](docs/drizzle-integration.md).
 
 ## Next steps
 
-The authenticated directory is connected to server-authorized data. Next: scoped manager workflows for joining, verifying resident links and approving households. Household details, editing, birthdays and organization directories require dedicated authorized endpoints; their existing previews are not live-data features.
+The authenticated directory, management workspace and invitation/approval flow are connected to server-authorized data. Next: joining existing households, family membership and contact management. Household details, editing, birthdays and organization directories require dedicated authorized endpoints; their existing previews are not live-data features.
 
 Resident identity provisioning, deployment prerequisites and revocation behavior are documented in [resident authorization](docs/resident-authorization.md). Screenshots remain on demand only.
 
@@ -219,3 +255,5 @@ See [Live management workspace](docs/management-workspace.md) for authenticated 
 See [Staff management](docs/staff-management.md) for administrator-only project/building manager assignment and revocation.
 
 See [Structure management](docs/structure-management.md) for scoped additions and safe label changes without deleting or moving existing records.
+
+See [Invitation onboarding](docs/invitation-onboarding.md) for multi-project account separation, scoped approval and printable QR/WhatsApp/email sharing.

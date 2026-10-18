@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { authReturnPath } from "./return-path";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,11 @@ import { authClient } from "./client";
 export function SignIn({
   enabled,
   initialError = false,
+  returnTo,
 }: {
   enabled: boolean;
   initialError?: boolean;
+  returnTo?: string;
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
@@ -21,8 +24,11 @@ export function SignIn({
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/directory",
-        errorCallbackURL: "/auth?error=sign-in",
+        callbackURL: authReturnPath(returnTo),
+        errorCallbackURL:
+          returnTo && authReturnPath(returnTo) !== "/directory"
+            ? `/auth?error=sign-in&next=${encodeURIComponent(authReturnPath(returnTo))}`
+            : "/auth?error=sign-in",
       });
       if (result.error) {
         setFailed(true);
