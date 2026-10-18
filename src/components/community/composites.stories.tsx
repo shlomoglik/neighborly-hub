@@ -145,14 +145,19 @@ export const Progress: Story = { render: () => <StepsDemo /> };
 export const ResponsiveDetails: Story = { render: () => <PanelDemo /> };
 export const Avatars: Story = { render: () => <AvatarsDemo /> };
 
-function BuildingsDemo() {
+function BuildingsDemo({ overflow = false }: { overflow?: boolean }) {
   const { t } = useI18n();
   const [building, setBuilding] = useState("");
   return (
     <BuildingSelector
       value={building}
       onChange={setBuilding}
-      buildings={[1, 2, 3].map((n) => ({ id: String(n), name: `${t("building")} ${n}` }))}
+      buildings={Array.from({ length: overflow ? 12 : 3 }, (_, index) => ({
+        id: String(index + 1),
+        name: overflow
+          ? `${t("demoProject")} - ${t("building")} ${index + 1}`
+          : `${t("building")} ${index + 1}`,
+      }))}
     />
   );
 }
@@ -169,4 +174,5 @@ function BannerDemo() {
   );
 }
 export const BuildingTabs: Story = { render: () => <BuildingsDemo /> };
+export const BuildingTabsOverflow: Story = { render: () => <BuildingsDemo overflow /> };
 export const BirthdaySummary: Story = { render: () => <BannerDemo /> };

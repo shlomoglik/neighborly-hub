@@ -15,11 +15,11 @@ export function BuildingSelector({
   const { t } = useI18n();
   const name = useId();
   return (
-    <fieldset className="community-enter community-interactive min-w-0 max-w-full">
+    <fieldset className="community-enter community-interactive min-w-0 w-full max-w-full">
       <legend className="sr-only">{t("filterBuilding")}</legend>
       <div className="flex gap-2 overflow-x-auto overscroll-x-contain p-1">
         {[...(includeAll ? [{ id: "", name: t("allBuildings") }] : []), ...buildings].map((b) => (
-          <label key={b.id} className="shrink-0 cursor-pointer">
+          <label key={b.id} className="relative shrink-0 cursor-pointer">
             <input
               className="peer sr-only"
               type="radio"
