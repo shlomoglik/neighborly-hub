@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookUser, CircleUserRound, Settings2, UserPlus, Users } from "lucide-react";
+import { BookUser, Search, CircleUserRound, Settings2, UserPlus, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
@@ -36,6 +36,13 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             ))}
           </nav>
           <div className="ms-auto flex shrink-0 items-center gap-1">
+            <Link
+              href="/search"
+              aria-label={t("globalSearch")}
+              className="grid size-11 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <Search className="size-5" aria-hidden="true" />
+            </Link>
             <Link
               href="/account"
               aria-label={t("authAccount")}
