@@ -191,3 +191,22 @@ it("provides scoped structure actions using stable parent IDs and current expect
   fireEvent.click(screen.getByRole("button", { name: translate("en", "addBuilding") }));
   expect(onEdit).toHaveBeenLastCalledWith({ mode: "create", entity: "building" });
 });
+
+it("keeps project controls mounted while the building filter updates only the results", () => {
+  const p = mount();
+  const projectChooser = screen.getByRole("navigation", { name: translate("en", "chooseProject") });
+  const buildingFilter = screen.getByRole("group", { name: translate("en", "filterBuilding") });
+  const projectHeading = screen.getByRole("heading", { name: "Saved project" });
+  fireEvent.click(screen.getByRole("radio", { name: "Building" }));
+  p.update({ buildingId: "b" });
+  expect(screen.getByRole("navigation", { name: translate("en", "chooseProject") })).toBe(
+    projectChooser,
+  );
+  expect(screen.getByRole("group", { name: translate("en", "filterBuilding") })).toBe(
+    buildingFilter,
+  );
+  expect(screen.getByRole("heading", { name: "Saved project" })).toBe(projectHeading);
+  expect(screen.queryByText(translate("en", "loading"))).toBeNull();
+  expect(screen.queryByRole("region", { name: "Building Empty building" })).toBeNull();
+  expect(screen.getByRole("region", { name: "Building Building" })).toBeTruthy();
+});

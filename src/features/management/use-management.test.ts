@@ -45,9 +45,15 @@ it("supports direct links outside the discovery page, project changes and buildi
   });
   await tick();
   expect(result.current.status).toBe("ready");
+  const projectCalls = vi.mocked(api.projects).mock.calls.length;
+  const hierarchyCalls = vi.mocked(api.hierarchy).mock.calls.length;
   act(() => result.current.onBuildingChange("b"));
-  expect(result.current.data).toBeNull();
+  expect(result.current.status).toBe("ready");
+  expect(result.current.data).toEqual(data);
+  expect(result.current.discovery).toEqual({ ...discovery, projects: [] });
   await tick();
+  expect(api.projects).toHaveBeenCalledTimes(projectCalls);
+  expect(api.hierarchy).toHaveBeenCalledTimes(hierarchyCalls);
   rerender({ id: "other" });
   expect(result.current.data).toBeNull();
   expect(result.current.discovery).toBeNull();
@@ -197,4 +203,25 @@ it("keeps the visible workspace stable until an explicit refresh or lifecycle ev
   await tick();
   expect(api.projects).toHaveBeenCalledTimes(calls + 1);
   expect(result.current.status).toBe("ready");
+});
+
+it("filters locally without loading and does not recover access by changing a filter", async () => {
+  const api = service();
+  const { result } = renderHook(() => useManagement("p", api));
+  await tick();
+  const calls = vi.mocked(api.hierarchy).mock.calls.length;
+  act(() => result.current.onBuildingChange("missing"));
+  expect(result.current.status).toBe("unavailable");
+  expect(result.current.data).toBeNull();
+  act(() => result.current.onBuildingChange("b"));
+  expect(result.current.status).toBe("ready");
+  expect(result.current.buildingId).toBe("b");
+  act(() => result.current.onBuildingChange(""));
+  expect(result.current.status).toBe("ready");
+  await tick();
+  expect(api.hierarchy).toHaveBeenCalledTimes(calls);
+  act(() => result.current.onAccessLost(403));
+  act(() => result.current.onBuildingChange("b"));
+  expect(result.current.status).toBe("unavailable");
+  expect(result.current.data).toBeNull();
 });

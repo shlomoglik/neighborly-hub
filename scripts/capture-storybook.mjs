@@ -47,6 +47,18 @@ const cases = [
     2,
   ],
   ["17-setup-project-ru-mobile", "features-management-project-setup--interactive", "ru", 390],
+  [
+    "18-building-overflow-he-mobile",
+    "features-community-composites--building-tabs-overflow",
+    "he",
+    390,
+  ],
+  [
+    "19-building-overflow-en-mobile",
+    "features-community-composites--building-tabs-overflow",
+    "en",
+    320,
+  ],
 ];
 
 // Finish the initial Storybook render before interactions unmount animated steps.
@@ -82,7 +94,7 @@ try {
       await main.getByRole("textbox").nth(1).fill("Sderot");
       await main.getByRole("button").last().click();
       await main.getByRole("spinbutton").first().waitFor();
-      await main.getByRole("textbox").fill("A");
+      await main.getByRole("textbox").first().fill("A");
       await main.getByRole("spinbutton").nth(0).fill("4");
       await main.getByRole("spinbutton").nth(1).fill("3");
       await settleAnimations(page);
@@ -96,6 +108,24 @@ try {
       await page.getByRole(width < 1024 ? "dialog" : "complementary").waitFor();
     }
     await settleAnimations(page);
+    if (story === "features-community-composites--building-tabs-overflow") {
+      const checkOverflow = () =>
+        page.evaluate(() => {
+          const scroller = document.querySelector("fieldset > div");
+          return (
+            document.documentElement.scrollWidth <= window.innerWidth &&
+            scroller &&
+            scroller.scrollWidth > scroller.clientWidth
+          );
+        });
+      if (!(await checkOverflow()))
+        throw new Error(`${name}: building overflow escaped its scroller`);
+      const last = page.getByRole("radio").last();
+      await last.focus();
+      await page.keyboard.press("Space");
+      if (!(await last.isChecked()) || !(await checkOverflow()))
+        throw new Error(`${name}: focusing the last building broke viewport containment`);
+    }
     if (errors.length) throw new Error(`${name}: ${errors.join("; ")}`);
     if (await page.locator(".sb-errordisplay").isVisible())
       throw new Error(`Story failed: ${story}`);

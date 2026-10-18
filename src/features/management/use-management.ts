@@ -22,7 +22,7 @@ export function useManagement(projectId: string, api: ManagementApi = management
     discovery: null,
     data: null,
   });
-  const key = JSON.stringify([projectId, buildingId, page, revision, paused]);
+  const key = JSON.stringify([projectId, page, revision, paused]);
   const latestKey = useRef(key);
   latestKey.current = key;
   const activeRead = useRef<AbortController | null>(null);
@@ -61,14 +61,11 @@ export function useManagement(projectId: string, api: ManagementApi = management
           // Direct links are independent of the current discovery page.
           const data = projectId ? await api.hierarchy(projectId, controller.signal) : null;
           if (controller.signal.aborted) return;
-          const status =
-            buildingId && !data?.buildings.some((b) => b.id === buildingId)
-              ? "unavailable"
-              : !discovery.hasManagementAccess
-                ? "forbidden"
-                : !projectId && !discovery.projects.length
-                  ? "empty"
-                  : "ready";
+          const status = !discovery.hasManagementAccess
+            ? "forbidden"
+            : !projectId && !discovery.projects.length
+              ? "empty"
+              : "ready";
           setSnapshot({ key, status, discovery, data: status === "ready" ? data : null });
         } catch (cause) {
           if (controller.signal.aborted) return;
@@ -85,11 +82,19 @@ export function useManagement(projectId: string, api: ManagementApi = management
         }
       })();
     return () => controller.abort();
-  }, [api, projectId, buildingId, page, key, paused]);
+  }, [api, projectId, page, key, paused]);
   const view: Snapshot =
     snapshot.key === key ? snapshot : { key, status: "loading", discovery: null, data: null };
+  // The authorized hierarchy already includes every accessible building. Filtering
+  // it is local and must not restart project discovery or unmount the workspace.
+  const unavailableBuilding =
+    view.status === "ready" &&
+    !!buildingId &&
+    !view.data?.buildings.some((building) => building.id === buildingId);
   return {
     ...view,
+    status: unavailableBuilding ? ("unavailable" as const) : view.status,
+    data: unavailableBuilding ? null : view.data,
     selectedProjectId: projectId,
     buildingId,
     onBuildingChange: (id: string) => setBuilding({ projectId, id }),
