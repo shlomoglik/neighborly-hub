@@ -6,6 +6,11 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  appMenu: { he: "תפריט", en: "Menu", ru: "Меню" },
+  appLanguage: { he: "שפה", en: "Language", ru: "Язык" },
+  languageHebrew: { he: "עברית", en: "עברית", ru: "עברית" },
+  languageEnglish: { he: "English", en: "English", ru: "English" },
+  languageRussian: { he: "Русский", en: "Русский", ru: "Русский" },
   buildingAddress: { he: "כתובת הבניין", en: "Building address", ru: "Адрес здания" },
   layoutEdit: { he: "עריכת פריסת דירות", en: "Edit apartment layout", ru: "Изменить план квартир" },
   layoutPerFloor: {
