@@ -131,7 +131,7 @@ it("distinguishes empty discovery from no management grants without issuing a de
   await tick();
   expect(result.current.status).toBe("forbidden");
 });
-it("clears hidden and cached pages, revalidates on visibility, polls visible tabs, and cleans up", async () => {
+it("clears hidden and cached pages, revalidates on visibility without polling, and cleans up", async () => {
   const api = service();
   const { result, unmount } = renderHook(() => useManagement("p", api));
   await tick();
@@ -150,7 +150,7 @@ it("clears hidden and cached pages, revalidates on visibility, polls visible tab
   await tick();
   expect(result.current.status).toBe("ready");
   await tick(30000);
-  expect(api.projects).toHaveBeenCalledTimes(calls + 2);
+  expect(api.projects).toHaveBeenCalledTimes(calls + 1);
   act(() => window.dispatchEvent(new Event("pagehide")));
   expect(result.current.data).toBeNull();
   act(() => window.dispatchEvent(new Event("pageshow")));
@@ -181,4 +181,20 @@ it("cannot restore old hierarchy after a mutation invalidates access during a co
   await act(async () => finish(data));
   expect(result.current.status).toBe("unavailable");
   expect(result.current.data).toBeNull();
+});
+
+it("keeps the visible workspace stable until an explicit refresh or lifecycle event", async () => {
+  const api = service();
+  const { result } = renderHook(() => useManagement("p", api));
+  await tick();
+  const calls = vi.mocked(api.projects).mock.calls.length;
+  await tick(120000);
+  expect(api.projects).toHaveBeenCalledTimes(calls);
+  expect(result.current.status).toBe("ready");
+  expect(result.current.data).toEqual(data);
+  act(() => result.current.onRefresh());
+  expect(result.current.status).toBe("loading");
+  await tick();
+  expect(api.projects).toHaveBeenCalledTimes(calls + 1);
+  expect(result.current.status).toBe("ready");
 });
