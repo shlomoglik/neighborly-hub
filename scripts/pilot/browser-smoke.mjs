@@ -37,7 +37,26 @@ async function context(role, mobile = false) {
   return c;
 }
 async function check(name, action) {
-  await action();
+  try {
+    await action();
+  } catch (error) {
+    process.stderr.write(`FAIL ${name}\n`);
+    for (const c of contexts)
+      for (const page of c.pages()) {
+        process.stderr.write(
+          JSON.stringify({
+            route: new URL(page.url()).pathname
+              .replace(/\/[0-9a-f-]{36}/g, "/:id")
+              .replace(/\/join\/.+/, "/join/:token"),
+            headings: await page.getByRole("heading").allTextContents(),
+            feedback: await page.locator('[role="alert"], [role="status"]').allTextContents(),
+            labels: await page.locator("label > span").allTextContents(),
+            visibility: await page.evaluate(() => document.visibilityState),
+          }) + "\n",
+        );
+      }
+    throw error;
+  }
   report.checks.push({ name, passed: true });
   process.stdout.write(`PASS ${name}\n`);
 }
@@ -135,14 +154,22 @@ try {
       projectId = new URL(adminPage.url()).searchParams.get("project");
       assert.match(projectId, /^[0-9a-f-]{36}$/);
       await adminPage.getByRole("link", { name: t.inviteManagement, exact: true }).click();
+      await adminPage.waitForURL(`${origin}/manage/invitations/${projectId}`);
     },
   );
   await check(
     "desktop: issue a restricted resident invitation with local QR and share links",
     async () => {
-      await adminPage.getByLabel(t.building, { exact: true }).selectOption({ label: "Pilot A" });
+      await adminPage.bringToFront();
       await adminPage
-        .getByLabel(t.apartment, { exact: true })
+        .locator("label")
+        .filter({ has: adminPage.getByText(t.building, { exact: true }) })
+        .locator("select")
+        .selectOption({ label: "Pilot A" });
+      await adminPage
+        .locator("label")
+        .filter({ has: adminPage.getByText(t.apartment, { exact: true }) })
+        .locator("select")
         .selectOption({ label: `${t.floor} 0 · ${t.apartment} 1` });
       await adminPage
         .getByLabel(t.inviteRecipientEmail, { exact: true })
@@ -182,7 +209,14 @@ try {
     await residentPage.goto(`${origin}/household/${householdId}`);
     await button(residentPage, "homeAddContact").click();
     await residentPage.getByLabel(t.phone, { exact: true }).fill("0501234567");
-    await residentPage.getByRole("radio", { name: t.vis_project, exact: true }).check();
+    await residentPage
+      .locator("label")
+      .filter({ has: residentPage.getByRole("radio", { name: t.vis_project, exact: true }) })
+      .click();
+    assert.equal(
+      await residentPage.getByRole("radio", { name: t.vis_project, exact: true }).isChecked(),
+      true,
+    );
     await button(residentPage, "save").click();
     await residentPage.getByText(t.homeSaved, { exact: true }).waitFor();
     const data = await (
