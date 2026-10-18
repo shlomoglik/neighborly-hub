@@ -268,3 +268,7 @@ See [Invitation onboarding](docs/invitation-onboarding.md) for multi-project acc
 Approved residents can open My households, view live adult family details, and manage their own contact values/visibility. Linked contact representatives can also rename their household. Directory links respect existing privacy and project/building scope. See [household profiles](docs/household-profile.md) for permissions, global contact semantics, API contracts and verification.
 
 Representatives can open Manage family members to privately add/edit/remove child profiles and issue reviewed invitations into their existing household. Apply migration 0006 first. See [family membership](docs/family-membership.md).
+
+## Pilot environment
+
+See [pilot environment](docs/pilot-environment.md) for a separate local PostgreSQL environment, public HTTPS/Google activation prerequisites and the real desktop/mobile browser journey in CI. The browser job uses synthetic signed sessions and does not claim real Google consent or a deployed public URL.

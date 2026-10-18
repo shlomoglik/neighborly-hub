@@ -1,6 +1,6 @@
 # Authentication foundation
 
-Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzle adapter uses the existing PostgreSQL database; Drizzle ORM is pinned to 0.45.2 to meet the adapter's peer requirement. No hosted auth service, password login, email delivery or SMS provider is introduced.
+Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzle adapter uses the existing PostgreSQL database; Drizzle ORM is pinned to 0.45.4 to meet the adapter's peer requirement. No hosted auth service, password login, email delivery or SMS provider is introduced.
 
 ## Configure
 
@@ -32,7 +32,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 
 ## Deliberate access boundary
 
-Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). The management workspace uses separately authorized structural reads described in [management workspace](management-workspace.md). Invitation joining requires separate manager approval; see [invitation onboarding](invitation-onboarding.md). Household detail previews remain synthetic. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
+Logging in creates an identity, **not** project membership, household association or a staff role. Authentication does not infer `people`/`household_members` links, approve join requests or authorize resident records by itself. The live directory uses explicit links and server authorization described in [resident authorization](resident-authorization.md). The management workspace uses separately authorized structural reads described in [management workspace](management-workspace.md). Invitation joining requires separate manager approval; see [invitation onboarding](invitation-onboarding.md). Household profiles and private family management now use separately authorized live endpoints. Existing `/api/dev/*` routes remain development-only prototypes, not authorized production APIs.
 
 Explicit user/person links and scoped directory authorization are implemented, and invitation approval can provision a link after manager verification. Do not use `households.created_by` as the sole proof of residency.
 
@@ -51,3 +51,5 @@ Official references: [Next.js integration](https://better-auth.com/docs/integrat
 Explicit resident links and directory read authorization are now described in [resident authorization](resident-authorization.md). Signing in alone still grants no resident or staff permissions.
 
 Successful Google sign-in now returns to `/directory`; `/account` remains available from the header for profile and sign-out. The directory explains missing resident access without offering an unimplemented self-claim flow.
+
+A public pilot requires its own HTTPS origin, database and OAuth client. See [pilot environment](pilot-environment.md) for the physical-device acceptance flow and the distinct synthetic browser CI boundary.

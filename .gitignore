@@ -45,3 +45,7 @@ storybook-static/
 
 # Generated visual review captures
 artifacts/storybook/
+
+# Sanitized pilot reports and private local fixture files
+artifacts/pilot/
+.pilot/

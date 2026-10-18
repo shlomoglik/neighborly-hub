@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "prepare": "node scripts/install-git-hooks.mjs"
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "pilot:db": "docker compose --env-file .env.pilot.local -f compose.pilot.yml up -d --wait db",
+    "pilot:fixture": "vitest run src/lib/access/pilot-fixture.integration.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",

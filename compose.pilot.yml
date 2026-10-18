@@ -1,0 +1,22 @@
+# Local-only disposable pilot database. This is not a public database deployment.
+name: neighborly-pilot
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: neighborly
+      POSTGRES_PASSWORD: ${PILOT_DB_PASSWORD:?Set PILOT_DB_PASSWORD in .env.pilot.local}
+      POSTGRES_DB: neighborly_pilot
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pilot-data:/var/lib/postgresql/data
+      # PostgreSQL runs these authoritative migrations once, on an empty volume.
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neighborly -d neighborly_pilot"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+volumes:
+  pilot-data:
