@@ -72,28 +72,6 @@ jobs:
       PGDATABASE: neighborly_test
     steps:
       - uses: actions/checkout@v7
-      - name: Apply independent PostgreSQL schema
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0001_initial.sql
-      - name: Apply party subtype integrity migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0002_party_subtype_integrity.sql
-      - name: Apply authentication migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0003_auth_sessions.sql
-      - name: Apply resident identity migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0004_resident_identity.sql
-      - name: Apply invitation and join request migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0005_invitations.sql
-      - name: Apply private family and household invitation migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0006_household_members.sql
-      - name: Apply building address migration
-        run: psql -v ON_ERROR_STOP=1 -f database/migrations/0007_building_addresses.sql
-      - name: Verify authentication constraints
-        run: psql -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
-      - name: Verify schema constraints and ownership
-        run: psql -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
-      - name: Verify family scope constraints
-        run: psql -v ON_ERROR_STOP=1 -f database/tests/family-integrity.sql
-      - name: Verify party subtype constraints
-        run: psql -v ON_ERROR_STOP=1 -f database/tests/party-integrity.sql
       - uses: pnpm/action-setup@v6
         with:
           version: 10.18.3
@@ -102,6 +80,22 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify migration lifecycle, rollback and concurrent runners
+        env:
+          MIGRATION_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
+        run: pnpm exec vitest run src/lib/db/deployment-migrations.integration.test.ts
+      - name: Apply all authoritative migrations using the production runner
+        env:
+          MIGRATION_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
+        run: pnpm db:migrate
+      - name: Verify authentication constraints
+        run: psql -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
+      - name: Verify schema constraints and ownership
+        run: psql -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
+      - name: Verify family scope constraints
+        run: psql -v ON_ERROR_STOP=1 -f database/tests/family-integrity.sql
+      - name: Verify party subtype constraints
+        run: psql -v ON_ERROR_STOP=1 -f database/tests/party-integrity.sql
       - name: Verify real database sessions and OAuth request boundaries
         env:
           AUTH_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
@@ -148,10 +142,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Apply authoritative migrations to isolated pilot database
-        run: |
-          for migration in database/migrations/*.sql; do
-            psql -v ON_ERROR_STOP=1 -f "$migration"
-          done
+        env:
+          MIGRATION_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm db:migrate
       - name: Build the actual production application
         run: pnpm build
       - name: Install isolated browser tooling
