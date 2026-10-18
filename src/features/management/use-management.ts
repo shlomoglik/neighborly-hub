@@ -36,16 +36,12 @@ export function useManagement(projectId: string, api: ManagementApi = management
       setPaused(true);
       refresh();
     };
-    const interval = window.setInterval(() => {
-      if (document.visibilityState !== "hidden") refresh();
-    }, 30000);
     window.addEventListener("focus", refresh);
     window.addEventListener("pagehide", hide);
     window.addEventListener("pageshow", visibility);
     document.addEventListener("visibilitychange", visibility);
     visibility();
     return () => {
-      window.clearInterval(interval);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("pagehide", hide);
       window.removeEventListener("pageshow", visibility);
