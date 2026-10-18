@@ -6,6 +6,63 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  structureAdd: { he: "הוספה", en: "Add", ru: "Добавить" },
+  structureEdit: { he: "עריכה", en: "Edit", ru: "Изменить" },
+  structureNumber: { he: "מספר", en: "Number", ru: "Номер" },
+  structureEditHint: {
+    he: "השמירה מעדכנת את המבנה בלבד. היא אינה משנה דיירים, בעלות או אכלוס.",
+    en: "Saving changes structure only. It does not change residents, ownership or occupancy.",
+    ru: "Сохранение изменяет только структуру, без изменения жильцов, собственности или заселённости.",
+  },
+  structureFloorHint: {
+    he: "אפשר להזין מספר קומה שלם, כולל 0 וקומות שליליות.",
+    en: "Use a whole floor number, including 0 and negative floors.",
+    ru: "Укажите целый номер этажа, включая 0 и отрицательные этажи.",
+  },
+  structureDuplicate: {
+    he: "השם או המספר כבר קיימים בהיקף זה. בחרו ערך אחר.",
+    en: "This name or number already exists in this scope. Choose another value.",
+    ru: "Такое название или номер уже существует в этих пределах. Выберите другое значение.",
+  },
+  structureStale: {
+    he: "הנתון השתנה מאז פתיחת הטופס. רעננו ובדקו אותו לפני עריכה מחדש.",
+    en: "This value changed after you opened the form. Refresh and inspect it before editing again.",
+    ru: "Значение изменилось после открытия формы. Обновите и проверьте его перед повторным редактированием.",
+  },
+  structureInvalid: {
+    he: "יש להזין שם או מספר תקין.",
+    en: "Enter a valid name or number.",
+    ru: "Введите корректное название или номер.",
+  },
+  structureUncertain: {
+    he: "לא ניתן לאשר שהשינוי נשמר. רעננו ובדקו את המבנה לפני ניסיון נוסף.",
+    en: "The result could not be confirmed. Refresh and inspect the structure before trying again.",
+    ru: "Не удалось подтвердить сохранение. Обновите и проверьте структуру перед повторной попыткой.",
+  },
+  structureRenameBuilding: { he: "שינוי שם בניין", en: "Rename building", ru: "Переименовать дом" },
+  structureAddFloor: { he: "הוספת קומה", en: "Add floor", ru: "Добавить этаж" },
+  structureEditFloor: {
+    he: "שינוי מספר קומה",
+    en: "Change floor number",
+    ru: "Изменить номер этажа",
+  },
+  structureAddApartment: { he: "הוספת דירה", en: "Add apartment", ru: "Добавить квартиру" },
+  structureEditFloorLabel: {
+    he: "שינוי מספר קומה {n} בבניין {building}",
+    en: "Change floor {n} in building {building}",
+    ru: "Изменить этаж {n} в доме {building}",
+  },
+  structureAddApartmentLabel: {
+    he: "הוספת דירה לקומה {n} בבניין {building}",
+    en: "Add apartment to floor {n} in building {building}",
+    ru: "Добавить квартиру на этаж {n} в доме {building}",
+  },
+  structureEditApartmentLabel: {
+    he: "עריכת דירה {n} בבניין {building}",
+    en: "Edit apartment {n} in building {building}",
+    ru: "Изменить квартиру {n} в доме {building}",
+  },
+
   saving: { he: "שומר…", en: "Saving…", ru: "Сохранение…" },
   staffRole: { he: "תפקיד", en: "Role", ru: "Роль" },
   staffManagement: { he: "ניהול מנהלים", en: "Manage staff", ru: "Управление назначениями" },

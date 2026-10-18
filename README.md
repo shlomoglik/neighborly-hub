@@ -217,3 +217,5 @@ Resident identity provisioning, deployment prerequisites and revocation behavior
 See [Live management workspace](docs/management-workspace.md) for authenticated project discovery, structural browsing and management authorization.
 
 See [Staff management](docs/staff-management.md) for administrator-only project/building manager assignment and revocation.
+
+See [Structure management](docs/structure-management.md) for scoped additions and safe label changes without deleting or moving existing records.

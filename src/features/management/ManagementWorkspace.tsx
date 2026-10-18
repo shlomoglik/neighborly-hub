@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
 import { staffHref } from "@/lib/access/staff-contracts";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -22,6 +23,8 @@ export type ManagementWorkspaceProps = {
   onBuildingChange: (id: string) => void;
   onPageChange: (page: number) => void;
   onRefresh: () => void;
+  onEdit?: (target: StructureEditTarget) => void;
+  editingBusy?: boolean;
 };
 /** Pure presentation; stories never mount the live request coordinator. */
 export function ManagementWorkspace(p: ManagementWorkspaceProps) {
@@ -57,7 +60,11 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("manage")}
         </h1>
-        <Button variant="outline" onClick={refresh} disabled={status === "loading"}>
+        <Button
+          variant="outline"
+          onClick={refresh}
+          disabled={status === "loading" || p.editingBusy}
+        >
           {t("refreshManagement")}
         </Button>
         {discovery?.canCreateProject && (
@@ -151,6 +158,14 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
               </Button>
             )}
           </header>
+          {p.onEdit && data.canAddBuilding && (
+            <Button
+              disabled={p.editingBusy}
+              onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
+            >
+              {t("addBuilding")}
+            </Button>
+          )}
           <div ref={buildingControls}>
             <BuildingSelector
               buildings={data.buildings}
@@ -172,6 +187,33 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
                 <h3 className="font-bold">
                   {t("building")} <bdi>{b.name}</bdi>
                 </h3>
+                {p.onEdit && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={p.editingBusy}
+                      onClick={() =>
+                        p.onEdit?.({
+                          mode: "update",
+                          entity: "building",
+                          id: b.id,
+                          expected: b.name,
+                        })
+                      }
+                    >
+                      {t("structureRenameBuilding")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={p.editingBusy}
+                      onClick={() =>
+                        p.onEdit?.({ mode: "create", entity: "floor", buildingId: b.id })
+                      }
+                    >
+                      {t("structureAddFloor")}
+                    </Button>
+                  </div>
+                )}
                 {!b.floors.length && (
                   <SystemFeedback kind="empty" message={t("managementNoFloors")} />
                 )}
@@ -184,6 +226,41 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
                     <h4 className="text-sm font-medium">
                       {t("floor")} {f.number}
                     </h4>
+                    {p.onEdit && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="ghost"
+                          disabled={p.editingBusy}
+                          aria-label={t("structureEditFloorLabel", {
+                            n: f.number,
+                            building: b.name,
+                          })}
+                          onClick={() =>
+                            p.onEdit?.({
+                              mode: "update",
+                              entity: "floor",
+                              id: f.id,
+                              expected: f.number,
+                            })
+                          }
+                        >
+                          {t("structureEditFloor")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          disabled={p.editingBusy}
+                          aria-label={t("structureAddApartmentLabel", {
+                            n: f.number,
+                            building: b.name,
+                          })}
+                          onClick={() =>
+                            p.onEdit?.({ mode: "create", entity: "apartment", floorId: f.id })
+                          }
+                        >
+                          {t("structureAddApartment")}
+                        </Button>
+                      </div>
+                    )}
                     {!f.apartments.length ? (
                       <p className="text-sm text-muted-foreground">{t("managementNoApartments")}</p>
                     ) : (
@@ -197,6 +274,27 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
                             <bdi className="block break-words font-semibold tabular-nums">
                               {a.number}
                             </bdi>
+                            {p.onEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={p.editingBusy}
+                                aria-label={t("structureEditApartmentLabel", {
+                                  n: a.number,
+                                  building: b.name,
+                                })}
+                                onClick={() =>
+                                  p.onEdit?.({
+                                    mode: "update",
+                                    entity: "apartment",
+                                    id: a.id,
+                                    expected: a.number,
+                                  })
+                                }
+                              >
+                                {t("structureEdit")}
+                              </Button>
+                            )}
                           </li>
                         ))}
                       </ul>

@@ -21,6 +21,7 @@ export type ManagementBuilding = {
   floors: { id: string; number: number; apartments: { id: string; number: string }[] }[];
 };
 export type ManagementHierarchy = ManagementProject & {
+  canAddBuilding: boolean;
   buildings: ManagementBuilding[];
   counts: { buildings: number; floors: number; apartments: number };
 };

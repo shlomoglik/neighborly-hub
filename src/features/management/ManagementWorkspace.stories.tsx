@@ -17,6 +17,7 @@ function Example({
   const project = { id: "synthetic-project", name: t("demoProject"), city: t("demoCity") };
   return (
     <ManagementWorkspace
+      onEdit={() => {}}
       status={status}
       selectedProjectId={project.id}
       buildingId={buildingId}
@@ -33,7 +34,12 @@ function Example({
       }
       data={
         empty
-          ? { ...project, buildings: [], counts: { buildings: 0, floors: 0, apartments: 0 } }
+          ? {
+              ...project,
+              buildings: [],
+              canAddBuilding: admin,
+              counts: { buildings: 0, floors: 0, apartments: 0 },
+            }
           : {
               ...project,
               buildings: [
@@ -54,6 +60,7 @@ function Example({
                 },
                 ...(admin ? [{ id: "b", name: t("demoBuilding") + " 2", floors: [] }] : []),
               ],
+              canAddBuilding: admin,
               counts: { buildings: admin ? 2 : 1, floors: 2, apartments: 2 },
             }
       }

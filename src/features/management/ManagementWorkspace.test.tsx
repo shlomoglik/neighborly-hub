@@ -32,6 +32,7 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
           ],
         },
       ],
+      canAddBuilding: false,
       counts: { buildings: 2, floors: 2, apartments: 1 },
     },
     onBuildingChange: vi.fn(),
@@ -121,6 +122,7 @@ it("renders an empty saved project and provides explicit discovery pagination", 
       name: "Empty project",
       city: null,
       buildings: [],
+      canAddBuilding: false,
       counts: { buildings: 0, floors: 0, apartments: 0 },
     },
     discovery: {
@@ -157,4 +159,35 @@ it("shows staff management only for the server-derived global administrator capa
   expect(
     screen.getByRole("link", { name: translate("en", "staffManagement") }).getAttribute("href"),
   ).toBe("/manage/staff/p");
+});
+
+it("provides scoped structure actions using stable parent IDs and current expected labels", () => {
+  const onEdit = vi.fn();
+  const p = mount("en", { onEdit });
+  expect(screen.queryByRole("button", { name: translate("en", "addBuilding") })).toBeNull();
+  fireEvent.click(
+    screen.getAllByRole("button", { name: translate("en", "structureRenameBuilding") })[0],
+  );
+  expect(onEdit).toHaveBeenLastCalledWith({
+    mode: "update",
+    entity: "building",
+    id: "a",
+    expected: "Empty building",
+  });
+  fireEvent.click(screen.getAllByRole("button", { name: translate("en", "structureAddFloor") })[0]);
+  expect(onEdit).toHaveBeenLastCalledWith({ mode: "create", entity: "floor", buildingId: "a" });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: translate("en", "structureEditApartmentLabel", { n: "2", building: "Building" }),
+    }),
+  );
+  expect(onEdit).toHaveBeenLastCalledWith({
+    mode: "update",
+    entity: "apartment",
+    id: "u",
+    expected: "2",
+  });
+  p.update({ onEdit, data: { ...p.data!, canAddBuilding: true } });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "addBuilding") }));
+  expect(onEdit).toHaveBeenLastCalledWith({ mode: "create", entity: "building" });
 });

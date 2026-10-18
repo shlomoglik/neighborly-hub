@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ManagementHierarchy, ManagementProjects } from "@/lib/access/management-contracts";
 import { managementApi, ManagementRequestError, type ManagementApi } from "./management-api";
 export type ManagementStatus =
@@ -23,6 +23,9 @@ export function useManagement(projectId: string, api: ManagementApi = management
     data: null,
   });
   const key = JSON.stringify([projectId, buildingId, page, revision, paused]);
+  const latestKey = useRef(key);
+  latestKey.current = key;
+  const activeRead = useRef<AbortController | null>(null);
   useEffect(() => {
     const refresh = () => setRevision((n) => n + 1);
     const visibility = () => {
@@ -51,6 +54,7 @@ export function useManagement(projectId: string, api: ManagementApi = management
   }, []);
   useEffect(() => {
     const controller = new AbortController();
+    activeRead.current = controller;
     setSnapshot({ key, status: "loading", discovery: null, data: null });
     if (!paused)
       void (async () => {
@@ -95,5 +99,14 @@ export function useManagement(projectId: string, api: ManagementApi = management
     onBuildingChange: (id: string) => setBuilding({ projectId, id }),
     onPageChange: setPage,
     onRefresh: () => setRevision((n) => n + 1),
+    onAccessLost: (status: number) => {
+      activeRead.current?.abort();
+      setSnapshot({
+        key: latestKey.current,
+        status: status === 401 ? "expired" : "unavailable",
+        discovery: null,
+        data: null,
+      });
+    },
   };
 }

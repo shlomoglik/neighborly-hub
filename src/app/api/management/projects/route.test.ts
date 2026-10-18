@@ -61,6 +61,7 @@ it("keeps successful detail and all server failures private without leaking exce
     name: "Project",
     city: null,
     buildings: [],
+    canAddBuilding: false,
     counts: { buildings: 0, floors: 0, apartments: 0 },
   });
   privateResponse(await detail(request(), context()), 200);

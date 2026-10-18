@@ -174,7 +174,14 @@ describe.skipIf(!url)("PostgreSQL management authorization and authenticated rou
       "Studio",
     ]);
     expect(await read(admin)).toEqual(result);
-    expect(Object.keys(result).sort()).toEqual(["buildings", "city", "counts", "id", "name"]);
+    expect(Object.keys(result).sort()).toEqual([
+      "buildings",
+      "canAddBuilding",
+      "city",
+      "counts",
+      "id",
+      "name",
+    ]);
     for (const secret of ["Private", "household", "contact", "role", "session", "email"])
       expect(JSON.stringify(result)).not.toContain(secret);
   });
