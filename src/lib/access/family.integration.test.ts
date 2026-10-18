@@ -365,7 +365,7 @@ describe.skipIf(!url)("Private family profiles and reviewed existing-household i
       ).status,
     ).toBe(400);
     const accepted = await claim(link.token);
-    expect(accepted.status).toBe(200);
+    expect(accepted.status).toBe(201);
     const saved = await accepted.json();
     expect(await (await claim(link.token)).json()).toEqual(saved);
     expect((await household(await request("GET", applicant), hctx())).status).toBe(404);
@@ -494,14 +494,12 @@ describe.skipIf(!url)("Private family profiles and reviewed existing-household i
     const pending = await (await claim(link.token, outsider)).json();
     const replacement = crypto.randomUUID();
     await fixture.client`UPDATE households SET is_active=false WHERE id=${home}`;
-    await fixture.db
-      .insert(s.households)
-      .values({
-        id: replacement,
-        apartmentId: apartment,
-        displayName: "Replacement",
-        approvalStatus: "approved",
-      });
+    await fixture.db.insert(s.households).values({
+      id: replacement,
+      apartmentId: apartment,
+      displayName: "Replacement",
+      approvalStatus: "approved",
+    });
     expect(
       (await review(await request("POST", manager, { decision: "approve" }), rctx(pending.id)))
         .status,
@@ -522,6 +520,85 @@ describe.skipIf(!url)("Private family profiles and reviewed existing-household i
       fixture.client`UPDATE household_members SET is_contact_person=true WHERE id=${childMember}`,
     ).rejects.toThrow();
   });
+  it("freezes child editing/removal when a profile gains independent contact records", async () => {
+    const [person] =
+      await fixture.client`SELECT person_id FROM household_members WHERE id=${childMember}`;
+    await fixture.db.insert(s.contactMethods).values({
+      partyId: person.person_id as string,
+      kind: "phone",
+      value: "0500000000",
+      visibility: "managers",
+    });
+    const data = await (await get(rep)).json();
+    expect(data.members.find((m: { id: string }) => m.id === childMember).editable).toBe(false);
+    expect(
+      (
+        await write(rep, {
+          action: "removeChild",
+          id: childMember,
+          expected: { name: "PRIVATE UPDATED CHILD", relation: "Child" },
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await fixture.client`SELECT value FROM contact_methods WHERE party_id=${person.person_id}`
+      )[0].value,
+    ).toBe("0500000000");
+    await fixture.client`DELETE FROM contact_methods WHERE party_id=${person.person_id}`;
+  });
+  it("rechecks child references after waiting for a concurrent party FK writer", async () => {
+    const [person] =
+      await fixture.client`SELECT person_id FROM household_members WHERE id=${childMember}`;
+    let release!: () => void;
+    let inserted!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      inserted = resolve;
+    });
+    const writer = fixture.db.transaction(async (tx) => {
+      await tx.insert(s.contactMethods).values({
+        partyId: person.person_id as string,
+        kind: "phone",
+        value: "0509999999",
+        visibility: "managers",
+      });
+      inserted();
+      await hold;
+    });
+    await ready;
+    const removal = write(rep, {
+      action: "removeChild",
+      id: childMember,
+      expected: { name: "PRIVATE UPDATED CHILD", relation: "Child" },
+    });
+    let blocked = false;
+    try {
+      const deadline = Date.now() + 3000;
+      while (Date.now() < deadline) {
+        const [waiting] =
+          await fixture.client`SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%"parties"%'`;
+        if (waiting.n > 0) {
+          blocked = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    } finally {
+      release();
+    }
+    await writer;
+    expect((await removal).status).toBe(404);
+    expect(blocked).toBe(true);
+    expect(
+      (
+        await fixture.client`SELECT value FROM contact_methods WHERE party_id=${person.person_id}`
+      )[0].value,
+    ).toBe("0509999999");
+    await fixture.client`DELETE FROM contact_methods WHERE party_id=${person.person_id}`;
+  }, 10000);
   it("removes only an owned private child profile and rejects stale/cross-household removal", async () => {
     const input = {
       action: "removeChild",

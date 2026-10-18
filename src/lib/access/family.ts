@@ -116,15 +116,22 @@ export async function mutateFamily(
         personId: s.people.partyId,
         name: s.people.fullName,
         relation: s.householdMembers.relation,
-        editable: editableChild,
       })
       .from(s.householdMembers)
       .innerJoin(s.people, eq(s.people.partyId, s.householdMembers.personId))
+      .innerJoin(s.parties, eq(s.parties.id, s.people.partyId))
       .where(
         and(eq(s.householdMembers.householdId, householdId), eq(s.householdMembers.id, input.id)),
       )
       .for("update");
-    if (!member?.editable) throw new HouseholdError(404, "NOT_FOUND");
+    if (!member) throw new HouseholdError(404, "NOT_FOUND");
+    // Recheck after row locks: FK writers may have committed while this SELECT waited.
+    const [eligibility] = await tx
+      .select({ editable: editableChild })
+      .from(s.householdMembers)
+      .innerJoin(s.people, eq(s.people.partyId, s.householdMembers.personId))
+      .where(eq(s.householdMembers.id, member.id));
+    if (!eligibility?.editable) throw new HouseholdError(404, "NOT_FOUND");
     if (member.name !== input.expected.name || member.relation !== input.expected.relation)
       throw new HouseholdError(409, "STALE_FAMILY");
     if (input.action === "removeChild") {
