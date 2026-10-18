@@ -95,9 +95,21 @@ export function RequestList({
             {!onReview && row.status === "approved" && (
               <Link
                 className="text-primary underline"
-                href={row.kind === "resident" ? "/directory" : managementHref(row.projectId)}
+                href={
+                  row.kind === "household_member"
+                    ? "/household"
+                    : row.kind === "resident"
+                      ? "/directory"
+                      : managementHref(row.projectId)
+                }
               >
-                {t(row.kind === "resident" ? "openBook" : "openProjectManagement")}
+                {t(
+                  row.kind === "household_member"
+                    ? "homeMine"
+                    : row.kind === "resident"
+                      ? "openBook"
+                      : "openProjectManagement",
+                )}
               </Link>
             )}
           </li>

@@ -6,6 +6,90 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  household_member: {
+    he: "בן משפחה מבוגר במשפחה קיימת",
+    en: "Adult member of an existing household",
+    ru: "Взрослый член существующей семьи",
+  },
+  familyManage: {
+    he: "ניהול בני המשפחה",
+    en: "Manage family members",
+    ru: "Управление членами семьи",
+  },
+  familyPrivateHint: {
+    he: "רק נציגי המשפחה יכולים לצפות במסך הזה ובפרטי הילדים. ילדים שנוספו כאן ניתנים לעריכה ומחיקה; מבוגרים מצטרפים בהזמנה ומנהלים את פרטי הקשר של עצמם.",
+    en: "Only household representatives can view this page and child details. Children added here can be edited or removed; adults join by invitation and manage their own contacts.",
+    ru: "Эта страница и сведения о детях доступны только представителям семьи. Детей, добавленных здесь, можно редактировать и удалять; взрослые присоединяются по приглашению и управляют своими контактами.",
+  },
+  familyAddChild: { he: "הוספת ילד/ה", en: "Add a child", ru: "Добавить ребёнка" },
+  familyChildEditor: {
+    he: "עריכת פרטי ילד/ה",
+    en: "Edit child details",
+    ru: "Редактировать сведения о ребёнке",
+  },
+  familyEditChild: { he: "עריכת {name}", en: "Edit {name}", ru: "Изменить {name}" },
+  familyRemoveChild: { he: "מחיקת {name}", en: "Remove {name}", ru: "Удалить {name}" },
+  familyRelation: {
+    he: "קרבה למשפחה (רשות)",
+    en: "Relationship (optional)",
+    ru: "Родство (необязательно)",
+  },
+  familyInviteAdult: {
+    he: "הזמנת בן משפחה מבוגר",
+    en: "Invite an adult family member",
+    ru: "Пригласить взрослого члена семьи",
+  },
+  familyInviteHint: {
+    he: "הקישור מיועד למשפחה הזו בלבד. המצטרף מתחבר ומגיש בקשה; רק לאחר אימות ואישור מנהל הוא מקבל חברות במשפחה, ללא הרשאת נציג. אפשר להגביל את הקישור לאימייל מסוים.",
+    en: "The link is bound to this household. The applicant signs in and submits a request; membership is granted only after manager verification and approval, without representative privileges. You can restrict the link to an email address.",
+    ru: "Ссылка привязана к этой семье. Заявитель входит в аккаунт и подаёт заявку; членство предоставляется только после проверки и одобрения управляющим, без прав представителя. Ссылку можно ограничить адресом email.",
+  },
+  familyJoinHint: {
+    he: "זו בקשה להצטרף למשפחה קיימת, ולא ליצור משפחה חדשה. אישור מנהל נדרש, וההצטרפות אינה מקנה הרשאת נציג משפחה.",
+    en: "This requests membership in an existing household, without creating a new one. Manager approval is required and does not grant representative privileges.",
+    ru: "Это заявка на вступление в существующую семью, без создания новой. Требуется одобрение управляющего; права представителя не предоставляются.",
+  },
+  familyInviteUsed: {
+    he: "הוגשה בקשה דרך הקישור. יש לבדוק את סטטוס הבקשה מול המנהל.",
+    en: "A request was submitted using this link. Check its status with the manager.",
+    ru: "По этой ссылке подана заявка. Уточните её статус у управляющего.",
+  },
+  familySelfInvite: {
+    he: "אי אפשר להצטרף באמצעות הזמנה שיצרת בעצמך.",
+    en: "You cannot join using an invitation you issued yourself.",
+    ru: "Нельзя вступить по собственному приглашению.",
+  },
+  familyInvalid: {
+    he: "יש להזין שם בן 1–200 תווים וקרבה של עד 100 תווים.",
+    en: "Enter a name of 1–200 characters and a relationship of up to 100 characters.",
+    ru: "Введите имя длиной 1–200 символов и родство длиной до 100 символов.",
+  },
+  familyStale: {
+    he: "הפרטים השתנו. יש לרענן ולפתוח מחדש את העריכה לפני שמירה.",
+    en: "The details changed. Refresh and reopen the editor before saving.",
+    ru: "Данные изменились. Обновите страницу и откройте форму заново перед сохранением.",
+  },
+  familyLimit: {
+    he: "אפשר לצרף עד 50 בני משפחה. יש לפנות למנהל אם נדרש שינוי.",
+    en: "A household can have up to 50 members. Contact a manager if a change is needed.",
+    ru: "В семье может быть до 50 участников. Если нужно изменение, обратитесь к управляющему.",
+  },
+  familyInviteLimit: {
+    he: "יש כבר 20 הזמנות בתוקף למשפחה. יש לבטל הזמנה קיימת לפני יצירת נוספת.",
+    en: "This household already has 20 unexpired invitations. Revoke an existing invitation before creating another.",
+    ru: "У этой семьи уже 20 действующих приглашений. Отзовите одно из них перед созданием нового.",
+  },
+  familyRemoveTitle: {
+    he: "למחוק את פרופיל הילד/ה?",
+    en: "Delete the child profile?",
+    ru: "Удалить профиль ребёнка?",
+  },
+  familyRemoveHint: {
+    he: "פרטי הפרופיל שנוסף למשפחה יימחקו. פעולה זו אינה מסירה מבוגרים או חשבונות משתמש.",
+    en: "The child profile added to this household will be deleted. This does not remove adult members or user accounts.",
+    ru: "Добавленный в эту семью профиль ребёнка будет удалён. Взрослые участники и аккаунты не удаляются.",
+  },
+
   homeDuplicate: {
     he: "פרט הקשר כבר קיים. יש לרענן ולערוך אותו במקום להוסיף שוב.",
     en: "This contact already exists. Refresh and edit it instead of adding it again.",

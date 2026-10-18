@@ -1,6 +1,6 @@
 # Live household profiles and self-service contacts
 
-Requires authoritative migrations 0001–0005 and the existing Google authentication configuration. No new migration, dependency or environment variable is required.
+Requires authoritative migrations 0001–0006 and the existing Google authentication configuration. No new migration, dependency or environment variable is required.
 
 ## Behavior and ownership
 
@@ -12,7 +12,7 @@ A verified linked adult with `household_members.is_contact_person` may rename th
 
 Contact methods belong to the global person, not to a project or household. The editor explains that values, visibility changes and deletion apply in all projects containing that person. Deletion requires confirmation. New contacts default to managers-only visibility. Building/project visibility uses the existing server-side directory rules; it does not override a project's building-only directory setting. No contacts are copied into login email/phone records.
 
-Adding family members/children, inviting an additional account into an occupied household, delegating representative privileges, ownership and moving households remain separate workflows.
+The separate [private family workflow](family-membership.md) now manages child profiles and reviewed invitations into occupied households. Delegating representative privileges, adult removal, ownership and household moves remain follow-up work.
 
 ## API
 

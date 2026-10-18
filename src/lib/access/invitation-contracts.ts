@@ -29,7 +29,9 @@ export const invitationInput = z.discriminatedUnion("kind", [
     .strict(),
 ]);
 export type InvitationInput = z.infer<typeof invitationInput>;
-export type InvitationKind = InvitationInput["kind"];
+export type InvitationKind = InvitationInput["kind"] | "household_member";
+export const householdInvitationInput = z.object({ recipientEmail, expiresInDays }).strict();
+export type HouseholdInvitationInput = z.infer<typeof householdInvitationInput>;
 export const joinInput = z.union([
   z
     .object({
@@ -38,6 +40,7 @@ export const joinInput = z.union([
       householdName: z.string().trim().min(1).max(200),
     })
     .strict(),
+  z.object({ fullName: z.string().trim().min(1).max(200) }).strict(),
   z.object({}).strict(),
 ]);
 export type JoinInput = z.infer<typeof joinInput>;

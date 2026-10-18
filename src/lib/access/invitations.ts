@@ -15,6 +15,8 @@ import {
   type JoinContext,
 } from "./invitation-contracts";
 import { managementPageSchema } from "./management-contracts";
+import { familyRepresentative, MAX_FAMILY_MEMBERS } from "./family-access";
+import { HouseholdError } from "./households";
 import { MAX_DIRECTORY_PAGE } from "./contracts";
 type Database = PostgresJsDatabase<typeof s>;
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -60,7 +62,7 @@ type Scope = Awaited<ReturnType<typeof grants>>;
 function permitted(scope: Scope, i: Pick<Invite, "kind" | "buildingId">) {
   return (
     scope.admin ||
-    (i.kind === "resident" &&
+    ((i.kind === "resident" || i.kind === "household_member") &&
       (scope.all || (!!i.buildingId && scope.buildings.includes(i.buildingId))))
   );
 }
@@ -68,7 +70,7 @@ function scopeWhere(scope: Scope) {
   return scope.admin
     ? sql`true`
     : and(
-        eq(s.invitations.kind, "resident"),
+        inArray(s.invitations.kind, ["resident", "household_member"]),
         scope.all
           ? sql`true`
           : scope.buildings.length
@@ -78,11 +80,18 @@ function scopeWhere(scope: Scope) {
 }
 // Correlated EXISTS checks keep queue revalidation bounded without loading raw issuer grants.
 const issuerHasAuthority = sql<boolean>`(
-  exists (select 1 from global_roles gr where gr.user_id = ${s.invitations.createdBy} and gr.role = 'admin')
+  (${s.invitations.kind} <> 'household_member' and exists (select 1 from global_roles gr where gr.user_id = ${s.invitations.createdBy} and gr.role = 'admin'))
   or (${s.invitations.kind} = 'resident' and exists (
     select 1 from staff_assignments sa
     where sa.user_id = ${s.invitations.createdBy} and sa.project_id = ${s.invitations.projectId}
       and (sa.role = 'project_manager' or (sa.role = 'building_manager' and sa.building_id = ${s.invitations.buildingId}))
+  ))
+  or (${s.invitations.kind} = 'household_member' and exists (
+    select 1 from user_person_links upl join people p on p.party_id=upl.person_id
+    join household_members hm on hm.person_id=p.party_id
+    join households h on h.id=hm.household_id
+    where upl.user_id=${s.invitations.createdBy} and not p.is_child and hm.is_contact_person
+      and h.id=${s.invitations.householdId} and h.is_active and h.approval_status='approved'
   ))
 )`;
 async function actorScope(tx: Tx, userId: string, projectId: string, lock = false) {
@@ -91,6 +100,16 @@ async function actorScope(tx: Tx, userId: string, projectId: string, lock = fals
   return scope;
 }
 async function issuer(tx: Tx, i: Invite, lock = false) {
+  if (i.kind === "household_member") {
+    if (!i.householdId) throw missing();
+    try {
+      await familyRepresentative(tx, i.createdBy, i.householdId, lock ? "issuer" : false);
+    } catch (error) {
+      if (error instanceof HouseholdError) throw missing();
+      throw error;
+    }
+    return;
+  }
   if (!permitted(await grants(tx, i.createdBy, i.projectId, lock), i)) throw missing();
 }
 async function recipient(tx: Tx, i: Invite, userId: string) {
@@ -154,35 +173,51 @@ export async function createInvitation(
     }
     const apartmentId = input.kind === "resident" ? input.apartmentId : null;
     if (apartmentId) await apartment(tx, { buildingId, projectId, apartmentId }, apartmentId);
-    const matching = input.recipientEmail
-      ? await tx
-          .select({ id: s.appUsers.id })
-          .from(s.appUsers)
-          .where(
-            and(
-              sql`lower(${s.appUsers.email}) = ${input.recipientEmail}`,
-              eq(s.appUsers.emailVerified, true),
-            ),
-          )
-          .limit(2)
-      : [];
-    const token = randomBytes(32).toString("hex");
-    const [row] = await tx
-      .insert(s.invitations)
-      .values({
-        projectId,
-        buildingId,
-        apartmentId,
-        kind: input.kind,
-        recipientEmail: input.recipientEmail ?? null,
-        recipientUserId: matching.length === 1 ? matching[0].id : null,
-        tokenHash: hashInvitationToken(token),
-        createdBy: userId,
-        expiresAt: new Date(Date.now() + input.expiresInDays * 86400000),
-      })
-      .returning({ id: s.invitations.id });
-    return { ...row, token };
+    return insertInvitation(
+      tx,
+      userId,
+      { projectId, buildingId, apartmentId, kind: input.kind },
+      input,
+    );
   });
+}
+export async function insertInvitation(
+  tx: Tx,
+  userId: string,
+  scope: {
+    projectId: string;
+    buildingId: string | null;
+    apartmentId: string | null;
+    householdId?: string | null;
+    kind: InvitationKind;
+  },
+  options: { recipientEmail?: string; expiresInDays: number },
+) {
+  const matching = options.recipientEmail
+    ? await tx
+        .select({ id: s.appUsers.id })
+        .from(s.appUsers)
+        .where(
+          and(
+            sql`lower(${s.appUsers.email}) = ${options.recipientEmail}`,
+            eq(s.appUsers.emailVerified, true),
+          ),
+        )
+        .limit(2)
+    : [];
+  const token = randomBytes(32).toString("hex");
+  const [row] = await tx
+    .insert(s.invitations)
+    .values({
+      ...scope,
+      recipientEmail: options.recipientEmail ?? null,
+      recipientUserId: matching.length === 1 ? matching[0].id : null,
+      tokenHash: hashInvitationToken(token),
+      createdBy: userId,
+      expiresAt: new Date(Date.now() + options.expiresInDays * 86400000),
+    })
+    .returning({ id: s.invitations.id });
+  return { ...row, token };
 }
 export async function listInvitations(
   db: Database,
@@ -289,7 +324,7 @@ export async function invitationContext(
             .where(eq(s.buildings.id, i.buildingId))
         : [];
       const apartments =
-        active && i.kind === "resident" && !own
+        active && (i.kind === "resident" || i.kind === "household_member") && !own
           ? await tx
               .select({ id: s.apartments.id, number: s.apartments.number, floor: s.floors.number })
               .from(s.apartments)
@@ -336,16 +371,25 @@ export async function submitJoin(db: Database, userId: string, token: string, va
     if (own) return { id: own.id, status: status(own.status) };
     if (!live(i) || i.consumedAt) throw missing();
     await issuer(tx, i, true);
-    if (i.kind === "resident") {
+    if (i.kind === "household_member") {
+      if (i.createdBy === userId) throw new InvitationError(403, "SELF_INVITE");
+      if (!("fullName" in input) || "apartmentId" in input)
+        throw new InvitationError(400, "INVALID_INPUT");
+    } else if (i.kind === "resident") {
       if (!("apartmentId" in input)) throw new InvitationError(400, "INVALID_INPUT");
       await apartment(tx, i, input.apartmentId);
-    } else if ("apartmentId" in input) throw new InvitationError(400, "INVALID_INPUT");
+    } else if ("fullName" in input) throw new InvitationError(400, "INVALID_INPUT");
     const [row] = await tx
       .insert(s.joinRequests)
       .values({
         invitationId: i.id,
         userId,
-        apartmentId: "apartmentId" in input ? input.apartmentId : null,
+        apartmentId:
+          i.kind === "household_member"
+            ? i.apartmentId
+            : "apartmentId" in input
+              ? input.apartmentId
+              : null,
         fullName: "fullName" in input ? input.fullName : null,
         householdName: "householdName" in input ? input.householdName : null,
       })
@@ -423,6 +467,32 @@ export async function listJoinRequests(
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
 }
+async function approvedPerson(tx: Tx, userId: string, fullName: string, reviewer: string) {
+  const [link] = await tx
+    .select({ personId: s.userPersonLinks.personId })
+    .from(s.userPersonLinks)
+    .where(eq(s.userPersonLinks.userId, userId))
+    .for("share");
+  let personId = link?.personId;
+  if (personId) {
+    const [person] = await tx
+      .select({ child: s.people.isChild })
+      .from(s.people)
+      .where(eq(s.people.partyId, personId))
+      .for("share");
+    if (!person || person.child) throw new InvitationError(409, "IDENTITY_UNAVAILABLE");
+  } else {
+    const [party] = await tx
+      .insert(s.parties)
+      .values({ kind: "person" })
+      .returning({ id: s.parties.id });
+    personId = party.id;
+    await tx.insert(s.people).values({ partyId: personId, fullName: fullName, isChild: false });
+    await tx.insert(s.userPersonLinks).values({ userId: userId, personId, verifiedBy: reviewer });
+  }
+
+  return personId;
+}
 export async function reviewJoinRequest(
   db: Database,
   reviewer: string,
@@ -484,30 +554,7 @@ export async function reviewJoinRequest(
             and(eq(s.households.apartmentId, request.apartmentId), eq(s.households.isActive, true)),
           );
         if (occupied) throw new InvitationError(409, "APARTMENT_OCCUPIED");
-        const [link] = await tx
-          .select({ personId: s.userPersonLinks.personId })
-          .from(s.userPersonLinks)
-          .where(eq(s.userPersonLinks.userId, request.userId));
-        let personId = link?.personId;
-        if (personId) {
-          const [person] = await tx
-            .select({ child: s.people.isChild })
-            .from(s.people)
-            .where(eq(s.people.partyId, personId));
-          if (!person || person.child) throw new InvitationError(409, "IDENTITY_UNAVAILABLE");
-        } else {
-          const [party] = await tx
-            .insert(s.parties)
-            .values({ kind: "person" })
-            .returning({ id: s.parties.id });
-          personId = party.id;
-          await tx
-            .insert(s.people)
-            .values({ partyId: personId, fullName: request.fullName!, isChild: false });
-          await tx
-            .insert(s.userPersonLinks)
-            .values({ userId: request.userId, personId, verifiedBy: reviewer });
-        }
+        const personId = await approvedPerson(tx, request.userId, request.fullName!, reviewer);
         const [home] = await tx
           .insert(s.households)
           .values({
@@ -521,6 +568,42 @@ export async function reviewJoinRequest(
         await tx
           .insert(s.householdMembers)
           .values({ householdId: home.id, personId, isContactPerson: true });
+      } else if (i.kind === "household_member") {
+        if (!i.householdId || !request.apartmentId || request.apartmentId !== i.apartmentId)
+          throw missing();
+        const personId = await approvedPerson(tx, request.userId, request.fullName!, reviewer);
+        const [home] = await tx
+          .select({ id: s.households.id })
+          .from(s.households)
+          .where(
+            and(
+              eq(s.households.id, i.householdId),
+              eq(s.households.apartmentId, i.apartmentId!),
+              eq(s.households.isActive, true),
+              eq(s.households.approvalStatus, "approved"),
+            ),
+          )
+          .for("update");
+        if (!home) throw new InvitationError(409, "INVITATION_INACTIVE");
+        const [existing] = await tx
+          .select({ id: s.householdMembers.id })
+          .from(s.householdMembers)
+          .where(
+            and(
+              eq(s.householdMembers.householdId, home.id),
+              eq(s.householdMembers.personId, personId),
+            ),
+          );
+        if (!existing) {
+          const [count] = await tx
+            .select({ n: sql<number>`count(*)::int` })
+            .from(s.householdMembers)
+            .where(eq(s.householdMembers.householdId, home.id));
+          if (count.n >= MAX_FAMILY_MEMBERS) throw new InvitationError(409, "FAMILY_LIMIT");
+          await tx
+            .insert(s.householdMembers)
+            .values({ householdId: home.id, personId, isContactPerson: false });
+        }
       } else {
         if (!scope.admin) throw missing();
         await tx

@@ -4,7 +4,7 @@
 
 ## Current status
 
-The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household profiles and self-service contacts now use authorized live data. Configure [authentication](docs/authentication.md), apply migrations 0001–0005 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
+The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household profiles and self-service contacts now use authorized live data. Configure [authentication](docs/authentication.md), apply migrations 0001–0006 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
 
 ## Getting started
 
@@ -109,6 +109,7 @@ erDiagram
     projects ||--o{ invitations : scopes
     buildings |o--o{ invitations : optional_building
     apartments |o--o{ invitations : optional_apartment
+    households |o--o{ invitations : existing_household
     invitations ||--o{ join_requests : receives
     app_users ||--o{ join_requests : requests
     app_users |o--o{ join_requests : reviews
@@ -165,6 +166,8 @@ erDiagram
     household_members {
       uuid household_id FK
       uuid person_id FK
+      boolean is_managed_child
+      uuid creation_key
       boolean is_contact_person
       int contact_priority
     }
@@ -209,6 +212,7 @@ erDiagram
       uuid project_id FK
       uuid building_id FK
       uuid apartment_id FK
+      uuid household_id FK
       text kind
       text token_hash UK
       uuid created_by FK
@@ -241,13 +245,13 @@ erDiagram
 
 **Key constraints:** Each building can have different numbers of apartments on each floor. Apartment numbers are unique per building. At most **one active household** is allowed per apartment (historic inactive households can remain). A person or organization can own multiple apartments, and an apartment can have multiple owners. Multiple members of a household may be designated contact persons.
 
-**Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. Invitation scope additionally uses `(building_id, project_id)` and `(apartment_id, building_id)` composite foreign keys from migration 0005. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. Party/subtype consistency is enforced by migration 0002.
+**Composite constraints in SQL:** `apartments(floor_id, building_id)` must refer to the same `floors(id, building_id)`; `staff_assignments(building_id, project_id)` must refer to `buildings(id, project_id)`. Invitation scope additionally uses `(building_id, project_id)` and `(apartment_id, building_id)` composite foreign keys from migration 0005 and `(household_id, apartment_id)` from migration 0006. These are currently enforced in the SQL baseline and not yet expressed in the Drizzle TypeScript schema. Party/subtype consistency is enforced by migration 0002.
 
 For setup and migration caveats, see [Database README](database/README.md) and [Drizzle integration](docs/drizzle-integration.md).
 
 ## Next steps
 
-The authenticated directory, management workspace, invitation/approval flow and household profiles use server-authorized data. Linked adults can manage their own global contacts; contact representatives can rename their own household. Next: joining existing households, family membership, birthdays and organization directories. These require separate authorized workflows.
+The authenticated directory, management workspace, invitation/approval flow and household profiles use server-authorized data. Linked adults can manage their own global contacts; contact representatives can rename their own household. Representatives can privately manage child profiles and invite adults into existing households with manager approval. Next: representative delegation, adult membership changes, birthdays and organization directories. See [family membership](docs/family-membership.md).
 
 Resident identity provisioning, deployment prerequisites and revocation behavior are documented in [resident authorization](docs/resident-authorization.md). Screenshots remain on demand only.
 
@@ -262,3 +266,5 @@ See [Invitation onboarding](docs/invitation-onboarding.md) for multi-project acc
 ### Household profiles
 
 Approved residents can open My households, view live adult family details, and manage their own contact values/visibility. Linked contact representatives can also rename their household. Directory links respect existing privacy and project/building scope. See [household profiles](docs/household-profile.md) for permissions, global contact semantics, API contracts and verification.
+
+Representatives can open Manage family members to privately add/edit/remove child profiles and issue reviewed invitations into their existing household. Apply migration 0006 first. See [family membership](docs/family-membership.md).
