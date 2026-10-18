@@ -38,14 +38,15 @@ export function useStructureEditor(
         setError(null);
       }
     },
-    onSave: async (value: string) => {
+    onSave: async (value: string, address?: string) => {
       if (!target || pending.current) return;
       const controller = new AbortController();
       pending.current = controller;
       setBusy(true);
       setError(null);
       try {
-        await save(projectId, target, value, controller.signal);
+        if (address === undefined) await save(projectId, target, value, controller.signal);
+        else await save(projectId, target, value, controller.signal, address);
         if (controller.signal.aborted) return;
         setTarget(null);
         onRefresh();

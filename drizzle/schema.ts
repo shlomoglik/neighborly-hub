@@ -111,6 +111,7 @@ export const buildings = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    address: text("address"),
   },
   (t) => [
     unique("buildings_project_id_name_unique").on(t.projectId, t.name),

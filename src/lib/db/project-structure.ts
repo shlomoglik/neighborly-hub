@@ -30,7 +30,11 @@ export async function insertProjectStructure(
   for (const buildingInput of input.buildings) {
     const [building] = await tx
       .insert(buildings)
-      .values({ projectId: project.id, name: buildingInput.name })
+      .values({
+        projectId: project.id,
+        name: buildingInput.name,
+        address: buildingInput.address || null,
+      })
       .returning({ id: buildings.id });
 
     for (const floorInput of buildingInput.floors) {

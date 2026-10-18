@@ -6,6 +6,61 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  buildingAddress: { he: "כתובת הבניין", en: "Building address", ru: "Адрес здания" },
+  layoutEdit: { he: "עריכת פריסת דירות", en: "Edit apartment layout", ru: "Изменить план квартир" },
+  layoutPerFloor: {
+    he: "מספר דירות שונה לפי קומה",
+    en: "Customize apartments per floor",
+    ru: "Число квартир по этажам",
+  },
+  layoutZeroHint: {
+    he: "אפשר להגדיר 0 לקומה ללא דירות. מספור הדירות רציף בכל בניין.",
+    en: "Use 0 for a floor without apartments. Apartment numbering is continuous within each building.",
+    ru: "Укажите 0 для этажа без квартир. Нумерация квартир сквозная в каждом здании.",
+  },
+  layoutCopyAll: {
+    he: "העתקת הפריסה לשאר הבניינים",
+    en: "Copy layout to other buildings",
+    ru: "Копировать план в остальные здания",
+  },
+  layoutFloorCount: {
+    he: "מספר דירות בקומה {floor} בבניין {building}",
+    en: "Apartments on floor {floor} in building {building}",
+    ru: "Квартир на этаже {floor} в здании {building}",
+  },
+  layoutFloor: {
+    he: "מספר דירות בקומה {floor}",
+    en: "Apartments on floor {floor}",
+    ru: "Квартир на этаже {floor}",
+  },
+  layoutHint: {
+    he: "בחרו בניין אחד או כמה בניינים, הגדירו מספר דירות לכל קומה ובדקו את השינויים לפני השמירה.",
+    en: "Select one or more buildings, set apartment counts per floor and review changes before saving.",
+    ru: "Выберите одно или несколько зданий, задайте число квартир на этажах и проверьте изменения перед сохранением.",
+  },
+  layoutApplyFloors: {
+    he: "החלה על כל הקומות שנבחרו",
+    en: "Apply to all selected floors",
+    ru: "Применить ко всем выбранным этажам",
+  },
+  layoutExistingHint: {
+    he: "שדה שלא שונה משאיר את הקומה כפי שהיא. ההגדרות חלות רק על קומות קיימות בבניינים שנבחרו. לשינוי חריג, בחרו בניין אחד בלבד.",
+    en: "Unchanged fields preserve existing counts. Changes apply only to existing floors in the selected buildings. Select one building to customize it separately.",
+    ru: "Неизменённые поля сохраняют текущие значения. Изменения относятся только к существующим этажам выбранных зданий. Для отдельной настройки выберите одно здание.",
+  },
+  layoutMixed: { he: "ערכים שונים", en: "Mixed values", ru: "Разные значения" },
+  layoutBuildingsCount: { he: "{n} בניינים", en: "{n} buildings", ru: "Зданий: {n}" },
+  layoutRemovalHint: {
+    he: "בהקטנה יוסרו הדירות האחרונות לפי המספור, ורק אם אינן מקושרות לנתונים. דירות שנשארות שומרות על המספר והשיוכים שלהן.",
+    en: "Reducing counts removes the last numbered apartments only when they have no linked records. Remaining apartments keep their numbers and relationships.",
+    ru: "При уменьшении удаляются последние по номеру квартиры без связанных данных. Остальные квартиры сохраняют номера и связи.",
+  },
+  layoutLinked: {
+    he: "לא ניתן להסיר דירה עם משק בית, בעלות, הזמנה או בקשת הצטרפות. לא נשמר אף שינוי. רעננו והתאימו את הפריסה.",
+    en: "An apartment with a household, ownership, invitation or join request cannot be removed. No changes were saved. Refresh and adjust the layout.",
+    ru: "Нельзя удалить квартиру с семьёй, владельцем, приглашением или заявкой. Изменения не сохранены. Обновите данные и измените план.",
+  },
+
   globalSearch: { he: "חיפוש גלובלי", en: "Global search", ru: "Глобальный поиск" },
   globalSearchHint: {
     he: "חיפוש לפי שם, טלפון או אימייל בכל הפרויקטים המורשים לך",

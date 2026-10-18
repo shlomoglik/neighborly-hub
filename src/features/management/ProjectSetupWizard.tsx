@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  setupFloorCounts,
+  setupApartmentCount,
   MAX_SETUP_BUILDINGS,
   MAX_SETUP_FLOORS,
   MAX_SETUP_APARTMENTS,
@@ -23,6 +25,8 @@ import { createProject, ProjectSetupRequestError } from "./project-setup-api";
 type BuildingDraft = {
   id: number;
   name: string;
+  address?: string;
+  floorUnits?: number[];
   floors: number;
   unitsPerFloor: number;
 };
@@ -56,7 +60,9 @@ export function ProjectSetupWizard({
   const payload = {
     name: projectName,
     city,
-    buildings: buildings.map(({ name, floors, unitsPerFloor }) => ({
+    buildings: buildings.map(({ name, address, floorUnits, floors, unitsPerFloor }) => ({
+      ...(address !== undefined ? { address } : {}),
+      ...(floorUnits ? { floorUnits } : {}),
       name,
       floors,
       unitsPerFloor,
@@ -116,7 +122,7 @@ export function ProjectSetupWizard({
           <p>
             {t("setupCreatedDetails", {
               n: buildings.length,
-              units: buildings.reduce((total, b) => total + b.floors * b.unitsPerFloor, 0),
+              units: buildings.reduce((total, b) => total + setupApartmentCount(b), 0),
             })}
           </p>
           <Link
@@ -199,6 +205,15 @@ export function ProjectSetupWizard({
                       onChange={(e) => updateBuilding(b.id, { name: e.target.value })}
                     />
                   </label>
+                  <label className="block space-y-2">
+                    <span>{t("buildingAddress")}</span>
+                    <Input
+                      maxLength={500}
+                      autoComplete="street-address"
+                      value={b.address ?? ""}
+                      onChange={(e) => updateBuilding(b.id, { address: e.target.value })}
+                    />
+                  </label>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="space-y-2">
                       <span>{t("floors")}</span>
@@ -207,7 +222,20 @@ export function ProjectSetupWizard({
                         min={1}
                         max={200}
                         value={b.floors}
-                        onChange={(e) => updateBuilding(b.id, { floors: Number(e.target.value) })}
+                        onChange={(e) => {
+                          const floors = Number(e.target.value);
+                          updateBuilding(b.id, {
+                            floors,
+                            ...(b.floorUnits
+                              ? {
+                                  floorUnits: Array.from(
+                                    { length: Math.max(0, Math.min(200, floors)) },
+                                    (_, i) => b.floorUnits?.[i] ?? b.unitsPerFloor,
+                                  ),
+                                }
+                              : {}),
+                          });
+                        }}
                       />
                     </label>
                     <label className="space-y-2">
@@ -220,13 +248,64 @@ export function ProjectSetupWizard({
                         onChange={(e) =>
                           updateBuilding(b.id, {
                             unitsPerFloor: Number(e.target.value),
+                            floorUnits: undefined,
                           })
                         }
                       />
                     </label>
                   </div>
+                  <details className="rounded-xl border p-3" open={!!b.floorUnits}>
+                    <summary className="cursor-pointer font-medium">{t("layoutPerFloor")}</summary>
+                    <p className="my-2 text-sm text-muted-foreground">{t("layoutZeroHint")}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {setupFloorCounts(b)
+                        .slice(0, 200)
+                        .map((units, floor) => (
+                          <label key={floor} className="flex items-center gap-2">
+                            <span className="min-w-16">
+                              {t("floor")} {floor}
+                            </span>
+                            <Input
+                              aria-label={t("layoutFloorCount", { floor, building: b.name })}
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={Number.isFinite(units) ? units : ""}
+                              onChange={(e) => {
+                                const counts = [...setupFloorCounts(b)];
+                                counts[floor] =
+                                  e.target.value === "" ? NaN : Number(e.target.value);
+                                updateBuilding(b.id, { floorUnits: counts });
+                              }}
+                            />
+                          </label>
+                        ))}
+                    </div>
+                  </details>
+                  {buildings.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setBuildings((items) =>
+                          items.map((item) =>
+                            item.id === b.id
+                              ? item
+                              : {
+                                  ...item,
+                                  floors: b.floors,
+                                  unitsPerFloor: b.unitsPerFloor,
+                                  floorUnits: b.floorUnits ? [...b.floorUnits] : undefined,
+                                },
+                          ),
+                        )
+                      }
+                    >
+                      {t("layoutCopyAll")}
+                    </Button>
+                  )}
                   <p className="text-sm text-muted-foreground">
-                    {t("willGenerate", { n: b.floors * b.unitsPerFloor })}
+                    {t("willGenerate", { n: setupApartmentCount(b) })}
                   </p>
                   {buildings.length > 1 && (
                     <Button
@@ -266,7 +345,15 @@ export function ProjectSetupWizard({
               </p>
               {buildings.map((b) => (
                 <div key={b.id} className="rounded-xl bg-muted p-3">
-                  {b.name}: {b.floors} {t("floors")} · {b.floors * b.unitsPerFloor} {t("units")}
+                  <p>
+                    {b.name}: {b.floors} {t("floors")} · {setupApartmentCount(b)} {t("units")}
+                  </p>
+                  {b.address && <p>{b.address}</p>}
+                  <p className="text-sm text-muted-foreground">
+                    {setupFloorCounts(b)
+                      .map((n, i) => `${t("floor")} ${i}: ${n}`)
+                      .join(" · ")}
+                  </p>
                 </div>
               ))}
               <p className="text-sm text-muted-foreground">{t("setupReviewHint")}</p>
