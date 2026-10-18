@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../../drizzle/schema";
 vi.mock("server-only", () => ({}));
-import { readDirectory } from "./directory";
+import { readDirectory, readGlobalSearch } from "./directory";
 import { readDirectoryProjects } from "./projects";
 const url = process.env.AUTH_TEST_DATABASE_URL;
 describe.skipIf(!url)("PostgreSQL resident authorization", () => {
@@ -112,6 +112,93 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
       await client`DELETE FROM app_users WHERE id IN ${client([admin, resident, pending, manager, outsider])}`;
     } finally {
       await client.end();
+    }
+  });
+  it("searches visible names and contacts across grants without leaking hidden matches", async () => {
+    const query = (value: string, user = resident, page = 1) =>
+      readGlobalSearch(db, user, { query: value, page });
+    const phone = "050-123-4567";
+    const email = "Visible.Search@example.test";
+    await db.insert(schema.contactMethods).values([
+      { partyId: personA, kind: "phone", value: phone, visibility: "building" },
+      { partyId: personA, kind: "email", value: email, visibility: "project" },
+      {
+        partyId: personA,
+        kind: "email",
+        value: "secret-search@example.test",
+        visibility: "managers",
+      },
+    ]);
+    const [otherBuilding, otherFloor, otherApartment, otherHome, otherPerson] = Array.from(
+      { length: 5 },
+      () => crypto.randomUUID(),
+    );
+    extraPeople.push(otherPerson);
+    await db
+      .insert(schema.buildings)
+      .values({ id: otherBuilding, projectId: otherProject, name: "Elsewhere" });
+    await db.insert(schema.floors).values({ id: otherFloor, buildingId: otherBuilding, number: 1 });
+    await db
+      .insert(schema.apartments)
+      .values({ id: otherApartment, buildingId: otherBuilding, floorId: otherFloor, number: "2" });
+    await db.insert(schema.households).values({
+      id: otherHome,
+      apartmentId: otherApartment,
+      displayName: "Elsewhere",
+      approvalStatus: "approved",
+    });
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.parties).values({ id: otherPerson, kind: "person" });
+      await tx
+        .insert(schema.people)
+        .values({ partyId: otherPerson, fullName: "Visible Search Other" });
+    });
+    await db
+      .insert(schema.householdMembers)
+      .values({ householdId: otherHome, personId: otherPerson });
+    await db
+      .insert(schema.contactMethods)
+      .values({ partyId: otherPerson, kind: "email", value: email, visibility: "managers" });
+    try {
+      expect((await query("0501234567")).residents.map((r) => r.personId)).toEqual([personA]);
+      expect((await query("VISIBLE.SEARCH")).residents.map((r) => r.personId)).toEqual([personA]);
+      expect((await query(personA)).residents[0]).toMatchObject({
+        projectId: project,
+        projectName: "Access fixture",
+      });
+      for (const value of [
+        "secret-search",
+        "Visible Search Other",
+        "%",
+        "_",
+        "\\",
+        "PRIVATE CHILD",
+        personB,
+      ]) {
+        expect((await query(value)).residents).toEqual([]);
+      }
+      expect((await query(email, outsider)).residents).toEqual([]);
+      expect((await query(email, pending)).residents).toEqual([]);
+      expect((await query("secret-search", manager)).residents.map((r) => r.personId)).toEqual([
+        personA,
+      ]);
+      await db
+        .insert(schema.staffAssignments)
+        .values({ userId: resident, projectId: otherProject, role: "project_manager" });
+      expect(new Set((await query("VISIBLE.SEARCH")).residents.map((r) => r.projectId))).toEqual(
+        new Set([project, otherProject]),
+      );
+      // An additional staff grant never reveals manager contacts in the resident's original project.
+      expect((await query("secret-search")).residents).toEqual([]);
+      await client`DELETE FROM staff_assignments WHERE user_id = ${resident}`;
+      expect((await query("Visible Search Other")).residents).toEqual([]);
+      await client`UPDATE households SET is_active = false WHERE id = ${homeA}`;
+      expect((await query(email)).residents).toEqual([]);
+    } finally {
+      await client`UPDATE households SET is_active = true WHERE id = ${homeA}`;
+      await client`DELETE FROM staff_assignments WHERE user_id = ${resident}`;
+      await client`DELETE FROM contact_methods WHERE value IN ${client([phone, email, "secret-search@example.test"])}`;
+      await client`DELETE FROM buildings WHERE id = ${otherBuilding}`;
     }
   });
   it("discovers only authorized projects and buildings without exposing role metadata", async () => {
@@ -244,6 +331,15 @@ describe.skipIf(!url)("PostgreSQL resident authorization", () => {
       buildingId: a,
       page: 2,
     });
+    const globalFirst = await readGlobalSearch(db, resident, { query: "Paging", page: 1 });
+    const globalSecond = await readGlobalSearch(db, resident, { query: "Paging", page: 2 });
+    expect(globalFirst.residents).toHaveLength(20);
+    expect(globalFirst.hasNext).toBe(true);
+    expect(globalSecond.residents).toHaveLength(1);
+    expect(globalSecond.hasNext).toBe(false);
+    expect(
+      new Set([...globalFirst.residents, ...globalSecond.residents].map((r) => r.personId)).size,
+    ).toBe(21);
     expect(first?.residents).toHaveLength(20);
     expect(first?.hasNext).toBe(true);
     expect(second?.residents).toHaveLength(1);

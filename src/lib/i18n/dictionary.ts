@@ -6,6 +6,17 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  globalSearch: { he: "חיפוש גלובלי", en: "Global search", ru: "Глобальный поиск" },
+  globalSearchHint: {
+    he: "חיפוש לפי שם, טלפון או אימייל בכל הפרויקטים המורשים לך",
+    en: "Search by name, phone or email across your authorized projects",
+    ru: "Поиск по имени, телефону или почте во всех доступных вам проектах",
+  },
+  globalSearchStart: {
+    he: "יש להזין לפחות שני תווים כדי לחפש",
+    en: "Enter at least two characters to search",
+    ru: "Введите минимум два символа для поиска",
+  },
   household_member: {
     he: "בן משפחה מבוגר במשפחה קיימת",
     en: "Adult member of an existing household",
