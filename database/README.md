@@ -12,6 +12,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0002_party_subtyp
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0003_auth_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0004_resident_identity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0005_invitations.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0006_household_members.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/party-integrity.sql
@@ -30,4 +31,6 @@ The smoke test rolls back its fixture data. The migration is intended for a **ne
 
 Apply `migrations/0004_resident_identity.sql` after 0003 to enable explicit user/person links. See [resident authorization](../docs/resident-authorization.md) for provisioning and directory access rules.
 
-Migration 0005 enables [invitation onboarding](../docs/invitation-onboarding.md) after 0004. Apply all five in order before enabling the current application.
+Migration 0005 enables [invitation onboarding](../docs/invitation-onboarding.md) after 0004. Apply all six in order before enabling the current application.
+
+Migration `0006_household_members.sql` adds private child-profile provenance/retry keys and household-bound adult invitations. Apply it after 0005, then run `database/tests/family-integrity.sql`. Existing rows default to unmanaged profiles; identity/membership data is preserved.

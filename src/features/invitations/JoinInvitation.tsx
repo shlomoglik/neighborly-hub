@@ -27,7 +27,9 @@ export function JoinInvitation(p: JoinInvitationProps) {
   const input = joinInput.safeParse(
     data?.kind === "resident"
       ? { apartmentId: selected, fullName: name, householdName: family }
-      : {},
+      : data?.kind === "household_member"
+        ? { fullName: name }
+        : {},
   );
   const valid =
     input.success && (data?.kind !== "resident" || data.apartments.some((a) => a.id === selected));
@@ -82,6 +84,26 @@ export function JoinInvitation(p: JoinInvitationProps) {
             >
               <p>{t("inviteJoinHint")}</p>
               <fieldset className="space-y-3" disabled={p.busy || !data.active}>
+                {data.kind === "household_member" && (
+                  <>
+                    <p>{t("familyJoinHint")}</p>
+                    {data.apartments[0] && (
+                      <p>
+                        {t("apartment")} <bdi>{data.apartments[0].number}</bdi>
+                      </p>
+                    )}
+                    <label className="block space-y-2">
+                      <span>{t("fullName")}</span>
+                      <Input
+                        required
+                        maxLength={200}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </label>
+                    <p className="text-sm text-muted-foreground">{t("inviteIdentityReuse")}</p>
+                  </>
+                )}
                 {data.kind === "resident" && (
                   <>
                     <label className="block space-y-2">

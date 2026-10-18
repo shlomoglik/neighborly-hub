@@ -12,6 +12,8 @@ export const invitationErrorKey = (code: string): TKey =>
       REQUEST_REVIEWED: "inviteReviewed",
       INVITATION_INACTIVE: "inviteInactive",
       SELF_REVIEW: "inviteSelfReview",
+      SELF_INVITE: "familySelfInvite",
+      FAMILY_LIMIT: "familyLimit",
       INVALID_INPUT: "inviteInvalid",
     }) as Record<string, TKey>
   )[code] ?? "inviteUncertain";

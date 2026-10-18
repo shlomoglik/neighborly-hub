@@ -189,6 +189,11 @@ export function HouseholdWorkspace({
             </Button>
           </nav>
           {data.canRename && (
+            <Button variant="outline" asChild>
+              <Link href={`/household/${data.id}/members`}>{t("familyManage")}</Link>
+            </Button>
+          )}
+          {data.canRename && (
             <Button
               variant="outline"
               disabled={busy}

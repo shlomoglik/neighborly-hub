@@ -210,6 +210,7 @@ export const households = pgTable(
     uniqueIndex("households_one_active_per_apartment")
       .on(t.apartmentId)
       .where(sql`${t.isActive}`),
+    unique("households_id_apartment_unique").on(t.id, t.apartmentId),
     index("households_apartment_id_idx").on(t.apartmentId),
     check(
       "households_approval_status_check",
@@ -231,9 +232,16 @@ export const householdMembers = pgTable(
     relation: text("relation"),
     isContactPerson: boolean("is_contact_person").notNull().default(false),
     contactPriority: integer("contact_priority"),
+    isManagedChild: boolean("is_managed_child").notNull().default(false),
+    creationKey: uuid("creation_key"),
   },
   (t) => [
     unique("household_members_household_id_person_id_unique").on(t.householdId, t.personId),
+    unique("household_members_creation_key_unique").on(t.householdId, t.creationKey),
+    check(
+      "household_members_managed_child_not_representative",
+      sql`NOT ${t.isManagedChild} OR NOT ${t.isContactPerson}`,
+    ),
     index("household_members_person_id_idx").on(t.personId),
     check(
       "household_members_contact_priority_check",
@@ -372,7 +380,7 @@ export const userPersonLinks = pgTable(
   (t) => [check("user_person_links_no_self_verification", sql`${t.userId} <> ${t.verifiedBy}`)],
 );
 
-// Composite structural scope FKs and CHECKs are authoritative in migration 0005.
+// Composite structural scope FKs and CHECKs are authoritative in migrations 0005–0006.
 export const invitations = pgTable(
   "invitations",
   {
@@ -382,6 +390,7 @@ export const invitations = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     buildingId: uuid("building_id"),
     apartmentId: uuid("apartment_id"),
+    householdId: uuid("household_id"),
     kind: text("kind").notNull(),
     recipientEmail: text("recipient_email"),
     recipientUserId: uuid("recipient_user_id").references(() => appUsers.id, {

@@ -1,12 +1,12 @@
 # Invitation onboarding
 
-Apply authoritative SQL migrations 0001–0005, in order. Migration 0005 adds `invitations` and `join_requests`, composite structural foreign keys, normalized recipient restrictions, token uniqueness, payload/review constraints and pagination indexes. Do not run the legacy Drizzle/Supabase migration.
+Apply authoritative SQL migrations 0001–0006, in order. Migration 0005 adds `invitations` and `join_requests`, composite structural foreign keys, normalized recipient restrictions, token uniqueness, payload/review constraints and pagination indexes. Do not run the legacy Drizzle/Supabase migration.
 
 ## Account and membership boundary
 
 An account is global. Staff assignments and household membership belong to projects/buildings/apartments and can accumulate independently. A resident request never creates another login. Approval reuses an existing verified `user_person_links` person without changing that person's name or existing memberships; otherwise the approving manager provisions a person, link, approved active household and membership atomically. The approver records identity verification provenance and must verify the applicant before approval. No matching by name or phone, no contact/ownership inference, and no takeover of an existing household.
 
-The initial resident flow creates one adult member for an apartment without an active household. Joining an occupied household, adding family members/children, ownership and household moves require separate workflows. Approved adult members can manage their own contacts through the [household profile](household-profile.md). Pending join requests do not create households, reserve apartments or grant directory/management access. The partial active-household uniqueness constraint and apartment row lock prevent two concurrent approvals from occupying one apartment. A user row lock serializes person provisioning across projects.
+The initial resident flow creates one adult member for an apartment without an active household. The [family membership workflow](family-membership.md) now adds private child profiles and reviewed adult joins to occupied households. Ownership and household moves remain separate workflows. Approved adult members can manage their own contacts through the [household profile](household-profile.md). Pending join requests do not create households, reserve apartments or grant directory/management access. The partial active-household uniqueness constraint and apartment row lock prevent two concurrent approvals from occupying one apartment. A user row lock serializes person provisioning across projects.
 
 ## Invitation types and authorization
 

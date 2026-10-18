@@ -179,3 +179,21 @@ it("creates a local printable/downloadable QR and targeted WhatsApp/mailto links
   ).toBe("neighborly-invitation.svg");
   expect(screen.getByRole("button", { name: translate("en", "invitePrint") })).toBeTruthy();
 });
+it.each(["he", "en", "ru"] as const)(
+  "joins an existing household with an adult name only in %s",
+  async (lang) => {
+    const base = join({}, lang);
+    cleanup();
+    const p = join({ data: { ...base.data!, kind: "household_member" } }, lang);
+    expect(screen.getByText(translate(lang, "familyJoinHint"))).toBeTruthy();
+    expect(screen.queryByLabelText(translate(lang, "familyName"))).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    fireEvent.change(screen.getByLabelText(translate(lang, "fullName")), {
+      target: { value: "Adult member" },
+    });
+    fireEvent.submit(
+      screen.getByRole("button", { name: translate(lang, "inviteSubmit") }).closest("form")!,
+    );
+    await waitFor(() => expect(p.onSubmit).toHaveBeenCalledWith({ fullName: "Adult member" }));
+  },
+);
