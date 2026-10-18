@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,12 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
                       })),
                     }}
                   />
+                  <Link
+                    href={`/household/${resident.householdId}`}
+                    className="inline-flex min-h-11 items-center px-4 text-primary underline"
+                  >
+                    {t("homeOpen")}
+                  </Link>
                 </li>
               ))}
             </ul>

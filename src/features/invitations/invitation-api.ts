@@ -5,43 +5,8 @@ import type {
   JoinContext,
   JoinInput,
 } from "@/lib/access/invitation-contracts";
-export class InvitationRequestError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-  ) {
-    super(code);
-  }
-}
-async function read<T>(
-  url: string,
-  signal: AbortSignal,
-  method = "GET",
-  body?: unknown,
-): Promise<T> {
-  const response = await fetch(url, {
-    method,
-    signal,
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  if (!response.ok) {
-    let code = "INTERNAL_ERROR";
-    try {
-      const data = await response.json();
-      if (typeof data.error === "string") code = data.error;
-    } catch {
-      /* Generic non-JSON failure. */
-    }
-    throw new InvitationRequestError(response.status, code);
-  }
-  return response.json() as Promise<T>;
-}
+import { PrivateRequestError, privateRequest as read } from "@/features/shared/private-api";
+export { PrivateRequestError as InvitationRequestError };
 const project = (id: string) => `/api/management/projects/${encodeURIComponent(id)}`;
 export const invitationApi = {
   invitations: (id: string, page: number, signal: AbortSignal) =>

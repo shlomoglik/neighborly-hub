@@ -25,6 +25,12 @@ export default async function AccountPage() {
         >
           {translate(lang, "openBook")}
         </Link>
+        <Link
+          href="/household"
+          className="inline-flex min-h-11 items-center text-primary underline"
+        >
+          {translate(lang, "homeMine")}
+        </Link>
         <SignOut />
       </div>
     </main>
