@@ -14,6 +14,9 @@ const config: StorybookConfig = {
           )
         : (viteConfig.resolve.alias ?? {})),
       "@": fileURLToPath(new URL("../src", import.meta.url)),
+      // The React/Vite Storybook framework does not mock Next.js navigation.
+      // Avoid bundling next/link's Node-dependent runtime into browser stories.
+      "next/link": fileURLToPath(new URL("./next-link.tsx", import.meta.url)),
     };
     viteConfig.plugins = [
       ...(viteConfig.plugins ?? []),
