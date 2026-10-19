@@ -26,7 +26,8 @@ for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GO
   if (!config[key]) throw new Error(`Missing required setting: ${key}`);
 }
 const url = new URL(config.DATABASE_URL);
-if (!["postgres:", "postgresql:"].includes(url.protocol)) throw new Error("Expected PostgreSQL DATABASE_URL");
+if (!["postgres:", "postgresql:"].includes(url.protocol))
+  throw new Error("Expected PostgreSQL DATABASE_URL");
 if (target === "local" && !["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
   throw new Error("Local target requires a loopback database host");
 }
@@ -34,10 +35,14 @@ if (target !== "local" && ["localhost", "127.0.0.1", "::1"].includes(url.hostnam
   throw new Error("Remote target requires a remote database host");
 }
 if (target === "production" && config.ALLOW_PRODUCTION_DEBUG !== "true") {
-  throw new Error("Production debugging requires ALLOW_PRODUCTION_DEBUG=true in the private environment file");
+  throw new Error(
+    "Production debugging requires ALLOW_PRODUCTION_DEBUG=true in the private environment file",
+  );
 }
 if (target === "production" && config.DATABASE_READ_ONLY !== "true") {
-  throw new Error("Production debugging requires DATABASE_READ_ONLY=true and a database role restricted to SELECT");
+  throw new Error(
+    "Production debugging requires DATABASE_READ_ONLY=true and a database role restricted to SELECT",
+  );
 }
 const env = {
   ...process.env,
