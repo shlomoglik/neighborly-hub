@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { BuildingLayoutEditor } from "./BuildingLayoutEditor";
 const id = "11111111-1111-4111-8111-111111111111";
 const meta = {

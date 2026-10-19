@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { StructureEditor } from "./StructureEditor";
 const meta = {
   title: "Features/Management/Structure editor",

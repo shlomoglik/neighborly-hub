@@ -272,3 +272,7 @@ Representatives can open Manage family members to privately add/edit/remove chil
 ## Pilot environment
 
 See [pilot environment](docs/pilot-environment.md) for a separate local PostgreSQL environment, public HTTPS/Google activation prerequisites and the real desktop/mobile browser journey in CI. The browser job uses synthetic signed sessions and does not claim real Google consent or a deployed public URL.
+
+### Storybook runtime verification
+
+Storybook uses `@storybook/nextjs-vite` with App Router support and a compatible Vite 7 development dependency, providing the official Next.js link and navigation mocks. Do not alias Next.js modules to custom components or polyfill `process` globally. CI builds Storybook and runs `scripts/check-storybook.mjs` against every indexed story in Chromium; a successful static build alone does not guarantee that stories render. Browser tooling is installed in an isolated temporary directory. Screenshot capture remains opt-in.

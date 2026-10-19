@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useI18n } from "@/lib/i18n";
 import { ManagementWorkspace } from "./ManagementWorkspace";
 import type { ManagementStatus } from "./use-management";
