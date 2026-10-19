@@ -172,7 +172,7 @@ jobs:
           node scripts/pilot/browser-smoke.mjs
       - name: Upload sanitized pilot result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pilot-smoke-result
           path: artifacts/pilot/pilot-smoke.json
