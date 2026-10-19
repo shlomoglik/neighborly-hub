@@ -22,7 +22,10 @@
     "dev:local": "node scripts/dev-environment.mjs local",
     "dev:development": "node scripts/dev-environment.mjs development",
     "dev:staging": "node scripts/dev-environment.mjs staging",
-    "dev:production": "node scripts/dev-environment.mjs production"
+    "dev:production": "node scripts/dev-environment.mjs production",
+    "admin:grant": "node scripts/admin-grant.mjs local",
+    "admin:grant:development": "node scripts/admin-grant.mjs development",
+    "admin:grant:staging": "node scripts/admin-grant.mjs staging"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",
