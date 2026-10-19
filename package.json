@@ -18,7 +18,11 @@
     "prepare": "node scripts/install-git-hooks.mjs",
     "pilot:db": "docker compose --env-file .env.pilot.local -f compose.pilot.yml up -d --wait db",
     "pilot:fixture": "vitest run src/lib/access/pilot-fixture.integration.test.ts",
-    "db:migrate": "node scripts/db/migrate.mjs"
+    "db:migrate": "node scripts/db/migrate.mjs",
+    "dev:local": "node scripts/dev-environment.mjs local",
+    "dev:development": "node scripts/dev-environment.mjs development",
+    "dev:staging": "node scripts/dev-environment.mjs staging",
+    "dev:production": "node scripts/dev-environment.mjs production"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.2",
