@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react-vite";
+import type { Preview } from "@storybook/nextjs-vite";
 import React, { useEffect } from "react";
 import { I18nContext } from "../src/lib/i18n/context";
 import { directionFor, isLang, translate, type Lang } from "../src/lib/i18n/dictionary";
@@ -53,6 +53,11 @@ const preview: Preview = {
       </LocalePreview>
     ),
   ],
-  parameters: { layout: "fullscreen", controls: { expanded: true }, a11y: { test: "error" } },
+  parameters: {
+    nextjs: { appDirectory: true },
+    layout: "fullscreen",
+    controls: { expanded: true },
+    a11y: { test: "error" },
+  },
 };
 export default preview;

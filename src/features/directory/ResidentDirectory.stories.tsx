@@ -1,7 +1,7 @@
 import { expect, userEvent, within } from "storybook/test";
 import { translate, isLang } from "@/lib/i18n/dictionary";
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useI18n } from "@/lib/i18n/context";
 import type { DirectoryQuery } from "@/lib/access/contracts";
 import { ResidentDirectory } from "./ResidentDirectory";
