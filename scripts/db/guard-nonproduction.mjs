@@ -13,5 +13,6 @@ export function assertNonProductionTarget(env = process.env) {
   if (/prod(uction)?/i.test(hostname) || /prod(uction)?/i.test(new URL(url).pathname)) {
     throw new Error("Refusing fixtures against a production-looking database");
   }
-  if (env.DATABASE_READ_ONLY === "true") throw new Error("Read-only database cannot accept fixtures");
+  if (env.DATABASE_READ_ONLY === "true")
+    throw new Error("Read-only database cannot accept fixtures");
 }
