@@ -36,7 +36,7 @@ jobs:
           export PLAYWRIGHT_MODULE_PATH="$RUNNER_TEMP/neighborly-capture/node_modules/playwright/index.mjs"
           node scripts/capture-storybook.mjs
       - name: Upload Storybook screenshots
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: storybook-screenshots
           path: artifacts/storybook
