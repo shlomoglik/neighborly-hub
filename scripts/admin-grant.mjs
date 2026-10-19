@@ -5,7 +5,9 @@ import postgres from "postgres";
 const [target, ...args] = process.argv.slice(2);
 const supported = ["local", "development", "staging"];
 if (!supported.includes(target)) {
-  throw new Error("Usage: node scripts/admin-grant.mjs <local|development|staging> --email <address>");
+  throw new Error(
+    "Usage: node scripts/admin-grant.mjs <local|development|staging> --email <address>",
+  );
 }
 if (args.length !== 2 || args[0] !== "--email" || !args[1].trim()) {
   throw new Error("Specify exactly one --email <address>");
@@ -24,7 +26,8 @@ for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
 }
 if (!env.DATABASE_URL) throw new Error("DATABASE_URL is missing");
 const url = new URL(env.DATABASE_URL);
-if (!["postgres:", "postgresql:"].includes(url.protocol)) throw new Error("Expected PostgreSQL URL");
+if (!["postgres:", "postgresql:"].includes(url.protocol))
+  throw new Error("Expected PostgreSQL URL");
 const host = url.hostname.toLowerCase();
 const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(host);
 if (target === "local" && !loopback) throw new Error("Local target requires loopback PostgreSQL");
@@ -36,7 +39,9 @@ if (/prod(uction)?/i.test(host) || /prod(uction)?/i.test(url.pathname)) {
   throw new Error("Refusing a production-looking database");
 }
 if (target !== "local" && env.ALLOW_REMOTE_ADMIN_BOOTSTRAP !== "true") {
-  throw new Error("Remote bootstrap requires ALLOW_REMOTE_ADMIN_BOOTSTRAP=true in the selected private env file");
+  throw new Error(
+    "Remote bootstrap requires ALLOW_REMOTE_ADMIN_BOOTSTRAP=true in the selected private env file",
+  );
 }
 const sql = postgres(env.DATABASE_URL, { max: 1, connect_timeout: 5 });
 try {
