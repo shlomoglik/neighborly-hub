@@ -22,7 +22,12 @@ for (const raw of readFileSync(filename, "utf8").split(/\r?\n/)) {
   const value = match[2].trim();
   config[match[1]] = /^(['"]).*\1$/.test(value) ? value.slice(1, -1) : value;
 }
-for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]) {
+for (const key of [
+  "DATABASE_URL",
+  "BETTER_AUTH_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+]) {
   if (!config[key]) throw new Error(`Missing required setting: ${key}`);
 }
 const url = new URL(config.DATABASE_URL);
