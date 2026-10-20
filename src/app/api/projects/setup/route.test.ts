@@ -59,7 +59,7 @@ it("rejects malformed, unsupported, oversized and invalid input before writes", 
   ])
     expect((await POST(request(body))).status).toBe(400);
   expect((await POST(request(undefined, { "content-type": "text/plain" }))).status).toBe(415);
-  expect((await POST(request("x".repeat(128 * 1024 + 1)))).status).toBe(413);
+  expect((await POST(request("x".repeat(12 * 1024 * 1024 + 1)))).status).toBe(413);
   expect(provisionProjectSetup).not.toHaveBeenCalled();
 });
 it("uses only verified identity, trims input, and returns the saved project ID", async () => {

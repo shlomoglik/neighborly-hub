@@ -13,7 +13,16 @@ export function buildingVersion(building: ManagementBuilding) {
           .map((f) => ({
             id: f.id,
             number: f.number,
-            apartments: [...f.apartments].sort((a, b) => a.id.localeCompare(b.id)),
+            name: f.name ?? null,
+            type: f.type ?? "residential",
+            apartments: [...f.apartments]
+              .sort((a, b) => a.id.localeCompare(b.id))
+              .map((a) => ({
+                id: a.id,
+                number: a.number,
+                type: a.type ?? "residential",
+                position: a.position ?? 0,
+              })),
           })),
       }),
     )

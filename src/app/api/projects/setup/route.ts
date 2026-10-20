@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
     )
       return json({ error: "INVALID_INPUT" }, 415);
-    // The bounded setup contract needs below 128 KiB, even with 100 long Unicode names.
+    // Detailed layouts include up to 10,000 Unicode unit names. Still bound streamed bytes.
     const body = await readBody(request);
     if (body === null) return json({ error: "PAYLOAD_TOO_LARGE" }, 413);
     let value: unknown;
@@ -50,7 +50,7 @@ async function readBody(request: Request): Promise<string | null> {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 128 * 1024) {
+      if (size > 12 * 1024 * 1024) {
         await reader.cancel();
         return null;
       }

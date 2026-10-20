@@ -133,3 +133,39 @@ it("supports empty ground floors, variable counts and continuous apartment numbe
     }).success,
   ).toBe(false);
 });
+
+it("preserves explicit labels, negative levels, empty floors and mixed unit types", () => {
+  const input = projectSetupInput.parse({
+    name: "Community",
+    city: "Sderot",
+    buildings: [
+      {
+        name: "A",
+        floors: 2,
+        unitsPerFloor: 1,
+        structure: [
+          { number: -1, name: "Parking", type: "parking", apartments: [] },
+          {
+            number: 0,
+            type: "commercial",
+            apartments: [
+              { number: "25B", type: "commercial" },
+              { number: "Studio-X", type: "residential" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  expect(toProjectStructure(input).buildings[0].floors).toEqual(input.buildings[0].structure);
+  expect(
+    projectSetupInput.safeParse({
+      ...input,
+      buildings: [{ ...input.buildings[0], floorUnits: [0, 2] }],
+    }).success,
+  ).toBe(false);
+  expect(
+    projectSetupInput.safeParse({ ...input, buildings: [{ ...input.buildings[0], floors: 3 }] })
+      .success,
+  ).toBe(false);
+});

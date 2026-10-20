@@ -142,10 +142,19 @@ try {
       await adminPage.goto(`${origin}/manage/setup`);
       await adminPage.getByLabel(t.projectName, { exact: true }).fill(projectName);
       await adminPage.getByLabel(t.city, { exact: true }).fill("Sderot");
-      await button(adminPage, "buildings").click();
-      await adminPage.getByLabel(t.building, { exact: true }).fill("Pilot A");
-      await adminPage.getByLabel(t.unitsPerFloor, { exact: true }).fill("2");
-      await button(adminPage, "stepReview").click();
+      await button(adminPage, "editorNext").click();
+      await adminPage.getByRole("button", { name: t.building, exact: true }).click();
+      const buildingName = adminPage.getByRole("textbox", { name: t.building, exact: true });
+      await buildingName.fill("Pilot A");
+      await buildingName.press("Enter");
+      await adminPage
+        .getByRole("button", { name: `${t.editorAddUnit} Pilot A 0`, exact: true })
+        .click();
+      await adminPage
+        .getByRole("button", { name: `${t.editorAddUnit} Pilot A 0`, exact: true })
+        .click();
+      await button(adminPage, "editorNext").click();
+      await button(adminPage, "editorNext").click();
       await button(adminPage, "create").click();
       await adminPage.getByRole("link", { name: t.openProjectManagement, exact: true }).click();
       await adminPage.waitForURL(

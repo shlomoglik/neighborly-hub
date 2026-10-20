@@ -26,24 +26,24 @@ describe.skipIf(!url)("deployment migration runner against real PostgreSQL", () 
   });
   it("initializes an empty database and repeats without changing schema or history", async () => {
     const migrations = await loadMigrations();
-    expect(await runMigrations(sql, migrations)).toEqual({ applied: 7, baselined: 0 });
+    expect(await runMigrations(sql, migrations)).toEqual({ applied: 8, baselined: 0 });
     expect(await runMigrations(sql, migrations)).toEqual({ applied: 0, baselined: 0 });
     await sql`select address from buildings limit 0`;
     const [row] = await sql`select count(*)::int as count from neighborly_migrations.history`;
-    expect(row.count).toBe(7);
+    expect(row.count).toBe(8);
   });
   it("rolls back DDL and history together and allows a corrected pending migration", async () => {
     const migrations = await loadMigrations();
     await runMigrations(sql, migrations);
     const failing = {
-      name: "0008_retry.sql",
+      name: "0009_retry.sql",
       checksum: "failed",
       body: "create table retry_test(id int); select missing_column from retry_test;",
     };
     await expect(runMigrations(sql, [...migrations, failing])).rejects.toThrow();
     const [row] =
       await sql`select to_regclass('retry_test') as table_name, (select count(*)::int from neighborly_migrations.history) as count`;
-    expect(row).toMatchObject({ table_name: null, count: 7 });
+    expect(row).toMatchObject({ table_name: null, count: 8 });
     expect(
       await runMigrations(sql, [
         ...migrations,
@@ -66,7 +66,7 @@ describe.skipIf(!url)("deployment migration runner against real PostgreSQL", () 
     await expect(runMigrations(sql, migrations)).rejects.toThrow("explicit verified baselining");
     expect(
       await runMigrations(sql, migrations, { baselineThrough: migrations.at(-1)!.name }),
-    ).toEqual({ applied: 0, baselined: 7 });
+    ).toEqual({ applied: 0, baselined: 8 });
     expect(await runMigrations(sql, migrations)).toEqual({ applied: 0, baselined: 0 });
     const [row] = await sql`select count(*)::int as count from projects`;
     expect(row.count).toBe(1);
@@ -82,7 +82,7 @@ describe.skipIf(!url)("deployment migration runner against real PostgreSQL", () 
         runMigrations(sql, migrations),
         runMigrations(other, migrations),
       ]);
-      expect(results.map((result) => result.applied).sort()).toEqual([0, 7]);
+      expect(results.map((result) => result.applied).sort()).toEqual([0, 8]);
     } finally {
       await other.end();
     }

@@ -9,6 +9,11 @@ const output = resolve(process.env.SCREENSHOT_DIRECTORY ?? "artifacts/storybook"
 const base = process.env.STORYBOOK_URL ?? "http://127.0.0.1:6006";
 await mkdir(output, { recursive: true });
 const cases = [
+  ["20-structure-he-desktop", "features-management-visual-structure--edge-cases", "he", 1500],
+  ["21-structure-he-mobile", "features-management-visual-structure--edge-cases", "he", 390],
+  ["22-structure-ru-mobile", "features-management-visual-structure--edge-cases", "ru", 390],
+  ["23-structure-en-desktop", "features-management-visual-structure--edge-cases", "en", 1500],
+
   ["01-household-he-mobile", "features-community-building-blocks--household", "he", 390],
   ["02-privacy-he-mobile", "features-community-building-blocks--privacy", "he", 390],
   ["03-member-form-ru-mobile", "features-community-composites--member-form", "ru", 390],
@@ -36,7 +41,7 @@ const cases = [
     "he",
     390,
     false,
-    2,
+    3,
   ],
   [
     "16-setup-review-en-desktop",
@@ -44,7 +49,7 @@ const cases = [
     "en",
     1280,
     false,
-    2,
+    3,
   ],
   ["17-setup-project-ru-mobile", "features-management-project-setup--interactive", "ru", 390],
   [
@@ -93,12 +98,17 @@ try {
       await main.getByRole("textbox").nth(0).fill("Neighborly Demo");
       await main.getByRole("textbox").nth(1).fill("Sderot");
       await main.getByRole("button").last().click();
-      await main.getByRole("spinbutton").first().waitFor();
-      await main.getByRole("textbox").first().fill("A");
-      await main.getByRole("spinbutton").nth(0).fill("4");
-      await main.getByRole("spinbutton").nth(1).fill("3");
+      await main.locator("article header button").nth(1).click();
+      const name = main.locator("article header input");
+      await name.fill("A");
+      await name.press("Enter");
+      const addUnit = main
+        .locator("article section button")
+        .filter({ has: page.locator("svg.lucide-plus") });
+      await addUnit.click();
+      await addUnit.click();
       await settleAnimations(page);
-      if (setupStep === 2) {
+      for (let step = 1; step < setupStep; step++) {
         await main.getByRole("button").last().click();
         await main.getByRole("heading", { level: 2 }).waitFor();
       }

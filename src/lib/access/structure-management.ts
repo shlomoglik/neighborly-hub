@@ -139,9 +139,23 @@ export function createManagementStructure(
       case "apartment": {
         const parent = await floorParent(tx, scope, projectId, input.floorId);
         await lockBuilding(tx, projectId, parent.buildingId, scope);
+        const [floor] = await tx
+          .select({ type: s.floors.type })
+          .from(s.floors)
+          .where(eq(s.floors.id, parent.floorId));
+        const [last] = await tx
+          .select({ position: sql<number>`coalesce(max(${s.apartments.position}), -1)` })
+          .from(s.apartments)
+          .where(eq(s.apartments.floorId, parent.floorId));
         const [row] = await tx
           .insert(s.apartments)
-          .values({ buildingId: parent.buildingId, floorId: parent.floorId, number: input.number })
+          .values({
+            buildingId: parent.buildingId,
+            floorId: parent.floorId,
+            number: input.number,
+            type: floor.type,
+            position: last.position + 1,
+          })
           .returning({ id: s.apartments.id });
         return row;
       }

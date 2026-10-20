@@ -24,6 +24,10 @@ export async function getProjectStructure(projectId: string) {
       buildingName: buildings.name,
       floorId: floors.id,
       floorNumber: floors.number,
+      floorName: floors.name,
+      floorType: floors.type,
+      apartmentType: apartments.type,
+      apartmentPosition: apartments.position,
       apartmentId: apartments.id,
       apartmentNumber: apartments.number,
     })
@@ -31,7 +35,12 @@ export async function getProjectStructure(projectId: string) {
     .leftJoin(floors, eq(floors.buildingId, buildings.id))
     .leftJoin(apartments, eq(apartments.floorId, floors.id))
     .where(eq(buildings.projectId, projectId))
-    .orderBy(asc(buildings.name), asc(floors.number), asc(apartments.number));
+    .orderBy(
+      asc(buildings.name),
+      asc(floors.number),
+      asc(apartments.position),
+      asc(apartments.number),
+    );
 
   return { ...project, buildings: toBuildingHierarchy(rows) };
 }

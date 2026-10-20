@@ -49,7 +49,14 @@ export async function updateBuildingLayouts(
         floors: current.floors.map((f) => ({
           id: f.id,
           number: f.number,
-          apartments: f.apartments.map((a) => ({ id: a.id, number: a.number })),
+          name: f.name,
+          type: f.type,
+          apartments: f.apartments.map((a) => ({
+            id: a.id,
+            number: a.number,
+            type: a.type,
+            position: a.position,
+          })),
         })),
       });
       if (version !== target.expectedVersion)
@@ -61,7 +68,12 @@ export async function updateBuildingLayouts(
           throw new StructureManagementError(404, "NOT_FOUND");
         const units = apartments
           .filter((a) => a.floorId === desired.id)
-          .sort((a, b) => collator.compare(a.number, b.number) || a.id.localeCompare(b.id));
+          .sort(
+            (a, b) =>
+              a.position - b.position ||
+              collator.compare(a.number, b.number) ||
+              a.id.localeCompare(b.id),
+          );
         if (desired.units < units.length) {
           const ids = units.slice(desired.units).map((a) => a.id);
           // Never cascade-delete households, ownership, invitations or join requests.
@@ -88,11 +100,17 @@ export async function updateBuildingLayouts(
           await tx.delete(s.apartments).where(inArray(s.apartments.id, ids));
           removed += ids.length;
         } else if (desired.units > units.length) {
-          const values = Array.from({ length: desired.units - units.length }, () => {
+          const values = Array.from({ length: desired.units - units.length }, (_, index) => {
             while (used.has(String(nextNumber))) nextNumber++;
             const number = String(nextNumber++);
             used.add(number);
-            return { buildingId: target.id, floorId: desired.id, number };
+            return {
+              buildingId: target.id,
+              floorId: desired.id,
+              number,
+              type: floors.find((f) => f.id === desired.id)!.type,
+              position: Math.max(-1, ...units.map((u) => u.position)) + 1 + index,
+            };
           });
           await tx.insert(s.apartments).values(values);
           added += values.length;

@@ -18,6 +18,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0004_resident_ide
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0005_invitations.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0006_household_members.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0007_building_addresses.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/migrations/0008_structure_editor.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/auth-integrity.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/smoke.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/tests/party-integrity.sql
@@ -36,8 +37,10 @@ The smoke test rolls back its fixture data. The migration is intended for a **ne
 
 Apply `migrations/0004_resident_identity.sql` after 0003 to enable explicit user/person links. See [resident authorization](../docs/resident-authorization.md) for provisioning and directory access rules.
 
-Migration 0005 enables [invitation onboarding](../docs/invitation-onboarding.md) after 0004. Apply all seven in order before enabling the current application.
+Migration 0005 enables [invitation onboarding](../docs/invitation-onboarding.md) after 0004. Apply all eight in order before enabling the current application.
 
 Migration `0006_household_members.sql` adds private child-profile provenance/retry keys and household-bound adult invitations. Apply it after 0005, then run `database/tests/family-integrity.sql`. Existing rows default to unmanaged profiles; identity/membership data is preserved.
 
 Migration `0007_building_addresses.sql` adds the optional building address without altering existing names, IDs or relationships. Apply it before deploying the flexible layout editor.
+
+Migration `0008_structure_editor.sql` adds unit/floor types, floor display names and unit positions; it preserves existing IDs and business labels. See [visual structure editor](../docs/visual-structure-editor.md).
