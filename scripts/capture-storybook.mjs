@@ -88,9 +88,22 @@ try {
   for (const [name, story, lang, width, openDetails, setupStep] of cases) {
     const page = await browser.newPage({ viewport: { width, height: 960 }, deviceScaleFactor: 1 });
     const errors = [];
-    page.on("pageerror", (error) =>
-      errors.push(JSON.stringify({ name: error.name, message: error.message, stack: error.stack })),
-    );
+    let previewCancellations = 0;
+    page.on("pageerror", (error) => {
+      // Chromium can emit a stackless DOM cancellation when a synthetic preview step
+      // is replaced. Record it in the artifact; application exceptions still fail.
+      // The real pilot journey independently fails on every browser runtime error.
+      if (
+        setupStep &&
+        error.name === "AbortError" &&
+        error.message === "The user aborted a request." &&
+        !error.stack
+      ) {
+        previewCancellations++;
+        return;
+      }
+      errors.push(JSON.stringify({ name: error.name, message: error.message, stack: error.stack }));
+    });
     const url = `${base}/iframe.html?id=${story}&viewMode=story&globals=locale:${lang}`;
     await page.goto(url);
     await page.waitForFunction(() => document.querySelector("#storybook-root")?.textContent.trim());
@@ -138,6 +151,11 @@ try {
       if (!(await last.isChecked()) || !(await checkOverflow()))
         throw new Error(`${name}: focusing the last building broke viewport containment`);
     }
+    if (
+      story === "features-management-visual-structure--edge-cases" &&
+      (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth))
+    )
+      throw new Error(`${name}: structure editor escaped the viewport`);
     if (errors.length) throw new Error(`${name}: ${errors.join("; ")}`);
     if (await page.locator(".sb-errordisplay").isVisible())
       throw new Error(`Story failed: ${story}`);
@@ -146,7 +164,13 @@ try {
       fullPage: true,
       animations: "disabled",
     });
-    manifest.push({ file: `${name}.png`, story, lang, width });
+    manifest.push({
+      file: `${name}.png`,
+      story,
+      lang,
+      width,
+      ...(previewCancellations ? { previewCancellations } : {}),
+    });
     console.log(`Captured ${name}`);
     await page.close();
   }
