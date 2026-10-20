@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useI18n } from "@/lib/i18n/context";
@@ -44,9 +45,13 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("directory")}
         </h1>
-        <Button variant="outline" disabled={status === "loading"} onClick={props.onRefresh}>
-          {t("refreshDirectory")}
-        </Button>
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            disabled={status === "loading"}
+            onClick={props.onRefresh}
+            label={t("refreshDirectory")}
+          />
+        </div>
       </div>
       {projects.length > 0 && (
         <div className="community-enter space-y-3 rounded-2xl border bg-card p-4">

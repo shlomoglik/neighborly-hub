@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -83,9 +84,13 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
         <h1 className="text-2xl font-bold" tabIndex={-1}>
           {t("inviteManagement")}
         </h1>
-        <Button variant="outline" disabled={p.busy || p.status === "loading"} onClick={p.onRefresh}>
-          {t("refreshManagement")}
-        </Button>
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            disabled={p.busy || p.status === "loading"}
+            onClick={p.onRefresh}
+            label={t("refreshManagement")}
+          />
+        </div>
       </div>
       {p.error && <p role="alert">{t(invitationErrorKey(p.error))}</p>}
       <InvitationFeedback status={p.status} onRetry={p.onRefresh} />

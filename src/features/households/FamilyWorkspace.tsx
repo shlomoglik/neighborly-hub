@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n, type TKey } from "@/lib/i18n";
@@ -127,9 +128,13 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("familyManage")}
         </h1>
-        <Button variant="outline" disabled={p.busy || p.status === "loading"} onClick={p.onRefresh}>
-          {t("refreshDirectory")}
-        </Button>
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            disabled={p.busy || p.status === "loading"}
+            onClick={p.onRefresh}
+            label={t("refreshDirectory")}
+          />
+        </div>
       </div>
       <HouseholdFeedback status={p.status} onRefresh={p.onRefresh} />
       {p.status === "ready" && p.data && (

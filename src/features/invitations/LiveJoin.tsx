@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { invitationApi } from "./invitation-api";
@@ -7,7 +8,6 @@ import { useInvitationAction } from "./use-invitation-action";
 import { JoinInvitation } from "./JoinInvitation";
 import { RequestList } from "./RequestList";
 import { InvitationFeedback } from "./InvitationFeedback";
-import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 export function LiveJoin({ token }: { token: string }) {
   const [page, setPage] = useState(1);
@@ -50,14 +50,16 @@ export function MyJoinRequests() {
   return (
     <AppShell>
       <div className="space-y-5">
-        <h1 className="text-2xl font-bold">{t("inviteMyRequests")}</h1>
-        <Button
-          variant="outline"
-          disabled={resource.status === "loading"}
-          onClick={resource.refresh}
-        >
-          {t("refreshManagement")}
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">{t("inviteMyRequests")}</h1>
+          <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+            <RefreshButton
+              disabled={resource.status === "loading"}
+              onClick={resource.refresh}
+              label={t("refreshManagement")}
+            />
+          </div>
+        </div>
         <p>{t("inviteNeedLink")}</p>
         <InvitationFeedback status={resource.status} onRetry={resource.refresh} />
         {resource.status === "ready" && resource.data && (
