@@ -18,3 +18,4 @@ vite.config.ts
 vitest.config.ts
 # Storybook generated output
 storybook-static/
+scripts/dev-environment.mjs
