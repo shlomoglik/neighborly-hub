@@ -6,7 +6,15 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
 import { AppHeaderMenu } from "./AppHeaderMenu";
-export function AppShell({ children, title }: { children: ReactNode; title?: string }) {
+export function AppShell({
+  children,
+  title,
+  wide = false,
+}: {
+  children: ReactNode;
+  title?: string;
+  wide?: boolean;
+}) {
   const { t } = useI18n();
   const pathname = usePathname();
   const nav = [
@@ -61,7 +69,9 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-4">{children}</main>
+      <main className={`mx-auto min-w-0 px-4 py-4 ${wide ? "max-w-7xl" : "max-w-3xl"}`}>
+        {children}
+      </main>
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

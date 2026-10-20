@@ -88,7 +88,9 @@ try {
   for (const [name, story, lang, width, openDetails, setupStep] of cases) {
     const page = await browser.newPage({ viewport: { width, height: 960 }, deviceScaleFactor: 1 });
     const errors = [];
-    page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+    page.on("pageerror", (error) =>
+      errors.push(JSON.stringify({ name: error.name, message: error.message, stack: error.stack })),
+    );
     const url = `${base}/iframe.html?id=${story}&viewMode=story&globals=locale:${lang}`;
     await page.goto(url);
     await page.waitForFunction(() => document.querySelector("#storybook-root")?.textContent.trim());

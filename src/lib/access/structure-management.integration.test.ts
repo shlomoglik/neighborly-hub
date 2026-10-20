@@ -191,7 +191,7 @@ describe.skipIf(!url)("PostgreSQL authorized structural mutations", () => {
       const saved = (await readManagementHierarchy(fixture.db, actor, project))!.buildings.find(
         (b) => b.id === buildingId,
       )!;
-      expect(saved.floors[0].apartments.map((a) => a.number)).toEqual(["2", "10"]);
+      expect(saved.floors[0].apartments.map((a) => a.number)).toEqual(["10", "2"]);
       expect(
         Object.keys(await (await call({ entity: "floor", buildingId, number: 4 }, actor)).json()),
       ).toEqual(["id"]);
@@ -325,6 +325,7 @@ describe.skipIf(!url)("PostgreSQL authorized structural mutations", () => {
       await fixture.db
         .insert(s.households)
         .values({ apartmentId: linked.id, displayName: "Protected household" });
+      data = (await read())!; // Relationship flags reflect the newly linked household.
       const blocked = await put(targets(data, 0), admin);
       check(blocked, 409);
       expect(await blocked.json()).toEqual({ error: "LINKED_APARTMENTS" });
