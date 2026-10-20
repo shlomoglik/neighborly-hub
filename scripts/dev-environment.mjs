@@ -5,7 +5,9 @@ import { resolve } from "node:path";
 const environments = ["local", "development", "staging", "production"];
 const target = process.argv[2];
 if (!environments.includes(target) || process.argv.length !== 3) {
-  console.error("Usage: node scripts/dev-environment.mjs <local|development|staging|production>");
+  console.error(
+    "Usage: node scripts/dev-environment.mjs <local|development|staging|production>",
+  );
   process.exit(1);
 }
 const filename = resolve(`.env.${target}.local`);
