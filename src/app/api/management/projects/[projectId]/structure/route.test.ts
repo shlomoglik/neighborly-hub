@@ -16,7 +16,9 @@ import {
   updateManagementStructure,
   StructureManagementError,
 } from "@/lib/access/structure-management";
-import { POST, PATCH } from "./route";
+vi.mock("@/lib/access/visual-structure", () => ({ saveVisualBuilding: vi.fn() }));
+import { saveVisualBuilding } from "@/lib/access/visual-structure";
+import { POST, PATCH, PUT } from "./route";
 const id = "c44c9aec-f8e4-46b3-9957-12ceba088994";
 const context = { params: Promise.resolve({ projectId: id }) };
 function request(
@@ -110,4 +112,32 @@ it("keeps invalid/missing/denied targets generic and never serializes database e
       error: error instanceof StructureManagementError ? error.code : "INTERNAL_ERROR",
     });
   }
+});
+
+it("validates detailed snapshots and passes only the verified actor to the visual writer", async () => {
+  const input = {
+    id,
+    expectedVersion: "a".repeat(64),
+    name: "A",
+    address: "",
+    floors: [
+      { id: "27e8d799-5714-4f4f-831d-715a0cced685", number: 0, type: "commercial", apartments: [] },
+    ],
+  };
+  const put = (value: unknown, origin = "https://structure.test") =>
+    new Request("https://structure.test/api", {
+      method: "PUT",
+      headers: { origin, "content-type": "application/json" },
+      body: JSON.stringify(value),
+    });
+  vi.mocked(saveVisualBuilding).mockResolvedValue({ id });
+  check(await PUT(put(input), context), 200);
+  expect(saveVisualBuilding).toHaveBeenCalledExactlyOnceWith({}, "verified", id, input);
+  check(await PUT(put({ ...input, userId: "forged" }), context), 400);
+  check(await PUT(put(input, "https://evil.test"), context), 403);
+  check(await PUT(put({ ...input, floors: [...input.floors, ...input.floors] }), context), 400);
+  vi.mocked(saveVisualBuilding).mockRejectedValue(
+    new StructureManagementError(409, "STALE_STRUCTURE"),
+  );
+  check(await PUT(put(input), context), 409);
 });

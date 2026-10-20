@@ -128,8 +128,11 @@ export const floors = pgTable(
       .notNull()
       .references(() => buildings.id, { onDelete: "cascade" }),
     number: integer("number").notNull(),
+    name: text("name"),
+    type: text("type").notNull().default("residential"),
   },
   (t) => [
+    check("floors_type_check", sql`${t.type} IN ('residential', 'commercial', 'parking')`),
     unique("floors_building_id_number_unique").on(t.buildingId, t.number),
     unique("floors_id_building_id_unique").on(t.id, t.buildingId),
     index("floors_building_id_idx").on(t.buildingId),
@@ -143,8 +146,12 @@ export const apartments = pgTable(
     buildingId: uuid("building_id").notNull(),
     floorId: uuid("floor_id").notNull(),
     number: text("number").notNull(),
+    type: text("type").notNull().default("residential"),
+    position: integer("position").notNull().default(0),
   },
   (t) => [
+    check("apartments_type_check", sql`${t.type} IN ('residential', 'commercial', 'parking')`),
+    check("apartments_position_check", sql`${t.position} >= 0`),
     unique("apartments_id_building_id_unique").on(t.id, t.buildingId),
     // The matching composite foreign key is defined in the SQL baseline.
     unique("apartments_building_id_number_unique").on(t.buildingId, t.number),

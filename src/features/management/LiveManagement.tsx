@@ -4,6 +4,7 @@ import { isStructureTargetAvailable } from "./structure-editor-model";
 import { StructureEditor } from "./StructureEditor";
 import { useStructureEditor } from "./use-structure-editor";
 import { BuildingLayoutEditor } from "./BuildingLayoutEditor";
+import { ManagedStructureEditor } from "./ManagedStructureEditor";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import { AppShell } from "@/components/AppShell";
 import { ManagementWorkspace } from "./ManagementWorkspace";
@@ -13,6 +14,8 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   const [layout, setLayout] = useState<{ data: ManagementHierarchy; initialId: string } | null>(
     null,
   );
+  const [visual, setVisual] = useState(false);
+  const LayoutEditor = visual ? ManagedStructureEditor : BuildingLayoutEditor;
   const editor = useStructureEditor(projectId, workspace.onRefresh, workspace.onAccessLost);
   const { target, onClose } = editor;
   const container = useRef<HTMLDivElement>(null);
@@ -43,13 +46,18 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           {...workspace}
           onEdit={editor.onOpen}
           editingBusy={editor.busy || !!layout}
+          onVisual={(initialId) => {
+            setVisual(true);
+            if (workspace.data) setLayout({ data: workspace.data, initialId });
+          }}
           onLayout={(initialId) => {
+            setVisual(false);
             if (workspace.data) setLayout({ data: workspace.data, initialId });
           }}
         />
       </div>
       {layout && layout.data.id === projectId && layoutAllowed && (
-        <BuildingLayoutEditor
+        <LayoutEditor
           key={projectId}
           {...layout}
           refreshing={workspace.status === "loading"}

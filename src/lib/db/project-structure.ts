@@ -40,15 +40,22 @@ export async function insertProjectStructure(
     for (const floorInput of buildingInput.floors) {
       const [floor] = await tx
         .insert(floors)
-        .values({ buildingId: building.id, number: floorInput.number })
+        .values({
+          buildingId: building.id,
+          number: floorInput.number,
+          name: floorInput.name,
+          type: floorInput.type,
+        })
         .returning({ id: floors.id });
 
       if (floorInput.apartments.length > 0) {
         await tx.insert(apartments).values(
-          floorInput.apartments.map((apartment) => ({
+          floorInput.apartments.map((apartment, position) => ({
             buildingId: building.id,
             floorId: floor.id,
             number: apartment.number,
+            type: apartment.type ?? floorInput.type ?? "residential",
+            position,
           })),
         );
       }

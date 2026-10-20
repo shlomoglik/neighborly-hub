@@ -20,7 +20,19 @@ export type ManagementBuilding = {
   version?: string;
   id: string;
   name: string;
-  floors: { id: string; number: number; apartments: { id: string; number: string }[] }[];
+  floors: {
+    id: string;
+    number: number;
+    name?: string | null;
+    type?: string;
+    apartments: {
+      id: string;
+      number: string;
+      type?: string;
+      position?: number;
+      linked?: boolean;
+    }[];
+  }[];
 };
 export type ManagementHierarchy = ManagementProject & {
   canAddBuilding: boolean;

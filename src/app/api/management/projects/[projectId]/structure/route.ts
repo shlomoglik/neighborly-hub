@@ -1,3 +1,5 @@
+import { visualBuildingInput } from "@/lib/access/visual-structure-contracts";
+import { saveVisualBuilding } from "@/lib/access/visual-structure";
 import { buildingLayoutInput } from "@/lib/access/building-layout-contracts";
 import { updateBuildingLayouts } from "@/lib/access/building-layout";
 import { z } from "zod";
@@ -30,7 +32,7 @@ async function body(request: Request) {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > (request.method === "PUT" ? 128 * 1024 : 4096)) {
+      if (size > (request.method === "PUT" ? 12 * 1024 * 1024 : 4096)) {
         await reader.cancel();
         throw new StructureManagementError(413, "PAYLOAD_TOO_LARGE");
       }
@@ -60,6 +62,11 @@ async function write(request: Request, context: Context, update: boolean) {
     const value = await body(request);
     const { db } = await import("@/lib/db/client");
     if (request.method === "PUT") {
+      if (value && typeof value === "object" && "expectedVersion" in value) {
+        const detailed = visualBuildingInput.safeParse(value);
+        if (!detailed.success) return respond({ error: "INVALID_INPUT" }, 400);
+        return respond(await saveVisualBuilding(db, user.id, projectId.data, detailed.data));
+      }
       const input = buildingLayoutInput.safeParse(value);
       if (!input.success) return respond({ error: "INVALID_INPUT" }, 400);
       return respond(await updateBuildingLayouts(db, user.id, projectId.data, input.data));

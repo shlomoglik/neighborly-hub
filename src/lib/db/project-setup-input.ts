@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { unitType, structureUnit } from "./project-structure-input";
 import type { ProjectStructureInput } from "./project-structure-input";
 
 export const MAX_SETUP_BUILDINGS = 100;
@@ -6,9 +7,18 @@ export const MAX_SETUP_FLOORS = 1000;
 export const MAX_SETUP_APARTMENTS = 10000;
 const name = z.string().trim().min(1).max(200);
 
+export const detailedFloor = z
+  .object({
+    number: z.number().int().min(-1000).max(1000),
+    name: name.optional(),
+    type: unitType,
+    apartments: z.array(structureUnit).max(200),
+  })
+  .strict();
 const building = z
   .object({
     name,
+    structure: z.array(detailedFloor).min(1).max(200).optional(),
     address: z.string().trim().max(500).optional(),
     floorUnits: z.array(z.number().int().min(0).max(200)).max(200).optional(),
     floors: z.number().int().min(1).max(200),
@@ -33,6 +43,35 @@ export const setupBuildingsInput = z
         });
       }
       seen.add(key);
+      if (item.structure) {
+        const levels = new Set<number>();
+        const units = new Set<string>();
+        if (item.structure.length !== item.floors || item.floorUnits)
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [index, "structure"],
+            message: "Inconsistent detailed layout",
+          });
+        for (const [fi, floor] of item.structure.entries()) {
+          if (levels.has(floor.number))
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [index, "structure", fi, "number"],
+              message: "Duplicate floor level",
+            });
+          levels.add(floor.number);
+          for (const [ui, unit] of floor.apartments.entries()) {
+            const key = unit.number.normalize("NFKC").toLowerCase();
+            if (units.has(key))
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [index, "structure", fi, "apartments", ui, "number"],
+                message: "Duplicate unit name within building",
+              });
+            units.add(key);
+          }
+        }
+      }
       if (item.floorUnits && item.floorUnits.length !== item.floors)
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -59,8 +98,10 @@ export function setupFloorCounts(building: {
   floors: number;
   unitsPerFloor: number;
   floorUnits?: number[];
+  structure?: z.infer<typeof detailedFloor>[];
 }) {
   return (
+    building.structure?.map((f) => f.apartments.length) ??
     building.floorUnits ??
     Array.from(
       { length: Math.max(0, Math.min(200, building.floors)) },
@@ -72,6 +113,7 @@ export function setupApartmentCount(building: {
   floors: number;
   unitsPerFloor: number;
   floorUnits?: number[];
+  structure?: z.infer<typeof detailedFloor>[];
 }) {
   return setupFloorCounts(building).reduce((total, units) => total + units, 0);
 }
@@ -85,10 +127,12 @@ export function toProjectStructure(input: ProjectSetupInput): ProjectStructureIn
       return {
         name: building.name,
         ...(building.address ? { address: building.address } : {}),
-        floors: setupFloorCounts(building).map((units, floor) => ({
-          number: floor,
-          apartments: Array.from({ length: units }, () => ({ number: String(number++) })),
-        })),
+        floors:
+          building.structure ??
+          setupFloorCounts(building).map((units, floor) => ({
+            number: floor,
+            apartments: Array.from({ length: units }, () => ({ number: String(number++) })),
+          })),
       };
     }),
   };

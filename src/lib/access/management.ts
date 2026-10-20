@@ -96,6 +96,11 @@ export async function readManagementHierarchy(
         buildingAddress: s.buildings.address,
         floorId: s.floors.id,
         floorNumber: s.floors.number,
+        floorName: s.floors.name,
+        floorType: s.floors.type,
+        apartmentType: s.apartments.type,
+        apartmentPosition: s.apartments.position,
+        apartmentLinked: sql<boolean>`exists(select 1 from ${s.households} where ${s.households.apartmentId} = ${s.apartments.id}) or exists(select 1 from ${s.apartmentOwnerships} where ${s.apartmentOwnerships.apartmentId} = ${s.apartments.id}) or exists(select 1 from ${s.invitations} where ${s.invitations.apartmentId} = ${s.apartments.id}) or exists(select 1 from ${s.joinRequests} where ${s.joinRequests.apartmentId} = ${s.apartments.id})`,
         apartmentId: s.apartments.id,
         apartmentNumber: s.apartments.number,
       })
@@ -121,7 +126,10 @@ export async function readManagementHierarchy(
     for (const b of buildings)
       for (const f of b.floors)
         f.apartments.sort(
-          (a, b) => collator.compare(a.number, b.number) || a.id.localeCompare(b.id),
+          (a, b) =>
+            (a.position ?? 0) - (b.position ?? 0) ||
+            collator.compare(a.number, b.number) ||
+            a.id.localeCompare(b.id),
         );
     return {
       ...project,
