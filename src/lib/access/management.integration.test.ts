@@ -161,7 +161,7 @@ describe.skipIf(!url)("PostgreSQL management authorization and authenticated rou
       (await readManagementProjects(fixture.db, mixed)).projects.map((p) => p.id).sort(),
     ).toEqual([projectId, otherId].sort());
   });
-  it("preserves empty buildings/floors and gives repeatable natural apartment ordering without personal fields", async () => {
+  it("preserves empty buildings/floors and gives repeatable explicit apartment ordering without personal fields", async () => {
     const result = (await read(admin))!;
     expect(result.buildings[1].floors).toEqual([]);
     expect(result.buildings[0].floors.map((f) => f.number)).toEqual([-1, 0]);
@@ -169,9 +169,11 @@ describe.skipIf(!url)("PostgreSQL management authorization and authenticated rou
     expect(result.buildings[0].floors[1].apartments.map((a) => a.number)).toEqual(
       expect.arrayContaining(["02", "2", "10", "Studio"]),
     );
-    expect(result.buildings[0].floors[1].apartments.slice(2).map((a) => a.number)).toEqual([
+    expect(result.buildings[0].floors[1].apartments.map((a) => a.number)).toEqual([
       "10",
+      "2",
       "Studio",
+      "02",
     ]);
     expect(await read(admin)).toEqual(result);
     expect(Object.keys(result).sort()).toEqual([

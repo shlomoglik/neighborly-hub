@@ -206,7 +206,7 @@ export function ProjectSetupWizard({
       </AppShell>
     );
   return (
-    <AppShell>
+    <AppShell wide>
       <div className="mx-auto min-w-0 max-w-7xl space-y-5">
         <Link
           href="/manage"
@@ -347,7 +347,7 @@ export function ProjectSetupWizard({
             <Skeleton className="h-4 w-2/3" />
           </div>
         )}
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 rounded-2xl border bg-card/95 p-3 shadow-warm">
+        <div className="sticky bottom-20 z-10 lg:bottom-0 flex flex-wrap justify-end gap-3 rounded-2xl border bg-card/95 p-3 shadow-warm">
           <Button
             variant="outline"
             disabled={submitting || step === 0}
