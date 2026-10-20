@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import Link from "next/link";
 import { invitationAdminHref } from "@/lib/access/invitation-contracts";
 import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
@@ -62,18 +63,18 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("manage")}
         </h1>
-        <Button
-          variant="outline"
-          onClick={refresh}
-          disabled={status === "loading" || p.editingBusy}
-        >
-          {t("refreshManagement")}
-        </Button>
-        {discovery?.canCreateProject && (
-          <Button asChild>
-            <Link href="/manage/setup">{t("newProject")}</Link>
-          </Button>
-        )}
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            onClick={refresh}
+            disabled={status === "loading" || p.editingBusy}
+            label={t("refreshManagement")}
+          />
+          {discovery?.canCreateProject && (
+            <Button asChild>
+              <Link href="/manage/setup">{t("newProject")}</Link>
+            </Button>
+          )}
+        </div>
       </div>
       {discovery && (
         <nav aria-label={t("chooseProject")} className="space-y-3 rounded-2xl border bg-card p-4">

@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -43,9 +44,9 @@ export function JoinInvitation(p: JoinInvitationProps) {
       {p.error && (
         <div role="alert" className="space-y-2">
           <p>{t(invitationErrorKey(p.error))}</p>
-          <Button variant="outline" disabled={p.busy} onClick={p.onRefresh}>
-            {t("refreshManagement")}
-          </Button>
+          <div className="flex justify-end">
+            <RefreshButton disabled={p.busy} onClick={p.onRefresh} label={t("refreshManagement")} />
+          </div>
         </div>
       )}
       {p.status === "ready" && data && (

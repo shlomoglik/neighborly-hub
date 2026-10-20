@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -112,9 +113,14 @@ export function StructureEditor(p: StructureEditorProps) {
           {p.error && (
             <div role="alert" className="space-y-2">
               <p>{t(p.error)}</p>
-              <Button type="button" variant="outline" disabled={p.busy} onClick={p.onReload}>
-                {t("refreshManagement")}
-              </Button>
+              <div className="flex justify-end">
+                <RefreshButton
+                  type="button"
+                  disabled={p.busy}
+                  onClick={p.onReload}
+                  label={t("refreshManagement")}
+                />
+              </div>
             </div>
           )}
           <AlertDialogFooter>

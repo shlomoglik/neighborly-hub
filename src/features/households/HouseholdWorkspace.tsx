@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -138,9 +139,13 @@ export function HouseholdWorkspace({
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("family")}
         </h1>
-        <Button variant="outline" onClick={onRefresh} disabled={busy || status === "loading"}>
-          {t("refreshDirectory")}
-        </Button>
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            onClick={onRefresh}
+            disabled={busy || status === "loading"}
+            label={t("refreshDirectory")}
+          />
+        </div>
       </div>
       <Link href="/directory" className="inline-flex min-h-11 items-center text-primary underline">
         {t("back")}

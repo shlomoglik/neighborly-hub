@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, type TKey } from "@/lib/i18n";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
@@ -241,9 +242,9 @@ export function BuildingLayoutEditor({
         {error && (
           <div role="alert" className="space-y-2">
             <p>{t(error)}</p>
-            <Button variant="outline" disabled={busy} onClick={onReload}>
-              {t("refreshManagement")}
-            </Button>
+            <div className="flex justify-end">
+              <RefreshButton disabled={busy} onClick={onReload} label={t("refreshManagement")} />
+            </div>
           </div>
         )}
         {blocked && <p role="status">{t(busy ? "saving" : "loading")}</p>}

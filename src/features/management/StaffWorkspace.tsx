@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n, type TKey } from "@/lib/i18n";
@@ -70,16 +71,16 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("staffManagement")}
         </h1>
-        <Button
-          variant="outline"
-          disabled={p.busy || p.status === "loading"}
-          onClick={() => {
-            requestFocus();
-            p.onRefresh();
-          }}
-        >
-          {t("refreshManagement")}
-        </Button>
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <RefreshButton
+            disabled={p.busy || p.status === "loading"}
+            onClick={() => {
+              requestFocus();
+              p.onRefresh();
+            }}
+            label={t("refreshManagement")}
+          />
+        </div>
       </div>
       {p.notice && (
         <div role={p.notice.error ? "alert" : "status"} className="rounded-xl border bg-card p-4">

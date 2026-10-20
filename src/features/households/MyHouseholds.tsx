@@ -1,4 +1,5 @@
 "use client";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -16,13 +17,13 @@ export function MyHouseholds() {
       <section className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{t("homeMine")}</h1>
-          <Button
-            variant="outline"
-            disabled={resource.status === "loading"}
-            onClick={resource.refresh}
-          >
-            {t("refreshDirectory")}
-          </Button>
+          <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+            <RefreshButton
+              disabled={resource.status === "loading"}
+              onClick={resource.refresh}
+              label={t("refreshDirectory")}
+            />
+          </div>
         </div>
         <HouseholdFeedback status={resource.status} onRefresh={resource.refresh} />
         {resource.status === "ready" && resource.data && (
