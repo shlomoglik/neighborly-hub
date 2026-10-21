@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/lib/auth/config", () => ({
   readAuthConfig: () => ({ baseURL: "https://example.test" }),
@@ -7,6 +7,7 @@ vi.mock("@/lib/access/project-setup", () => ({ provisionProjectSetup: vi.fn() })
 vi.mock("@/lib/db/client", () => ({ db: {} }));
 import { getCurrentUser } from "@/lib/auth/session";
 import { provisionProjectSetup } from "@/lib/access/project-setup";
+import { logger } from "@/lib/logging";
 import { POST } from "./route";
 const valid = {
   name: " Community ",
@@ -35,6 +36,7 @@ beforeEach(() => {
   });
   vi.mocked(provisionProjectSetup).mockResolvedValue({ projectId });
 });
+afterEach(() => vi.restoreAllMocks());
 it("rejects anonymous requests before provisioning", async () => {
   vi.mocked(getCurrentUser).mockResolvedValue(null);
   const response = await POST(request());
@@ -78,8 +80,49 @@ it("returns forbidden when the database grant is missing or revoked", async () =
   expect((await POST(request())).status).toBe(403);
 });
 it("never leaks internal errors or reports success after persistence fails", async () => {
+  const log = vi.spyOn(logger, "error").mockImplementation(() => {});
   vi.mocked(provisionProjectSetup).mockRejectedValue(new Error("private SQL and credentials"));
   const response = await POST(request());
   expect(response.status).toBe(500);
   expect(await response.json()).toEqual({ error: "SETUP_FAILED" });
+  expect(log).toHaveBeenCalledExactlyOnceWith("project.setup.failed", expect.any(Error), {
+    phase: "persist-project",
+  });
+});
+
+it("logs a wrapped missing-column error with a migration hint without private SQL or parameters", async () => {
+  const log = vi.spyOn(logger, "error").mockImplementation(() => {});
+  vi.mocked(provisionProjectSetup).mockRejectedValue(
+    new Error("private SQL", {
+      cause: Object.assign(new Error("private credentials and row values"), {
+        code: "42703",
+        query: "private SQL",
+        parameters: ["private values"],
+      }),
+    }),
+  );
+  const response = await POST(request());
+  expect(await response.json()).toEqual({
+    error: "SETUP_FAILED",
+    reason: "SERVICE_SETUP_INCOMPLETE",
+  });
+  expect(log).toHaveBeenCalledExactlyOnceWith("project.setup.failed", expect.any(Error), {
+    phase: "persist-project",
+  });
+});
+
+it("identifies connection failures during session lookup", async () => {
+  const log = vi.spyOn(logger, "error").mockImplementation(() => {});
+  vi.mocked(getCurrentUser).mockRejectedValue(
+    Object.assign(new Error("private URL"), { code: "CONNECT_TIMEOUT" }),
+  );
+  const response = await POST(request());
+  expect(response.status).toBe(500);
+  expect(await response.json()).toEqual({ error: "SETUP_FAILED", reason: "SERVICE_UNAVAILABLE" });
+  expect(provisionProjectSetup).not.toHaveBeenCalled();
+  expect(log).toHaveBeenCalledExactlyOnceWith(
+    "project.setup.failed",
+    expect.objectContaining({ code: "CONNECT_TIMEOUT" }),
+    { phase: "authenticate" },
+  );
 });

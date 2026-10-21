@@ -31,3 +31,25 @@ it("rejects failed and malformed responses instead of reporting a successful sav
   await expect(createProject(input)).rejects.toThrow();
   expect(fetch).toHaveBeenCalledTimes(2);
 });
+
+it.each(["SERVICE_SETUP_INCOMPLETE", "SERVICE_UNAVAILABLE", "LAYOUT_CONFLICT"] as const)(
+  "preserves the safe %s reason for client-side translation",
+  async (reason) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ error: "SETUP_FAILED", reason }, { status: 500 })),
+    );
+    await expect(createProject(input)).rejects.toEqual(new ProjectSetupRequestError(500, reason));
+  },
+);
+
+it.each([
+  Response.json(
+    { error: "SETUP_FAILED", reason: "PRIVATE_SQL", message: "private credentials" },
+    { status: 500 },
+  ),
+  new Response("private proxy error", { status: 500 }),
+])("ignores unknown reasons and non-JSON error bodies", async (response) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+  await expect(createProject(input)).rejects.toEqual(new ProjectSetupRequestError(500));
+});

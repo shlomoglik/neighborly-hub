@@ -14,6 +14,7 @@ import {
   type ProjectSetupResult,
 } from "@/lib/db/project-setup-input";
 import { managementHref } from "@/lib/access/management-contracts";
+import type { PublicErrorReason } from "@/lib/error-diagnostics";
 import { createProject, ProjectSetupRequestError } from "./project-setup-api";
 import { ProjectStructureEditor } from "./ProjectStructureEditor";
 import {
@@ -25,6 +26,11 @@ import {
 } from "./project-structure-draft";
 
 export const SETUP_DRAFT_KEY = "neighborly:project-setup:v2";
+const setupFailureMessages: Record<PublicErrorReason, TKey> = {
+  SERVICE_SETUP_INCOMPLETE: "setupServiceIncomplete",
+  SERVICE_UNAVAILABLE: "setupServiceUnavailable",
+  LAYOUT_CONFLICT: "setupLayoutConflict",
+};
 const savedDraft = z.object({
   version: z.literal(2),
   revision: z.string(),
@@ -192,14 +198,19 @@ export function ProjectSetupWizard({
       }
     } catch (cause) {
       const status = cause instanceof ProjectSetupRequestError ? cause.status : 0;
+      const reason =
+        cause instanceof ProjectSetupRequestError && status === 500 && cause.reason
+          ? setupFailureMessages[cause.reason]
+          : undefined;
       setError(
-        status === 401
-          ? "setupExpired"
-          : status === 403
-            ? "setupForbidden"
-            : [400, 413, 415].includes(status)
-              ? "setupInvalid"
-              : "setupFailed",
+        reason ??
+          (status === 401
+            ? "setupExpired"
+            : status === 403
+              ? "setupForbidden"
+              : [400, 413, 415].includes(status)
+                ? "setupInvalid"
+                : "setupFailed"),
       );
     } finally {
       pending.current = false;

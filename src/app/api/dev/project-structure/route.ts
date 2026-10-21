@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { projectStructureInput } from "@/lib/db/project-structure-input";
+import { logger } from "@/lib/logging";
 
 // Node.js is required for the PostgreSQL driver.
 export const runtime = "nodejs";
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     const result = await createProjectStructure(input);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    console.error("Project structure creation failed", error);
+    logger.error("dev.project-structure.failed", error);
     return NextResponse.json({ error: "Project structure creation failed" }, { status: 409 });
   }
 }

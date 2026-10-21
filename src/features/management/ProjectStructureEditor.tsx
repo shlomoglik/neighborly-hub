@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
+import { logger } from "@/lib/logging";
 import {
   MAX_SETUP_BUILDINGS,
   MAX_SETUP_FLOORS,
@@ -181,14 +182,14 @@ export function ProjectStructureEditor({
   const valid = validation.success;
   useEffect(() => {
     if (process.env.NODE_ENV !== "development" || validation.success) return;
-    console.warn(
-      "[ProjectStructureEditor] Invalid layout (field indexes are zero-based):",
-      validation.error.issues.map((issue) => ({
+    logger.warn("structure.validation.failed", {
+      indexBase: 0,
+      issues: validation.error.issues.map((issue) => ({
         field: issue.path.join("."),
         code: issue.code,
         message: issue.message,
       })),
-    );
+    });
   }, [validation]);
   const bulkBuilding = buildings.find((b) => b.id === bulk?.building);
   const bulkFloor = bulkBuilding?.floors.find((f) => f.id === bulk?.floor);

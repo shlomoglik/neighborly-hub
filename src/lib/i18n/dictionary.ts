@@ -810,6 +810,21 @@ export const dict = {
     en: "Creation could not be confirmed. Check the project list in the directory before trying again to avoid duplicates.",
     ru: "Не удалось подтвердить создание. Перед повторной попыткой проверьте список проектов в справочнике, чтобы избежать дубликатов.",
   },
+  setupServiceIncomplete: {
+    he: "יצירת הפרויקט דורשת עדכון של השירות. פנו למנהל המערכת להשלמת העדכון. הפרטים שהזנתם נשארו בטופס.",
+    en: "Project creation needs a service update. Contact the system administrator to complete it. Your entries remain in the form.",
+    ru: "Для создания проекта требуется обновление сервиса. Обратитесь к системному администратору. Введённые данные остаются в форме.",
+  },
+  setupServiceUnavailable: {
+    he: "שירות יצירת הפרויקט אינו זמין כרגע. נסו שוב בעוד מספר רגעים. הפרטים שהזנתם נשארו בטופס.",
+    en: "Project creation is temporarily unavailable. Try again shortly. Your entries remain in the form.",
+    ru: "Создание проекта временно недоступно. Повторите попытку немного позже. Введённые данные остаются в форме.",
+  },
+  setupLayoutConflict: {
+    he: "הפריסה מתנגשת בנתונים קיימים. בדקו את שמות הבניינים והיחידות ונסו שוב. הפרטים שהזנתם נשארו בטופס.",
+    en: "The layout conflicts with existing data. Check the building and unit names and try again. Your entries remain in the form.",
+    ru: "План конфликтует с существующими данными. Проверьте названия зданий и помещений и повторите попытку. Введённые данные остаются в форме.",
+  },
   refreshDirectory: { he: "רענון הספר", en: "Refresh directory", ru: "Обновить справочник" },
   chooseProject: { he: "בחירת פרויקט", en: "Choose a project", ru: "Выберите проект" },
   directoryUnlinked: {
