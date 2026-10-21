@@ -5,7 +5,7 @@ import {
   migrationConnection,
   migrationPlan,
 } from "../../../scripts/db/migrations.mjs";
-import { deploymentBuild } from "../../../scripts/vercel-build.mjs";
+import { deploymentBuild, deploymentFailureMessage } from "../../../scripts/vercel-build.mjs";
 
 it("loads only the eight authoritative SQL migrations and preserves function bodies", async () => {
   const migrations = await loadMigrations();
@@ -108,4 +108,36 @@ it("propagates migration failures so Vercel cannot publish the build", async () 
   await expect(
     deploymentBuild({ VERCEL: "1", VERCEL_ENV: "production" }, operations),
   ).rejects.toThrow("migration failed");
+});
+
+it.each([
+  ["28P01", "authentication failed"],
+  ["42501", "privileges"],
+  ["ECONNREFUSED", "connection refused"],
+  ["CONNECT_TIMEOUT", "timed out"],
+  ["23505", "23505"],
+])("reports safe deployment diagnostics for %s without leaking driver data", (code, expected) => {
+  const secret = "postgres://user:password@private-host/database";
+  const error = Object.assign(new Error(secret), {
+    code,
+    detail: secret,
+    query: "SELECT private_resident_data",
+    cause: new Error(secret),
+  });
+  const message = deploymentFailureMessage(error, "migration");
+  expect(message).toContain("Deployment migration failed");
+  expect(message).toContain(expected);
+  expect(message).not.toContain(secret);
+  expect(message).not.toContain("private_resident_data");
+});
+it.each([
+  undefined,
+  null,
+  "secret",
+  { code: "postgres://user:password@host/db" },
+  { code: "toString" },
+])("handles unknown deployment failures safely: %j", (error) => {
+  const message = deploymentFailureMessage(error, "configuration");
+  expect(message).toContain("Deployment configuration failed (code unavailable)");
+  expect(message).not.toContain("password");
 });
