@@ -287,3 +287,25 @@ it("cancels a pending autosave when saving manually", () => {
   expect(localStorage.getItem(SETUP_DRAFT_KEY)).toBe(stored);
   expect(screen.getByText("Draft saved on this device")).toBeTruthy();
 });
+
+it.each(["he", "en", "ru"] as const)("clones a building from its header in %s", (lang) => {
+  mount(vi.fn(), lang);
+  fill(lang);
+  const button = screen.getByRole("button", {
+    name: `${translate(lang, "editorCloneBuilding")} A`,
+  });
+  expect(button.nextElementSibling?.getAttribute("aria-label")).toBe(
+    `${translate(lang, "remove")} ${translate(lang, "building")} A`,
+  );
+  fireEvent.click(button);
+  fireEvent.click(screen.getByRole("button", { name: translate(lang, "editorSaveDraft") }));
+  const saved = JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!);
+  expect(saved.buildings.map((b: { name: string }) => b.name)).toEqual(["A", "A (2)"]);
+  expect(saved.buildings[1].floors[0].apartments[0].number).toBe("1");
+  expect(saved.buildings[1].floors[0].apartments[0].id).not.toBe(
+    saved.buildings[0].floors[0].apartments[0].id,
+  );
+  expect(
+    screen.getByRole("button", { name: translate(lang, "editorNext") }).hasAttribute("disabled"),
+  ).toBe(false);
+});

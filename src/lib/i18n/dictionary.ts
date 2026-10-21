@@ -60,6 +60,7 @@ export const dict = {
   editorAddFloor: { he: "הוספת קומה", en: "Add floor", ru: "Добавить этаж" },
   editorAddUnit: { he: "הוספת יחידה", en: "Add unit", ru: "Добавить помещение" },
   editorDuplicate: { he: "שכפול קומה", en: "Duplicate floor", ru: "Дублировать этаж" },
+  editorCloneBuilding: { he: "שכפול בניין", en: "Clone building", ru: "Дублировать здание" },
   editorCopies: { he: "מספר קומות חדשות מעל", en: "New floors above", ru: "Новых этажей выше" },
   editorCopyTargets: {
     he: "העתקת מבנה לקומות קיימות",
