@@ -350,7 +350,38 @@ export function ProjectStructureEditor({
                     {t("editorCount", { n: b.floors.reduce((n, f) => n + f.apartments.length, 0) })}
                   </span>
                   {!typesOnly && (
-                    <div className="ms-auto flex items-center gap-1">
+                    <div className="ms-auto flex max-w-full flex-wrap items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={`${t("editorAddFloor")} ${b.name}`}
+                        disabled={b.floors.length >= 200}
+                        onClick={() => {
+                          update(b.id, (b) => ({
+                            ...b,
+                            floors: [
+                              ...b.floors,
+                              newFloor(Math.max(...b.floors.map((f) => f.number)) + 1),
+                            ],
+                          }));
+                          setCollapsed((ids) => ids.filter((id) => id !== b.id));
+                        }}
+                      >
+                        <Plus aria-hidden className="size-4" />
+                        {t("editorAddFloor")}
+                      </Button>
+                      {!managed && buildings.length > 1 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCopySourceId(b.id);
+                            setBuildingTargets([]);
+                          }}
+                        >
+                          {t("layoutCopyBuildings")}
+                        </Button>
+                      )}
                       {!managed && (
                         <Button
                           variant="ghost"
@@ -407,18 +438,6 @@ export function ProjectStructureEditor({
                           onChange={(e) => update(b.id, (b) => ({ ...b, address: e.target.value }))}
                         />
                       </label>
-                    )}
-                    {!typesOnly && !managed && buildings.length > 1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setCopySourceId(b.id);
-                          setBuildingTargets([]);
-                        }}
-                      >
-                        {t("layoutCopyBuildings")}
-                      </Button>
                     )}
                     {[...b.floors]
                       .sort((a, b) => b.number - a.number)
@@ -719,25 +738,6 @@ export function ProjectStructureEditor({
                           )}
                         </section>
                       ))}
-                    {!typesOnly && (
-                      <Button
-                        variant="outline"
-                        className="w-full border-dashed"
-                        disabled={b.floors.length >= 200}
-                        onClick={() =>
-                          update(b.id, (b) => ({
-                            ...b,
-                            floors: [
-                              ...b.floors,
-                              newFloor(Math.max(...b.floors.map((f) => f.number)) + 1),
-                            ],
-                          }))
-                        }
-                      >
-                        <Plus className="size-4" />
-                        {t("editorAddFloor")}
-                      </Button>
-                    )}
                   </div>
                 )}
               </article>

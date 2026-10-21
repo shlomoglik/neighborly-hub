@@ -310,6 +310,27 @@ it.each(["he", "en", "ru"] as const)("clones a building from its header in %s", 
   ).toBe(false);
 });
 
+it("adds floors from the building header and reveals the new highest floor when collapsed", () => {
+  mount(vi.fn());
+  fill();
+  const add = screen.getByRole("button", { name: "Add floor A" });
+  expect(add.closest("header")).not.toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Collapse all Building A" }));
+  expect(screen.queryByRole("spinbutton", { name: "Level A 0" })).toBeNull();
+  fireEvent.click(add);
+  const card = within(add.closest("article")!);
+  expect(card.getAllByRole("spinbutton").map((input) => (input as HTMLInputElement).value)).toEqual(
+    ["1", "0"],
+  );
+  expect(card.getByRole("button", { name: "Unit name A 1" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  const saved = JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!);
+  expect(saved.buildings[0].floors.map((floor: { number: number }) => floor.number)).toEqual([
+    0, 1,
+  ]);
+  expect(saved.buildings[0].floors[1].name).toBe("Floor 1");
+});
+
 function saveCopyDraft() {
   const buildings = ["A", "B", "C"].map((name) => ({
     id: name,
