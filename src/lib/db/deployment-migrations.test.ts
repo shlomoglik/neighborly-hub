@@ -4,6 +4,7 @@ import {
   migrationBody,
   migrationConnection,
   migrationPlan,
+  runMigrations,
 } from "../../../scripts/db/migrations.mjs";
 import { deploymentBuild, deploymentFailureMessage } from "../../../scripts/vercel-build.mjs";
 
@@ -138,6 +139,48 @@ it.each([
   { code: "toString" },
 ])("handles unknown deployment failures safely: %j", (error) => {
   const message = deploymentFailureMessage(error, "configuration");
-  expect(message).toContain("Deployment configuration failed (code unavailable)");
+  expect(message).toContain("Deployment configuration failed (code unavailable, kind Error)");
   expect(message).not.toContain("password");
+});
+
+it("finds nested and aggregate driver codes without logging private messages", () => {
+  const cause = Object.assign(new Error("private credentials"), { code: "28P01" });
+  const nested = new Error("private SQL", { cause });
+  expect(deploymentFailureMessage(nested, "migration/history")).toContain("28P01");
+  expect(
+    deploymentFailureMessage(new AggregateError([nested]), "migration/connect-and-begin"),
+  ).toContain("authentication failed");
+  expect(deploymentFailureMessage(nested, "migration/history")).not.toContain("private");
+});
+it("handles cyclic causes and identifies uncoded programming errors safely", () => {
+  const error = new TypeError("private connection string");
+  error.cause = error;
+  const message = deploymentFailureMessage(error, "migration/create-client");
+  expect(message).toContain("kind TypeError");
+  expect(message).toContain("code unavailable");
+  expect(message).not.toContain("private");
+});
+it.each(["ENOENT", "ERR_SSL_REQUIRED", "SELF_SIGNED_CERT_IN_CHAIN"])("recognizes %s", (code) => {
+  expect(deploymentFailureMessage({ code }, "migration/load-files")).toContain(`code ${code}`);
+});
+
+it("reports migration checkpoints and the filename before SQL fails", async () => {
+  const events: string[] = [];
+  const failure = Object.assign(new Error("private SQL"), { code: "42501" });
+  const tx = Object.assign(
+    async (strings: TemplateStringsArray) => {
+      const query = strings.join("");
+      if (query.includes("to_regclass")) return [{ history: null }];
+      if (query.includes("as populated")) return [{ populated: false }];
+      return [];
+    },
+    { unsafe: vi.fn().mockRejectedValue(failure) },
+  );
+  const sql = { begin: (callback: (transaction: typeof tx) => unknown) => callback(tx) };
+  await expect(
+    runMigrations(sql, [{ name: "0001_test.sql", checksum: "hash", body: "SQL" }], {
+      onProgress: (step: string) => events.push(step),
+    }),
+  ).rejects.toBe(failure);
+  expect(events).toEqual(["connect-and-begin", "lock", "history", "apply:0001_test.sql"]);
 });

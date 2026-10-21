@@ -63,13 +63,25 @@ export function migrationPlan(migrations, history) {
   return migrations.slice(history.length);
 }
 
-/** One transaction owns the lock, DDL and history, including rollback on any failure. */
-export async function runMigrations(sql, migrations, { baselineThrough } = {}) {
+/**
+ * One transaction owns the lock, DDL and history, including rollback on any failure.
+ * @param {*} sql
+ * @param {*} migrations
+ * @param {{ baselineThrough?: string, onProgress?: (step: string) => void }} options
+ */
+export async function runMigrations(
+  sql,
+  migrations,
+  { baselineThrough, onProgress = () => {} } = {},
+) {
+  onProgress("connect-and-begin");
   return sql.begin(async (tx) => {
+    onProgress("lock");
     await tx`set local lock_timeout = '10s'`;
     await tx`set local statement_timeout = '5min'`;
     await tx`set local search_path = public, pg_catalog`;
     await tx`select pg_advisory_xact_lock(78234619, 1)`;
+    onProgress("history");
     const [existing] = await tx`select to_regclass('neighborly_migrations.history') as history`;
     const [schema] = await tx`select exists (
       select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -102,10 +114,12 @@ export async function runMigrations(sql, migrations, { baselineThrough } = {}) {
     const pending = migrationPlan(migrations, history);
     const selected = baselineThrough ? migrations.slice(0, baselineIndex + 1) : pending;
     for (const migration of selected) {
+      onProgress(`${baselineThrough ? "baseline" : "apply"}:${migration.name}`);
       if (!baselineThrough) await tx.unsafe(migration.body);
       await tx`insert into neighborly_migrations.history (name, checksum, baselined)
         values (${migration.name}, ${migration.checksum}, ${!!baselineThrough})`;
     }
+    onProgress("commit");
     return {
       applied: baselineThrough ? 0 : selected.length,
       baselined: baselineThrough ? selected.length : 0,
@@ -126,9 +140,17 @@ export function migrationConnection(environment = process.env) {
   return url;
 }
 
-export async function migrate({ environment = process.env, baselineThrough } = {}) {
+/** @param {{ environment?: Record<string, string | undefined>, baselineThrough?: string, onProgress?: (step: string) => void }} options */
+export async function migrate({
+  environment = process.env,
+  baselineThrough,
+  onProgress = () => {},
+} = {}) {
+  onProgress("configuration");
   const connection = migrationConnection(environment);
+  onProgress("load-files");
   const migrations = await loadMigrations();
+  onProgress("create-client");
   const sql = postgres(connection, {
     max: 1,
     prepare: false,
@@ -136,7 +158,7 @@ export async function migrate({ environment = process.env, baselineThrough } = {
     onnotice: () => {},
   });
   try {
-    return await runMigrations(sql, migrations, { baselineThrough });
+    return await runMigrations(sql, migrations, { baselineThrough, onProgress });
   } finally {
     await sql.end({ timeout: 5 });
   }
