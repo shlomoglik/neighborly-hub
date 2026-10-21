@@ -44,6 +44,32 @@ export const newBuilding = (): DraftBuilding => ({
   address: "",
   floors: [newFloor(0)],
 });
+/** Materialize visible defaults in draft state, including restored older drafts. */
+export function withDefaultNames(
+  buildings: DraftBuilding[],
+  buildingLabel: string,
+  floorLabel: string,
+): DraftBuilding[] {
+  const key = (name: string) => name.trim().normalize("NFKC").toLowerCase();
+  const used = new Set(buildings.filter((b) => b.name.trim()).map((b) => key(b.name)));
+  let next = 1;
+  return buildings.map((b) => {
+    let name = b.name;
+    if (!name.trim()) {
+      while (used.has(key(`${buildingLabel} ${next}`))) next++;
+      name = `${buildingLabel} ${next++}`;
+      used.add(key(name));
+    }
+    return {
+      ...b,
+      name,
+      floors: b.floors.map((f) => ({
+        ...f,
+        name: f.name.trim() ? f.name : `${floorLabel} ${f.number}`,
+      })),
+    };
+  });
+}
 export function draftPayload(
   name: string,
   city: string,

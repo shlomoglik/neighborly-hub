@@ -20,6 +20,7 @@ import {
   draftBuildings,
   draftPayload,
   newBuilding,
+  withDefaultNames,
   type DraftBuilding,
 } from "./project-structure-draft";
 
@@ -41,7 +42,11 @@ export function ProjectSetupWizard({
   const [step, setStep] = useState(0);
   const [projectName, setProjectName] = useState("");
   const [city, setCity] = useState("");
-  const [buildings, setBuildings] = useState<DraftBuilding[]>(() => [newBuilding()]);
+  const [buildings, setBuildingsState] = useState<DraftBuilding[]>(() =>
+    withDefaultNames([newBuilding()], t("building"), t("floor")),
+  );
+  const setBuildings = (next: DraftBuilding[]) =>
+    setBuildingsState(withDefaultNames(next, t("building"), t("floor")));
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ProjectSetupResult | null>(null);
   const [error, setError] = useState<TKey | null>(null);

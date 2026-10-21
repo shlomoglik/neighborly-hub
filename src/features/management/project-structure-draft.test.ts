@@ -5,6 +5,7 @@ import {
   duplicateFloors,
   moveUnit,
   validateDraft,
+  withDefaultNames,
   type DraftBuilding,
 } from "./project-structure-draft";
 const building = (): DraftBuilding => ({
@@ -77,4 +78,20 @@ it("copies a building template without leaking addresses, IDs or links", () => {
   expect(copied.address).toBe("Other street");
   expect(copied.floors[0].id).not.toBe(source.floors[0].id);
   expect(copied.floors[0].apartments[1].linked).toBeUndefined();
+});
+
+it("materializes unique default names while preserving custom names, IDs and floor levels", () => {
+  const existing = { ...building(), name: "Building 1" };
+  const unnamed = { ...building(), id: "unnamed", name: " " };
+  unnamed.floors[0].number = -1;
+  const named = withDefaultNames([existing, unnamed], "Building", "Floor");
+  expect(named.map((b) => b.name)).toEqual(["Building 1", "Building 2"]);
+  expect(named[1].id).toBe("unnamed");
+  expect(named[1].floors.map((f) => [f.number, f.name])).toEqual([
+    [-1, "Floor -1"],
+    [0, "Shop"],
+  ]);
+  expect(unnamed.name).toBe(" ");
+  expect(unnamed.floors[0].name).toBe("");
+  expect(validateDraft(named).success).toBe(true);
 });
