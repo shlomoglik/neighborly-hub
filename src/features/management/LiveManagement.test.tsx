@@ -78,6 +78,11 @@ function view() {
     </I18nContext.Provider>
   );
 }
+function renderEditor() {
+  const rendered = render(view());
+  fireEvent.click(screen.getByRole("button", { name: "Edit structure" }));
+  return rendered;
+}
 function editUnit() {
   fireEvent.click(screen.getByRole("button", { name: "Unit name Building 1" }));
   fireEvent.change(screen.getByRole("textbox", { name: "Unit name Building 1" }), {
@@ -95,7 +100,7 @@ afterEach(() => {
 it("renders the actual shared structure editor inline without spreading the internal React key", () => {
   const errors = vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(useManagement).mockReturnValue(state());
-  render(view());
+  renderEditor();
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
@@ -104,7 +109,7 @@ it("renders the actual shared structure editor inline without spreading the inte
 it("shows all authorized buildings by default without forcing a selection", () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue({ ...initial, buildingIds: [] });
-  render(view());
+  renderEditor();
   expect(initial.onBuildingChange).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
@@ -115,7 +120,7 @@ it("shows all authorized buildings by default without forcing a selection", () =
 it("preserves the draft during revalidation and removes it when authorization is lost", async () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
-  const rendered = render(view());
+  const rendered = renderEditor();
   editUnit();
   vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
   rendered.rerender(view());
@@ -133,7 +138,7 @@ it("saves only the selected building with original IDs and expected version, the
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
   vi.mocked(privateRequest).mockResolvedValue({});
-  render(view());
+  renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(initial.onRefresh).toHaveBeenCalledOnce());
@@ -158,7 +163,7 @@ it("warns before discarding changes on building switches", () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-  render(view());
+  renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("checkbox", { name: "Other building" }));
   expect(confirm).toHaveBeenCalledOnce();
@@ -171,7 +176,7 @@ it("warns before discarding changes on building switches", () => {
 it("keeps stale edits on the original version and provides explicit reload on conflicts", async () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
-  const rendered = render(view());
+  const rendered = renderEditor();
   editUnit();
   vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
   rendered.rerender(view());
@@ -200,7 +205,7 @@ it("keeps stale edits on the original version and provides explicit reload on co
 });
 it("cancel resets the inline draft without sending a write", async () => {
   vi.mocked(useManagement).mockReturnValue(state());
-  render(view());
+  renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() =>
@@ -217,7 +222,7 @@ it("shows only the selected subset and restores all buildings", () => {
     data,
     buildingIds: [buildingId, otherId],
   });
-  const rendered = render(view());
+  const rendered = renderEditor();
   expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add floor Third building" })).toBeNull();
@@ -229,7 +234,7 @@ it("saving one building preserves another building's dirty draft and refreshes o
   const initial = { ...state(), buildingIds: [] };
   vi.mocked(useManagement).mockReturnValue(initial);
   vi.mocked(privateRequest).mockResolvedValue({});
-  const rendered = render(view());
+  const rendered = renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
   const other = screen.getByRole("region", {
@@ -270,7 +275,7 @@ it("saving one building preserves another building's dirty draft and refreshes o
 });
 it("canceling a building leaves the other building's unsaved changes intact", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  render(view());
+  renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
   const other = screen.getByRole("region", {
@@ -290,7 +295,7 @@ it("canceling a building leaves the other building's unsaved changes intact", ()
 it("immediately removes a revoked building while all buildings are displayed", () => {
   const initial = { ...state(), buildingIds: [] };
   vi.mocked(useManagement).mockReturnValue(initial);
-  const rendered = render(view());
+  const rendered = renderEditor();
   vi.mocked(useManagement).mockReturnValue({
     ...initial,
     data: { ...initial.data!, buildings: [initial.data!.buildings[0]] },
@@ -305,7 +310,7 @@ it("keeps building editors visible after canceling the add-building dialog", asy
     ...initial,
     data: { ...initial.data!, canAddBuilding: true },
   });
-  render(view());
+  renderEditor();
   fireEvent.click(screen.getByRole("button", { name: "Add building" }));
   const dialog = screen.getByRole("alertdialog");
   fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -314,7 +319,7 @@ it("keeps building editors visible after canceling the add-building dialog", asy
 });
 it("renders one project toolbar, live summary and checks for multiple buildings", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  render(view());
+  renderEditor();
   expect(screen.getAllByRole("textbox", { name: translate("en", "editorSearch") })).toHaveLength(1);
   expect(screen.getAllByRole("heading", { name: translate("en", "editorSummary") })).toHaveLength(
     1,
@@ -335,7 +340,7 @@ it("renders one project toolbar, live summary and checks for multiple buildings"
 });
 it("searches all selected building drafts through one field without discarding edits", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  render(view());
+  renderEditor();
   editUnit();
   const search = screen.getByRole("textbox", { name: translate("en", "editorSearch") });
   fireEvent.change(search, { target: { value: "Other building" } });
@@ -350,7 +355,7 @@ it("searches all selected building drafts through one field without discarding e
 });
 it("compares selected buildings in one table", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  render(view());
+  renderEditor();
   fireEvent.click(screen.getByRole("button", { name: translate("en", "editorCompare") }));
   const table = screen.getByRole("table", { name: translate("en", "editorCompare") });
   expect(within(table).getByRole("columnheader", { name: /Other building/ })).toBeTruthy();
@@ -361,7 +366,7 @@ it("compares selected buildings in one table", () => {
 });
 it("updates one shared validation panel when a building draft becomes invalid", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  render(view());
+  renderEditor();
   fireEvent.click(screen.getByRole("button", { name: "Unit name Building 1" }));
   const input = screen.getByRole("textbox", { name: "Unit name Building 1" });
   fireEvent.change(input, { target: { value: "" } });
@@ -372,4 +377,92 @@ it("updates one shared validation panel when a building draft becomes invalid", 
     name: `${translate("en", "editorTitle")} · Building`,
   });
   expect(within(first).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
+});
+it("opens in view mode with browsing tools and no editing or creation controls", () => {
+  const initial = state();
+  vi.mocked(useManagement).mockReturnValue({
+    ...initial,
+    buildingIds: [],
+    data: { ...initial.data!, canAddBuilding: true },
+  });
+  render(view());
+  expect(screen.getByRole("button", { name: "Edit structure" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add building" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add floor Building" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Unit name Building 1" })).toBeNull();
+  expect(screen.queryByRole("spinbutton")).toBeNull();
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("heading", { name: translate("en", "editorSummary") })).toBeNull();
+  expect(screen.queryByRole("heading", { name: translate("en", "editorChecks") })).toBeNull();
+  const search = screen.getByRole("textbox", { name: translate("en", "editorSearch") });
+  expect(screen.getAllByRole("textbox")).toHaveLength(1);
+  fireEvent.change(search, { target: { value: "Other building" } });
+  expect(
+    screen.queryByRole("region", { name: `${translate("en", "editorTitle")} · Building` }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
+  ).toBeTruthy();
+  expect(privateRequest).not.toHaveBeenCalled();
+});
+it("confirms unsaved changes before returning to view and discards only after confirmation", () => {
+  vi.mocked(useManagement).mockReturnValue(state());
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  renderEditor();
+  editUnit();
+  fireEvent.click(screen.getByRole("button", { name: "Back to view" }));
+  expect(confirm).toHaveBeenCalledOnce();
+  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Back to view" }));
+  expect(screen.getByRole("button", { name: "Edit structure" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  expect(screen.queryByText("Suite-A")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Edit structure" }));
+  expect(screen.getByRole("button", { name: "Unit name Building 1" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
+  expect(privateRequest).not.toHaveBeenCalled();
+});
+it("updates view mode from fresh server data without adding synthetic floors", () => {
+  const initial = { ...state(), buildingIds: [] };
+  vi.mocked(useManagement).mockReturnValue(initial);
+  const rendered = render(view());
+  const other = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Other building`,
+  });
+  expect(within(other).queryByRole("button", { name: "Floor 0" })).toBeNull();
+  vi.mocked(useManagement).mockReturnValue({
+    ...initial,
+    data: {
+      ...initial.data!,
+      buildings: initial.data!.buildings.map((b) =>
+        b.id === buildingId ? { ...b, name: "Updated building" } : b,
+      ),
+    },
+  });
+  rendered.rerender(view());
+  expect(
+    screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Updated building` }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("region", { name: `${translate("en", "editorTitle")} · Building` }),
+  ).toBeNull();
+  expect(privateRequest).not.toHaveBeenCalled();
+});
+it("blocks leaving edit mode during a save", async () => {
+  vi.mocked(useManagement).mockReturnValue(state());
+  vi.mocked(privateRequest).mockImplementation(() => new Promise(() => {}));
+  renderEditor();
+  editUnit();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Back to view" }).hasAttribute("disabled")).toBe(
+      true,
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Back to view" }));
+  expect(screen.queryByRole("button", { name: "Edit structure" })).toBeNull();
+  expect(privateRequest).toHaveBeenCalledOnce();
 });

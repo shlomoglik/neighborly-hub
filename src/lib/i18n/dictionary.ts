@@ -748,6 +748,17 @@ export const dict = {
     en: "In your scope: {buildings} buildings · {floors} floors · {apartments} apartments",
     ru: "В вашем доступе: {buildings} домов · {floors} этажей · {apartments} квартир",
   },
+  managementEditStructure: {
+    he: "עריכת מבנה",
+    en: "Edit structure",
+    ru: "Редактировать структуру",
+  },
+  managementViewStructure: { he: "חזרה לתצוגה", en: "Back to view", ru: "Вернуться к просмотру" },
+  managementViewHint: {
+    he: "תצוגת מבנה הפרויקט. לביצוע שינויים לחצו על עריכת מבנה.",
+    en: "Project structure overview. Choose Edit structure to make changes.",
+    ru: "Обзор структуры проекта. Для внесения изменений выберите редактирование структуры.",
+  },
   managementStructureHint: {
     he: "ערכו את מבנה הבניינים ושמרו את השינויים בכל בניין בנפרד.",
     en: "Edit the building structures and save each building separately.",

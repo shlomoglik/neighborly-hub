@@ -21,7 +21,12 @@ type Entry = {
   draft: DraftBuilding;
   error: TKey | null;
 };
-function entryFor(original: Building, buildingLabel: string, floorLabel: string): Entry {
+function entryFor(
+  original: Building,
+  buildingLabel: string,
+  floorLabel: string,
+  editable = true,
+): Entry {
   const [draft] = withDefaultNames(
     [
       {
@@ -43,7 +48,9 @@ function entryFor(original: Building, buildingLabel: string, floorLabel: string)
                   linked: u.linked ?? false,
                 })),
             }))
-          : [newFloor(0)],
+          : editable
+            ? [newFloor(0)]
+            : [],
       },
     ],
     buildingLabel,
@@ -56,6 +63,7 @@ const isDirty = (entry: Entry) => JSON.stringify(entry.draft) !== JSON.stringify
 /** One project editor with independent, version-checked building saves. */
 export function ManagedStructureEditor({
   data,
+  mode,
   buildingIds,
   refreshing,
   onSaved,
@@ -64,6 +72,7 @@ export function ManagedStructureEditor({
   onBusyChange,
 }: {
   data: ManagementHierarchy;
+  mode: "view" | "edit";
   buildingIds: string[];
   refreshing: boolean;
   onSaved: () => void;
@@ -75,14 +84,18 @@ export function ManagedStructureEditor({
   const [entries, setEntries] = useState<Entry[]>(() =>
     data.buildings
       .filter((b) => !buildingIds.length || buildingIds.includes(b.id))
-      .map((b) => entryFor(b, t("building"), t("floor"))),
+      .map((b) => entryFor(b, t("building"), t("floor"), mode === "edit")),
   );
   const [busyId, setBusyId] = useState<string | null>(null);
   const busy = busyId !== null;
   const [waiting, setWaiting] = useState<{ id: string; source: ManagementHierarchy } | null>(null);
   const pending = useRef<AbortController | null>(null);
   // Filter revoked buildings during render, before effects can run.
-  const selected = entries.filter(
+  const viewEntries =
+    mode === "view"
+      ? data.buildings.map((b) => entryFor(b, t("building"), t("floor"), false))
+      : entries;
+  const selected = viewEntries.filter(
     (entry) =>
       (!buildingIds.length || buildingIds.includes(entry.original.id)) &&
       data.buildings.some((b) => b.id === entry.original.id),
@@ -97,6 +110,7 @@ export function ManagedStructureEditor({
   }, [busy, waiting, onBusyChange]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
+    if (mode === "view") return;
     const refreshed = waiting && !refreshing && data !== waiting.source;
     setEntries((current) => {
       const next = data.buildings
@@ -112,7 +126,7 @@ export function ManagedStructureEditor({
         : next;
     });
     if (refreshed) setWaiting(null);
-  }, [data, buildingIds, refreshing, waiting, t]);
+  }, [data, buildingIds, refreshing, waiting, t, mode]);
   const reload = (id: string) => {
     setWaiting({ id, source: data });
     onSaved();
@@ -127,7 +141,7 @@ export function ManagedStructureEditor({
       );
   };
   async function save(entry: Entry) {
-    if (pending.current || blocked || entry.error || !isDirty(entry)) return;
+    if (mode !== "edit" || pending.current || blocked || entry.error || !isDirty(entry)) return;
     const b = entry.draft;
     const parsed = visualBuildingInput.safeParse({
       ...b,
@@ -175,12 +189,15 @@ export function ManagedStructureEditor({
   }
   return (
     <section dir={dir} className="min-w-0 space-y-4" aria-label={t("editorTitle")}>
-      <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
+      <p className="text-sm text-muted-foreground">
+        {t(mode === "edit" ? "managementStructureHint" : "managementViewHint")}
+      </p>
       <fieldset disabled={blocked} className="min-w-0">
         <ProjectStructureEditor
-          managed
+          mode={mode}
           buildings={selected.map((entry) => entry.draft)}
           onChange={(buildings) => {
+            if (mode !== "edit") return;
             const next = withDefaultNames(buildings, t("building"), t("floor"));
             setEntries((current) =>
               current.map((entry) => ({

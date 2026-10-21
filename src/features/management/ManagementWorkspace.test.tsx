@@ -8,6 +8,7 @@ afterEach(cleanup);
 function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> = {}) {
   const props: ManagementWorkspaceProps = {
     status: "ready",
+    mode: "edit",
     selectedProjectId: "p",
     buildingIds: [],
     discovery: {
@@ -185,3 +186,34 @@ it("supports multiple building chips and an explicit all-buildings reset", () =>
   fireEvent.click(screen.getByRole("checkbox", { name: "Building B" }));
   expect(p.onBuildingChange).toHaveBeenLastCalledWith([]);
 });
+it.each(["he", "en", "ru"] as const)(
+  "exposes localized view/edit transitions and creation only in edit mode in %s",
+  (lang) => {
+    const onModeChange = vi.fn();
+    const onEdit = vi.fn();
+    const p = mount(lang, {
+      mode: "view",
+      onModeChange,
+      onEdit,
+      data: {
+        id: "p",
+        name: "Project",
+        city: null,
+        buildings: [],
+        canAddBuilding: true,
+        counts: { buildings: 0, floors: 0, apartments: 0 },
+      },
+    });
+    expect(screen.queryByRole("button", { name: translate(lang, "addBuilding") })).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: translate(lang, "managementEditStructure") }),
+    );
+    expect(onModeChange).toHaveBeenLastCalledWith("edit");
+    p.update({ mode: "edit" });
+    expect(screen.getByRole("button", { name: translate(lang, "addBuilding") })).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: translate(lang, "managementViewStructure") }),
+    );
+    expect(onModeChange).toHaveBeenLastCalledWith("view");
+  },
+);

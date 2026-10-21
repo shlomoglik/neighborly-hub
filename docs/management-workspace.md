@@ -32,3 +32,9 @@ Storybook mounts only synthetic presentation fixtures; it never calls authentica
 The workspace supports [authorized structural additions and label changes](structure-management.md). Global administrators can now provision and revoke scoped staff assignments for existing registered accounts; see [staff management](staff-management.md). Structural deletions/moves, resident onboarding, approval mutations and approval counts remain outside this workflow.
 
 Project management includes a link to [scoped invitations and join request review](invitation-onboarding.md). Staff invitation issuance/review is administrator-only; resident invitations follow project/building grants.
+
+## View, edit and creation modes
+
+Project pages open in view mode. Building selection, search, type filtering and collapsing remain available, while names, floor levels, addresses and unit types render as plain values. Structural additions, drag/move controls and Save/Cancel actions appear only after choosing **Edit structure**. Returning to view confirms discarding unsaved drafts; saves and revalidation block the transition. Fresh server data drives view mode, without generating placeholder floors for empty buildings.
+
+The editor has explicit `view`, `edit` and `create` modes. Project creation remains in the separate setup wizard. The detailed summary, section preview and preflight checks are creation/editing aids; view mode omits them. Summary and section preview are desktop-only (`xl`); successful preflight feedback is also desktop-only, while validation errors remain visible on mobile.

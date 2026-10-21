@@ -63,10 +63,17 @@ function fixture(): DraftBuilding[] {
     },
   ];
 }
-function Interactive({ typesOnly = false }: { typesOnly?: boolean }) {
+function Interactive({
+  typesOnly = false,
+  mode = "create",
+}: {
+  typesOnly?: boolean;
+  mode?: "view" | "edit" | "create";
+}) {
   const [buildings, setBuildings] = useState(fixture);
   return (
     <ProjectStructureEditor
+      mode={mode}
       buildings={buildings}
       onChange={setBuildings}
       projectName="פרויקט הגפן · שלב א׳"
@@ -83,3 +90,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const EdgeCases: Story = {};
 export const Types: Story = { args: { typesOnly: true } };
+
+export const View: Story = { args: { mode: "view" } };
+export const Edit: Story = { args: { mode: "edit" } };

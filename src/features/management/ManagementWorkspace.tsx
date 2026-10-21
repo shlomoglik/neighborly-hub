@@ -36,6 +36,8 @@ export type ManagementWorkspaceProps = {
   onRefresh: () => void;
   onEdit?: (target: StructureEditTarget) => void;
   editingBusy?: boolean;
+  mode?: "view" | "edit";
+  onModeChange?: (mode: "view" | "edit") => void;
   structure?: ReactNode;
 };
 
@@ -191,15 +193,26 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">{t("editorTitle")}</h2>
-            {p.onEdit && data.canAddBuilding && (
-              <Button
-                variant="outline"
-                disabled={p.editingBusy}
-                onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
-              >
-                {t("addBuilding")}
-              </Button>
-            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              {p.onModeChange && (
+                <Button
+                  variant={p.mode === "edit" ? "outline" : "default"}
+                  disabled={p.editingBusy}
+                  onClick={() => p.onModeChange?.(p.mode === "edit" ? "view" : "edit")}
+                >
+                  {t(p.mode === "edit" ? "managementViewStructure" : "managementEditStructure")}
+                </Button>
+              )}
+              {p.mode === "edit" && p.onEdit && data.canAddBuilding && (
+                <Button
+                  variant="outline"
+                  disabled={p.editingBusy}
+                  onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
+                >
+                  {t("addBuilding")}
+                </Button>
+              )}
+            </div>
           </div>
           {data.buildings.length > 1 && (
             <BuildingSelector
