@@ -320,7 +320,7 @@ it("keeps building editors visible after canceling the add-building dialog", asy
 it("renders one project toolbar, live summary and checks for multiple buildings", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
   renderEditor();
-  expect(screen.getAllByRole("textbox", { name: translate("en", "editorSearch") })).toHaveLength(1);
+  expect(screen.queryByRole("searchbox")).toBeNull();
   expect(screen.getAllByRole("heading", { name: translate("en", "editorSummary") })).toHaveLength(
     1,
   );
@@ -338,20 +338,14 @@ it("renders one project toolbar, live summary and checks for multiple buildings"
   fireEvent.click(within(other).getByRole("button", { name: "Cancel" }));
   expect(counts()).toEqual(["2", "2", "1"]);
 });
-it("searches all selected building drafts through one field without discarding edits", () => {
+it("keeps all selected building drafts visible without a search field", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
   renderEditor();
   editUnit();
-  const search = screen.getByRole("textbox", { name: translate("en", "editorSearch") });
-  fireEvent.change(search, { target: { value: "Other building" } });
-  expect(screen.queryByRole("button", { name: "Add floor Building" })).toBeNull();
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
-  fireEvent.change(search, { target: { value: "Suite-A" } });
   expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Add floor Other building" })).toBeNull();
-  fireEvent.change(search, { target: { value: "" } });
-  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
 });
 it("compares selected buildings in one table", () => {
   vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
@@ -396,12 +390,7 @@ it("opens in view mode with browsing tools and no editing or creation controls",
   expect(screen.queryByRole("combobox")).toBeNull();
   expect(screen.queryByRole("heading", { name: translate("en", "editorSummary") })).toBeNull();
   expect(screen.queryByRole("heading", { name: translate("en", "editorChecks") })).toBeNull();
-  const search = screen.getByRole("textbox", { name: translate("en", "editorSearch") });
-  expect(screen.getAllByRole("textbox")).toHaveLength(1);
-  fireEvent.change(search, { target: { value: "Other building" } });
-  expect(
-    screen.queryByRole("region", { name: `${translate("en", "editorTitle")} · Building` }),
-  ).toBeNull();
+  expect(screen.queryByRole("searchbox")).toBeNull();
   expect(
     screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
   ).toBeTruthy();

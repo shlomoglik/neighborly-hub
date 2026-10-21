@@ -2,16 +2,24 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Building2,
+  Car,
   ChevronDown,
   ChevronUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Columns2,
   Copy,
   GripVertical,
   Link2,
+  ListTree,
+  MapPin,
   Plus,
+  Store,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
 import { logger } from "@/lib/logging";
+import { BuildingSelector } from "@/components/community/BuildingSelector";
 import {
   MAX_SETUP_BUILDINGS,
   MAX_SETUP_FLOORS,
@@ -41,12 +50,162 @@ import {
   type DraftFloor,
   type UnitType,
 } from "./project-structure-draft";
+import { splitFloorLabel } from "./building-label";
 
 const typeStyle = {
   residential: "bg-primary/10 text-primary",
   commercial: "bg-amber-100 text-amber-900",
   parking: "bg-stone-200 text-stone-700",
 };
+const viewTileStyle = {
+  residential: "bg-accent/30 text-accent-foreground",
+  commercial: "bg-amber-100 text-amber-950",
+  parking: "bg-stone-200 text-stone-800",
+};
+const viewSwatchStyle = {
+  residential: "border-green-900/40",
+  commercial: "border-amber-900/50",
+  parking: "border-stone-700/50",
+};
+function ViewBuilding({
+  building,
+  filter,
+  accordion,
+  expanded,
+  onToggle,
+}: {
+  building: DraftBuilding;
+  filter: UnitType | "all";
+  accordion: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useI18n();
+  const floors = [...building.floors]
+    .sort((a, b) => b.number - a.number)
+    .filter((floor) => filter === "all" || floor.apartments.some((unit) => unit.type === filter));
+  const unitCount = building.floors.reduce((total, floor) => total + floor.apartments.length, 0);
+  const maxUnits = Math.max(1, ...building.floors.map((floor) => floor.apartments.length));
+
+  return (
+    <article
+      role="region"
+      aria-label={`${t("editorTitle")} · ${building.name}`}
+      className="min-w-0 overflow-hidden rounded-3xl border bg-card"
+    >
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Building2 className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+          <h2 className="font-heading text-xl font-normal">
+            <bdi>{building.name}</bdi>
+          </h2>
+        </div>
+        <span className="basis-full text-sm text-muted-foreground sm:basis-auto">
+          {building.floors.length} {t("floors")} · {t("editorCount", { n: unitCount })}
+        </span>
+        {building.address && (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="size-4" aria-hidden />
+            <bdi>{building.address}</bdi>
+          </span>
+        )}
+        {accordion && (
+          <button
+            type="button"
+            aria-label={`${expanded ? t("editorCollapse") : t("editorExpand")} ${building.name}`}
+            aria-expanded={expanded}
+            onClick={onToggle}
+            className="ms-auto grid size-11 place-items-center rounded-lg text-muted-foreground sm:hidden"
+          >
+            <ChevronDown
+              className={`size-5 transition-transform ${expanded ? "" : "-rotate-90 rtl:rotate-90"}`}
+            />
+          </button>
+        )}
+      </header>
+      <div
+        className={`border-t border-border/60 ${accordion && !expanded ? "hidden sm:block" : ""}`}
+      >
+        {floors.map((floor) => {
+          const floorLabel = splitFloorLabel(floor.name, `${t("floor")} ${floor.number}`);
+          const floorType = floor.type;
+          const showFloorType =
+            floorType !== "residential" &&
+            (floorType !== "parking" ||
+              (floor.apartments.length > 0 &&
+                floor.apartments.every((unit) => unit.type === "parking")));
+          const units = floor.apartments.filter((unit) => filter === "all" || unit.type === filter);
+          return (
+            <section
+              key={floor.id}
+              className="grid min-w-0 grid-cols-[112px_minmax(0,1fr)] items-center gap-2 border-t border-border/50 px-3 py-1 transition-colors first:border-t-0 hover:bg-secondary/50 sm:grid-cols-[112px_minmax(0,1fr)_auto]"
+            >
+              <div className="min-w-0">
+                <h3 className="font-heading text-sm font-normal leading-4">
+                  <bdi>{floorLabel.title}</bdi>
+                </h3>
+                {floorLabel.description && (
+                  <p className="text-xs leading-4 text-muted-foreground">
+                    <bdi>{floorLabel.description}</bdi>
+                  </p>
+                )}
+                {showFloorType && (
+                  <span
+                    className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] ${typeStyle[floorType]}`}
+                  >
+                    {t(floorType)}
+                  </span>
+                )}
+              </div>
+              {floor.apartments.length ? (
+                <div className="col-span-2 row-start-2 min-w-0 overflow-x-auto sm:col-span-1 sm:col-start-2 sm:row-start-1">
+                  <div
+                    className="me-auto grid w-max gap-1.5"
+                    style={{ gridTemplateColumns: `repeat(${maxUnits}, 56px)` }}
+                  >
+                    {units.map((unit) => (
+                      <div
+                        key={unit.id}
+                        className={`flex h-12 w-14 flex-wrap items-center justify-center gap-1 rounded-xl px-1 py-0.5 text-center ${viewTileStyle[unit.type]}`}
+                      >
+                        {unit.type === "commercial" && (
+                          <Store className="size-3.5 shrink-0" aria-hidden />
+                        )}
+                        {unit.type === "parking" && (
+                          <Car className="size-3.5 shrink-0" aria-hidden />
+                        )}
+                        <span className="min-w-0 text-sm font-medium" dir="ltr">
+                          <bdi>{unit.number}</bdi>
+                        </span>
+                        {unit.linked && (
+                          <span title={t("editorLinked")} className="inline-flex shrink-0">
+                            <Link2 className="size-3.5" aria-label={t("editorLinked")} role="img" />
+                          </span>
+                        )}
+                        {unit.type !== floorType && (
+                          <span className="basis-full text-[10px] leading-none opacity-75">
+                            {t(unit.type)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="col-span-2 row-start-2 flex min-h-11 items-center rounded-xl border border-dashed px-3 text-sm text-muted-foreground sm:col-span-1 sm:col-start-2 sm:row-start-1">
+                  {t("editorEmpty")}
+                </p>
+              )}
+              <span className="col-start-2 row-start-1 justify-self-end text-xs tabular-nums text-muted-foreground sm:col-start-3">
+                {t("editorCountShort", { n: floor.apartments.length })}
+              </span>
+            </section>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
 function InlineName({
   value,
   label,
@@ -148,6 +307,9 @@ export type ProjectStructureEditorProps = {
   mode?: "view" | "edit" | "create";
   buildingActions?: (id: string) => ReactNode;
   disabledBuildings?: string[];
+  buildingOptions?: { id: string; name: string }[];
+  selectedBuildingIds?: string[];
+  onBuildingSelectionChange?: (ids: string[]) => void;
 };
 export function ProjectStructureEditor({
   buildings,
@@ -157,6 +319,9 @@ export function ProjectStructureEditor({
   mode = "create",
   buildingActions,
   disabledBuildings = [],
+  buildingOptions,
+  selectedBuildingIds = [],
+  onBuildingSelectionChange,
 }: ProjectStructureEditorProps) {
   const { t } = useI18n();
   const readOnly = mode === "view";
@@ -164,10 +329,12 @@ export function ProjectStructureEditor({
   const onChange = (next: DraftBuilding[]) => {
     if (!readOnly) onBuildingsChange(next);
   };
-  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<UnitType | "all">("all");
   const [comparison, setComparison] = useState(false);
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [expandedBuildings, setExpandedBuildings] = useState<string[]>(() =>
+    buildings[0] ? [buildings[0].id] : [],
+  );
   const [selected, setSelected] = useState(buildings[0]?.id);
   const [drag, setDrag] = useState<{ building: string; unit: string } | null>(null);
   const [move, setMove] = useState<string | null>(null);
@@ -218,74 +385,125 @@ export function ProjectStructureEditor({
   }, [validation, readOnly]);
   const bulkBuilding = buildings.find((b) => b.id === bulk?.building);
   const bulkFloor = bulkBuilding?.floors.find((f) => f.id === bulk?.floor);
-  const normalized = search.trim().normalize("NFKC").toLocaleLowerCase();
-  const matches = (value: string) =>
-    value.normalize("NFKC").toLocaleLowerCase().includes(normalized);
-  const visible = buildings.filter(
-    (b) =>
-      matches(b.name) ||
-      b.floors.some(
-        (f) =>
-          matches(f.name) ||
-          matches(String(f.number)) ||
-          f.apartments.some((u) => matches(u.number)),
+  const visible = buildings;
+  const typeCounts = Object.fromEntries(
+    unitTypes.map((type) => [
+      type,
+      buildings.reduce(
+        (total, building) =>
+          total +
+          building.floors.reduce(
+            (floorTotal, floor) =>
+              floorTotal + floor.apartments.filter((unit) => unit.type === type).length,
+            0,
+          ),
+        0,
       ),
-  );
+    ]),
+  ) as Record<UnitType, number>;
+  const allBuildings = !selectedBuildingIds.length;
   return (
     <div className="min-w-0 space-y-4">
       {!readOnly && <p className="text-sm text-muted-foreground">{t("editorHint")}</p>}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-muted/50 p-3">
-        <Input
-          aria-label={t("editorSearch")}
-          placeholder={t("editorSearch")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="min-w-40 flex-1"
-        />
-        <div className="flex flex-wrap gap-1" role="group" aria-label={t("editorType")}>
+      <div className="flex flex-wrap items-center gap-3">
+        {buildingOptions && onBuildingSelectionChange && (
+          <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+            <BuildingSelector
+              buildings={buildingOptions}
+              multiple
+              value={selectedBuildingIds}
+              onChange={onBuildingSelectionChange}
+            />
+          </div>
+        )}
+        <div
+          className="flex max-w-full gap-1 overflow-x-auto rounded-[14px] bg-secondary p-1"
+          role="group"
+          aria-label={t("editorType")}
+        >
           {(["all", ...unitTypes] as const).map((type) => (
             <Button
               key={type}
-              size="sm"
-              variant={filter === type ? "default" : "ghost"}
+              size="default"
+              variant="ghost"
+              className={`h-9 shrink-0 rounded-[10px] px-3 shadow-none ${filter === type ? "bg-card text-foreground shadow-sm hover:bg-card" : "text-muted-foreground hover:bg-card/50"}`}
               aria-pressed={filter === type}
               onClick={() => setFilter(type)}
             >
+              {type !== "all" && (
+                <span
+                  className={`size-3 shrink-0 rounded-[3px] border ${viewTileStyle[type]} ${viewSwatchStyle[type]}`}
+                  aria-hidden
+                />
+              )}
               {t(type === "all" ? "editorAll" : type)}
+              {type !== "all" && (
+                <span className="tabular-nums text-muted-foreground">{typeCounts[type]}</span>
+              )}
             </Button>
           ))}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            setCollapsed(
-              collapsed.length
-                ? []
-                : buildings.flatMap((b) => [b.id, ...b.floors.map((f) => f.id)]),
-            )
-          }
-        >
-          {t(collapsed.length ? "editorExpand" : "editorCollapse")}
-        </Button>
         {!readOnly && (
-          <div className="flex gap-1" role="group" aria-label={t("editorCompare")}>
+          <div className="ms-auto flex shrink-0 items-center gap-3">
             <Button
-              variant={!comparison ? "default" : "outline"}
-              size="sm"
-              aria-pressed={!comparison}
-              onClick={() => setComparison(false)}
+              variant={readOnly ? "ghost" : "outline"}
+              size={readOnly ? "default" : "sm"}
+              className={readOnly ? "h-11 shrink-0 text-muted-foreground" : undefined}
+              onClick={() =>
+                setCollapsed(
+                  collapsed.length
+                    ? []
+                    : buildings.flatMap((b) => [b.id, ...b.floors.map((f) => f.id)]),
+                )
+              }
             >
-              {t("editorTree")}
+              {collapsed.length ? (
+                <ChevronsUpDown className="size-4" aria-hidden />
+              ) : (
+                <ChevronsDownUp className="size-4" aria-hidden />
+              )}
+              {t(collapsed.length ? "editorExpand" : "editorCollapse")}
             </Button>
-            <Button
-              variant={comparison ? "default" : "outline"}
-              size="sm"
-              aria-pressed={comparison}
-              onClick={() => setComparison(true)}
-            >
-              {t("editorCompare")}
-            </Button>
+            <TooltipProvider>
+              <div
+                role="group"
+                aria-label={t("editorCompare")}
+                className="flex items-center gap-1 rounded-[14px] bg-secondary p-1"
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={comparison ? "ghost" : "default"}
+                      size="icon"
+                      aria-label={t("editorTree")}
+                      aria-pressed={!comparison}
+                      className="h-9 w-9 min-w-9 rounded-[10px]"
+                      onClick={() => setComparison(false)}
+                    >
+                      <ListTree aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("editorTree")}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={comparison ? "default" : "ghost"}
+                      size="icon"
+                      aria-label={t("editorCompare")}
+                      aria-pressed={comparison}
+                      className="h-9 w-9 min-w-9 rounded-[10px]"
+                      onClick={() => setComparison(true)}
+                    >
+                      <Columns2 aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t("editorCompare")}</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
         )}
         {!readOnly && !typesOnly && !managed && (
@@ -302,7 +520,9 @@ export function ProjectStructureEditor({
       <div
         className={`grid min-w-0 items-start gap-5 ${readOnly ? "" : "xl:grid-cols-[minmax(0,1fr)_19rem]"}`}
       >
-        <div className="min-w-0 space-y-4">
+        <div
+          className={`min-w-0 gap-6 ${readOnly && allBuildings ? "grid xl:grid-cols-2" : "space-y-4"}`}
+        >
           {comparison ? (
             <div className="max-w-full overflow-x-auto rounded-2xl border bg-card">
               <table className="w-full border-collapse text-sm">
@@ -351,6 +571,23 @@ export function ProjectStructureEditor({
                 </tbody>
               </table>
             </div>
+          ) : readOnly ? (
+            visible.map((b) => (
+              <ViewBuilding
+                key={b.id}
+                building={b}
+                filter={filter}
+                accordion={allBuildings}
+                expanded={expandedBuildings.includes(b.id)}
+                onToggle={() =>
+                  setExpandedBuildings((current) =>
+                    current.includes(b.id)
+                      ? current.filter((id) => id !== b.id)
+                      : [...current, b.id],
+                  )
+                }
+              />
+            ))
           ) : (
             visible.map((b) => (
               <article
@@ -487,13 +724,9 @@ export function ProjectStructureEditor({
                         .sort((a, b) => b.number - a.number)
                         .filter(
                           (f) =>
-                            (matches(b.name) ||
-                              matches(f.name) ||
-                              matches(String(f.number)) ||
-                              f.apartments.some((u) => matches(u.number))) &&
-                            (filter === "all" ||
-                              f.type === filter ||
-                              f.apartments.some((u) => u.type === filter)),
+                            filter === "all" ||
+                            f.type === filter ||
+                            f.apartments.some((u) => u.type === filter),
                         )
                         .map((f) => (
                           <section
@@ -570,14 +803,15 @@ export function ProjectStructureEditor({
                                 <div className="ms-auto flex gap-1">
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
+                                    aria-label={`${t("editorDuplicate")} ${f.name || f.number}`}
                                     onClick={() => {
                                       setBulk({ building: b.id, floor: f.id });
                                       setCopies(1);
                                       setTargets([]);
                                     }}
                                   >
-                                    {t("editorDuplicate")}
+                                    <Copy className="size-4" aria-hidden />
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -610,14 +844,7 @@ export function ProjectStructureEditor({
                                 )}
                                 <div className="flex flex-wrap gap-2">
                                   {f.apartments
-                                    .filter(
-                                      (u) =>
-                                        (filter === "all" || u.type === filter) &&
-                                        (matches(b.name) ||
-                                          matches(f.name) ||
-                                          matches(String(f.number)) ||
-                                          matches(u.number)),
-                                    )
+                                    .filter((u) => filter === "all" || u.type === filter)
                                     .map((u) => {
                                       const index = f.apartments.findIndex((x) => x.id === u.id);
                                       return (

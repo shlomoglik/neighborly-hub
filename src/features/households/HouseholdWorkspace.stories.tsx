@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
 const meta = {
-  title: "Community/Live household",
+  title: "Features/Households/HouseholdWorkspace",
   component: HouseholdWorkspace,
   args: {
     status: "ready",

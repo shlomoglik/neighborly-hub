@@ -25,6 +25,8 @@ export type StructureEditorProps = {
   onReload: () => void;
   onRestoreFocus?: () => void;
 };
+// This dialog remains the project-hierarchy editor (building creation and renames).
+// ManagedStructureEditor owns versioned floor/unit layout saves and cannot replace this API path.
 export function StructureEditor(p: StructureEditorProps) {
   const { t, dir } = useI18n();
   const [value, setValue] = useState(p.target.mode === "update" ? String(p.target.expected) : "");

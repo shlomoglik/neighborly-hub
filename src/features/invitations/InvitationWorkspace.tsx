@@ -1,11 +1,10 @@
 "use client";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
-import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { managementHref, type ManagementHierarchy } from "@/lib/access/management-contracts";
+import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import {
   invitationInput,
   type InvitationInput,
@@ -77,13 +76,10 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
       : p.data.invitations.canInviteStaff);
   return (
     <section className="space-y-5 break-words">
-      <Link className="text-primary underline" href={managementHref(p.projectId)}>
-        {t("backToProject")}
-      </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold" tabIndex={-1}>
+        <h2 className="font-heading text-2xl font-normal" tabIndex={-1}>
           {t("inviteManagement")}
-        </h1>
+        </h2>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             disabled={p.busy || p.status === "loading"}
@@ -96,9 +92,6 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
       <InvitationFeedback status={p.status} onRetry={p.onRefresh} />
       {p.status === "ready" && p.data && (
         <div className="community-enter space-y-5">
-          <h2 className="text-xl font-bold">
-            <bdi>{hierarchy!.name}</bdi>
-          </h2>
           <form
             className="space-y-3 rounded-2xl border bg-card p-4"
             onSubmit={async (event) => {

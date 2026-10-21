@@ -4,6 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import type { StaffPage } from "@/lib/access/staff-contracts";
 import { StaffWorkspace } from "./StaffWorkspace";
 import type { StaffStatus } from "./use-staff";
+import { ManageProjectHeader } from "./ManageProjectHeader";
 function Example({
   status = "ready",
   empty = false,
@@ -37,40 +38,52 @@ function Example({
         ],
   );
   return (
-    <StaffWorkspace
-      projectId={projectId}
-      status={status}
-      busy={busy}
-      notice={null}
-      data={
-        status === "ready"
-          ? {
-              project: { id: projectId, name: t("demoProject") },
-              buildings: [{ id: buildingId, name: t("demoBuilding") }],
-              assignments,
-              page: 1,
-              hasNext: false,
-            }
-          : null
-      }
-      onAdd={async (input) => {
-        setAssignments((items) => [
-          ...items,
-          { id: String(items.length), name: t("demoPerson"), ...input },
-        ]);
-        return true;
-      }}
-      onRemove={async (id) => {
-        setAssignments((items) => items.filter((a) => a.id !== id));
-        return true;
-      }}
-      onRefresh={() => {}}
-      onPageChange={() => {}}
-    />
+    <div className="space-y-6">
+      <ManageProjectHeader
+        project={{
+          id: projectId,
+          name: t("demoProject"),
+          city: t("demoCity"),
+          counts: { buildings: 1, floors: 9, apartments: 29 },
+        }}
+        active="staff"
+        canManageStaff
+      />
+      <StaffWorkspace
+        projectId={projectId}
+        status={status}
+        busy={busy}
+        notice={null}
+        data={
+          status === "ready"
+            ? {
+                project: { id: projectId, name: t("demoProject") },
+                buildings: [{ id: buildingId, name: t("demoBuilding") }],
+                assignments,
+                page: 1,
+                hasNext: false,
+              }
+            : null
+        }
+        onAdd={async (input) => {
+          setAssignments((items) => [
+            ...items,
+            { id: String(items.length), name: t("demoPerson"), ...input },
+          ]);
+          return true;
+        }}
+        onRemove={async (id) => {
+          setAssignments((items) => items.filter((a) => a.id !== id));
+          return true;
+        }}
+        onRefresh={() => {}}
+        onPageChange={() => {}}
+      />
+    </div>
   );
 }
 const meta = {
-  title: "Features/Management/Staff assignments",
+  title: "Features/Management/StaffWorkspace",
   component: Example,
   tags: ["autodocs"],
 } satisfies Meta<typeof Example>;

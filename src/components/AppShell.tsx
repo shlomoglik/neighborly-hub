@@ -26,7 +26,9 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background pb-24 lg:pb-8">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-3 sm:gap-3">
+        <div
+          className={`mx-auto flex items-center gap-2 px-4 py-3 sm:gap-3 ${wide ? "max-w-7xl" : "max-w-3xl"}`}
+        >
           <Link
             href="/directory"
             className="flex min-w-0 flex-1 items-center gap-2 lg:flex-initial"

@@ -4,6 +4,7 @@ import { InvitationWorkspace, type InvitationWorkspaceProps } from "./Invitation
 import { JoinInvitation } from "./JoinInvitation";
 import { InvitationShare } from "./InvitationShare";
 import type { ResourceStatus } from "./use-invitation-resource";
+import { ManageProjectHeader } from "@/features/management/ManageProjectHeader";
 const projectId = "c44c9aec-f8e4-46b3-9957-12ceba088994";
 const buildingId = "27e8d799-5714-4f4f-831d-715a0cced685";
 const apartmentId = "94864538-67d1-4f89-8ea5-3b4a707e9a32";
@@ -76,24 +77,34 @@ function Example({
     },
   };
   return (
-    <InvitationWorkspace
-      projectId={projectId}
-      status={status}
-      data={status === "ready" ? data : null}
-      busy={false}
-      error={null}
-      created={null}
-      onCreate={async () => false}
-      onRevoke={async () => {}}
-      onReview={async () => false}
-      onRefresh={() => {}}
-      onInvitationPage={() => {}}
-      onRequestPage={() => {}}
-    />
+    <div className="space-y-6">
+      <ManageProjectHeader
+        project={data.hierarchy}
+        active="invitations"
+        canManageStaff={admin}
+        pendingCount={
+          data.requests.requests.filter((request) => request.status === "pending").length
+        }
+      />
+      <InvitationWorkspace
+        projectId={projectId}
+        status={status}
+        data={status === "ready" ? data : null}
+        busy={false}
+        error={null}
+        created={null}
+        onCreate={async () => false}
+        onRevoke={async () => {}}
+        onReview={async () => false}
+        onRefresh={() => {}}
+        onInvitationPage={() => {}}
+        onRequestPage={() => {}}
+      />
+    </div>
   );
 }
 const meta = {
-  title: "Features/Invitations/Workspace",
+  title: "Features/Management/InvitationWorkspace",
   component: Example,
   tags: ["autodocs"],
 } satisfies Meta<typeof Example>;
