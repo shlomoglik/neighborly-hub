@@ -310,6 +310,7 @@ export type ProjectStructureEditorProps = {
   buildingOptions?: { id: string; name: string }[];
   selectedBuildingIds?: string[];
   onBuildingSelectionChange?: (ids: string[]) => void;
+  buildingSelectionDisabled?: boolean;
 };
 export function ProjectStructureEditor({
   buildings,
@@ -322,6 +323,7 @@ export function ProjectStructureEditor({
   buildingOptions,
   selectedBuildingIds = [],
   onBuildingSelectionChange,
+  buildingSelectionDisabled = false,
 }: ProjectStructureEditorProps) {
   const { t } = useI18n();
   const readOnly = mode === "view";
@@ -402,6 +404,9 @@ export function ProjectStructureEditor({
     ]),
   ) as Record<UnitType, number>;
   const allBuildings = !selectedBuildingIds.length;
+  const viewExpanded =
+    visible.length > 0 && visible.every((building) => expandedBuildings.includes(building.id));
+  const willExpand = readOnly ? !viewExpanded : collapsed.length > 0;
   return (
     <div className="min-w-0 space-y-4">
       {!readOnly && <p className="text-sm text-muted-foreground">{t("editorHint")}</p>}
@@ -413,6 +418,7 @@ export function ProjectStructureEditor({
               multiple
               value={selectedBuildingIds}
               onChange={onBuildingSelectionChange}
+              disabled={buildingSelectionDisabled}
             />
           </div>
         )}
@@ -443,67 +449,73 @@ export function ProjectStructureEditor({
             </Button>
           ))}
         </div>
-        {!readOnly && (
+        {(!readOnly || allBuildings) && (
           <div className="ms-auto flex shrink-0 items-center gap-3">
             <Button
               variant={readOnly ? "ghost" : "outline"}
               size={readOnly ? "default" : "sm"}
               className={readOnly ? "h-11 shrink-0 text-muted-foreground" : undefined}
-              onClick={() =>
-                setCollapsed(
-                  collapsed.length
-                    ? []
-                    : buildings.flatMap((b) => [b.id, ...b.floors.map((f) => f.id)]),
-                )
-              }
+              onClick={() => {
+                if (readOnly) {
+                  setExpandedBuildings(viewExpanded ? [] : visible.map((building) => building.id));
+                } else {
+                  setCollapsed(
+                    collapsed.length
+                      ? []
+                      : buildings.flatMap((b) => [b.id, ...b.floors.map((f) => f.id)]),
+                  );
+                }
+              }}
             >
-              {collapsed.length ? (
+              {willExpand ? (
                 <ChevronsUpDown className="size-4" aria-hidden />
               ) : (
                 <ChevronsDownUp className="size-4" aria-hidden />
               )}
-              {t(collapsed.length ? "editorExpand" : "editorCollapse")}
+              {t(willExpand ? "editorExpand" : "editorCollapse")}
             </Button>
-            <TooltipProvider>
-              <div
-                role="group"
-                aria-label={t("editorCompare")}
-                className="flex items-center gap-1 rounded-[14px] bg-secondary p-1"
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant={comparison ? "ghost" : "default"}
-                      size="icon"
-                      aria-label={t("editorTree")}
-                      aria-pressed={!comparison}
-                      className="h-9 w-9 min-w-9 rounded-[10px]"
-                      onClick={() => setComparison(false)}
-                    >
-                      <ListTree aria-hidden />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("editorTree")}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant={comparison ? "default" : "ghost"}
-                      size="icon"
-                      aria-label={t("editorCompare")}
-                      aria-pressed={comparison}
-                      className="h-9 w-9 min-w-9 rounded-[10px]"
-                      onClick={() => setComparison(true)}
-                    >
-                      <Columns2 aria-hidden />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("editorCompare")}</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
+            {!readOnly && (
+              <TooltipProvider>
+                <div
+                  role="group"
+                  aria-label={t("editorCompare")}
+                  className="flex items-center gap-1 rounded-[14px] bg-secondary p-1"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={comparison ? "ghost" : "default"}
+                        size="icon"
+                        aria-label={t("editorTree")}
+                        aria-pressed={!comparison}
+                        className="h-9 w-9 min-w-9 rounded-[10px]"
+                        onClick={() => setComparison(false)}
+                      >
+                        <ListTree aria-hidden />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("editorTree")}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={comparison ? "default" : "ghost"}
+                        size="icon"
+                        aria-label={t("editorCompare")}
+                        aria-pressed={comparison}
+                        className="h-9 w-9 min-w-9 rounded-[10px]"
+                        onClick={() => setComparison(true)}
+                      >
+                        <Columns2 aria-hidden />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("editorCompare")}</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            )}
           </div>
         )}
         {!readOnly && !typesOnly && !managed && (

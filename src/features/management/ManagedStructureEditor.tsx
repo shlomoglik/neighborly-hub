@@ -214,6 +214,7 @@ export function ManagedStructureEditor({
           buildingOptions={data.buildings}
           selectedBuildingIds={buildingIds}
           onBuildingSelectionChange={onBuildingChange}
+          buildingSelectionDisabled={blocked}
           disabledBuildings={selected
             .filter((entry) => entry.error)
             .map((entry) => entry.original.id)}
