@@ -17,7 +17,7 @@ export function BuildingSelector(props: BuildingSelectorProps) {
   return (
     <fieldset
       disabled={disabled}
-      className="community-enter community-interactive min-w-0 w-full max-w-full disabled:opacity-60"
+      className="community-enter min-w-0 w-full max-w-full disabled:opacity-60"
     >
       <legend className="sr-only">{t("filterBuilding")}</legend>
       <div className="flex gap-2 overflow-x-auto overscroll-x-contain p-1">
