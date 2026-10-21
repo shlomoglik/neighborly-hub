@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   copyFloor,
   copyBuildingLayout,
+  cloneBuilding,
   duplicateFloors,
   moveUnit,
   validateDraft,
@@ -94,4 +95,44 @@ it("materializes unique default names while preserving custom names, IDs and flo
   expect(unnamed.name).toBe(" ");
   expect(unnamed.floors[0].name).toBe("");
   expect(validateDraft(named).success).toBe(true);
+});
+
+it("clones the full building layout with fresh IDs and independent units, without resident links", () => {
+  const source = { ...building(), address: "Example street 5" };
+  source.floors[1].number = -1;
+  source.floors[1].type = "parking";
+  const clone = cloneBuilding(source, [source]);
+  expect(clone).toMatchObject({ name: "A (2)", address: source.address });
+  expect(clone.id).not.toBe(source.id);
+  expect(clone.floors.map((f) => [f.number, f.name, f.type])).toEqual(
+    source.floors.map((f) => [f.number, f.name, f.type]),
+  );
+  const sourceIds = new Set([
+    source.id,
+    ...source.floors.map((f) => f.id),
+    ...source.floors.flatMap((f) => f.apartments.map((u) => u.id)),
+  ]);
+  const cloneIds = [
+    clone.id,
+    ...clone.floors.map((f) => f.id),
+    ...clone.floors.flatMap((f) => f.apartments.map((u) => u.id)),
+  ];
+  expect(cloneIds.every((id) => !sourceIds.has(id))).toBe(true);
+  expect(new Set(cloneIds).size).toBe(cloneIds.length);
+  expect(clone.floors[0].apartments.map((u) => u.number)).toEqual(["25A", "25B"]);
+  expect(clone.floors[0].apartments.every((u) => u.linked === undefined)).toBe(true);
+  expect(validateDraft([source, clone]).success).toBe(true);
+  clone.floors[0].apartments[0].number = "Edited";
+  expect(source.floors[0].apartments[0].number).toBe("25A");
+  expect(cloneBuilding(source, [source, clone]).name).toBe("A (3)");
+});
+
+it("keeps clone names within the name length limit and avoids normalized collisions", () => {
+  const source = { ...building(), name: "A".repeat(200) };
+  const clone = cloneBuilding(source, [source]);
+  expect(clone.name.length).toBe(200);
+  const collision = { ...clone, name: clone.name.toLowerCase() };
+  const next = cloneBuilding(source, [source, collision]);
+  expect(next.name.endsWith(" (3)")).toBe(true);
+  expect(validateDraft([source, collision, next]).success).toBe(true);
 });

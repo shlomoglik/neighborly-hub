@@ -1,6 +1,15 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ChevronDown, ChevronUp, GripVertical, Link2, Plus, Trash2 } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  GripVertical,
+  Link2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +21,12 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
 import {
+  MAX_SETUP_BUILDINGS,
+  MAX_SETUP_FLOORS,
+  MAX_SETUP_APARTMENTS,
+} from "@/lib/db/project-setup-input";
+import {
+  cloneBuilding,
   copyFloor,
   copyBuildingLayout,
   duplicateFloors,
@@ -141,6 +156,7 @@ export function ProjectStructureEditor({
     (n, b) => n + b.floors.reduce((n, f) => n + f.apartments.length, 0),
     0,
   );
+  const floorCount = buildings.reduce((n, b) => n + b.floors.length, 0);
   const levels = Array.from(new Set(buildings.flatMap((b) => b.floors.map((f) => f.number)))).sort(
     (a, b) => b - a,
   );
@@ -318,23 +334,48 @@ export function ProjectStructureEditor({
                     {t("editorCount", { n: b.floors.reduce((n, f) => n + f.apartments.length, 0) })}
                   </span>
                   {!typesOnly && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ms-auto"
-                      aria-label={`${t("remove")} ${t("building")} ${b.name}`}
-                      disabled={
-                        managed ||
-                        buildings.length === 1 ||
-                        b.floors.some((f) => f.apartments.some((u) => u.linked))
-                      }
-                      onClick={() => {
-                        if (window.confirm(t("editorDelete")))
-                          onChange(buildings.filter((x) => x.id !== b.id));
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <div className="ms-auto flex items-center gap-1">
+                      {!managed && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`${t("editorCloneBuilding")} ${b.name}`}
+                          title={t("editorCloneBuilding")}
+                          disabled={
+                            buildings.length >= MAX_SETUP_BUILDINGS ||
+                            floorCount + b.floors.length > MAX_SETUP_FLOORS ||
+                            count + b.floors.reduce((n, f) => n + f.apartments.length, 0) >
+                              MAX_SETUP_APARTMENTS
+                          }
+                          onClick={() => {
+                            const cloned = cloneBuilding(b, buildings);
+                            onChange(
+                              buildings.flatMap((current) =>
+                                current.id === b.id ? [current, cloned] : [current],
+                              ),
+                            );
+                          }}
+                        >
+                          <Copy aria-hidden className="size-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`${t("remove")} ${t("building")} ${b.name}`}
+                        disabled={
+                          managed ||
+                          buildings.length === 1 ||
+                          b.floors.some((f) => f.apartments.some((u) => u.linked))
+                        }
+                        onClick={() => {
+                          if (window.confirm(t("editorDelete")))
+                            onChange(buildings.filter((x) => x.id !== b.id));
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   )}
                 </header>
                 {!collapsed.includes(b.id) && (

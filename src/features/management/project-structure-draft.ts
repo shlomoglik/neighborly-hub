@@ -192,3 +192,16 @@ export function copyBuildingLayout(source: DraftBuilding, target: DraftBuilding)
     })),
   };
 }
+
+/** A clone shares layout and labels, never IDs or resident links. */
+export function cloneBuilding(source: DraftBuilding, buildings: DraftBuilding[]): DraftBuilding {
+  const key = (name: string) => name.trim().normalize("NFKC").toLowerCase();
+  const used = new Set(buildings.map((b) => key(b.name)));
+  let copy = 2;
+  let name: string;
+  do {
+    const suffix = ` (${copy++})`;
+    name = `${source.name.trim().slice(0, 200 - suffix.length)}${suffix}`;
+  } while (used.has(key(name)));
+  return copyBuildingLayout(source, { ...newBuilding(), name, address: source.address });
+}
