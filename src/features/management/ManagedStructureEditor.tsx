@@ -12,7 +12,12 @@ import {
 import { useI18n, type TKey } from "@/lib/i18n";
 import { privateRequest, PrivateRequestError } from "@/features/shared/private-api";
 import { ProjectStructureEditor } from "./ProjectStructureEditor";
-import { newFloor, validateDraft, type DraftBuilding } from "./project-structure-draft";
+import {
+  newFloor,
+  validateDraft,
+  withDefaultNames,
+  type DraftBuilding,
+} from "./project-structure-draft";
 import { unitType } from "@/lib/db/project-structure-input";
 import { visualBuildingInput } from "@/lib/access/visual-structure-contracts";
 export function ManagedStructureEditor({
@@ -34,29 +39,37 @@ export function ManagedStructureEditor({
 }) {
   const { t, dir } = useI18n();
   const original = data.buildings.find((b) => b.id === initialId)!;
-  const [buildings, setBuildings] = useState<DraftBuilding[]>(() => [
-    {
-      id: original.id,
-      name: original.name,
-      address: original.address ?? "",
-      floors: original.floors.length
-        ? original.floors.map((f) => ({
-            id: f.id,
-            number: f.number,
-            name: f.name ?? "",
-            type: unitType.catch("residential").parse(f.type),
-            apartments: [...f.apartments]
-              .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-              .map((u) => ({
-                id: u.id,
-                number: u.number,
-                type: unitType.catch("residential").parse(u.type),
-                linked: u.linked ?? false,
-              })),
-          }))
-        : [newFloor(0)],
-    },
-  ]);
+  const [buildings, setBuildingsState] = useState<DraftBuilding[]>(() =>
+    withDefaultNames(
+      [
+        {
+          id: original.id,
+          name: original.name,
+          address: original.address ?? "",
+          floors: original.floors.length
+            ? original.floors.map((f) => ({
+                id: f.id,
+                number: f.number,
+                name: f.name ?? "",
+                type: unitType.catch("residential").parse(f.type),
+                apartments: [...f.apartments]
+                  .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                  .map((u) => ({
+                    id: u.id,
+                    number: u.number,
+                    type: unitType.catch("residential").parse(u.type),
+                    linked: u.linked ?? false,
+                  })),
+              }))
+            : [newFloor(0)],
+        },
+      ],
+      t("building"),
+      t("floor"),
+    ),
+  );
+  const setBuildings = (next: DraftBuilding[]) =>
+    setBuildingsState(withDefaultNames(next, t("building"), t("floor")));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<TKey | null>(null);
   const pending = useRef<AbortController | null>(null);

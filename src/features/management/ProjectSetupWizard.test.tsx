@@ -73,7 +73,12 @@ it.each(["he", "en", "ru"] as const)("creates detailed structure in %s", async (
         floors: 1,
         unitsPerFloor: 1,
         structure: [
-          { number: 0, type: "residential", apartments: [{ number: "1", type: "residential" }] },
+          {
+            number: 0,
+            name: `${translate(lang, "floor")} 0`,
+            type: "residential",
+            apartments: [{ number: "1", type: "residential" }],
+          },
         ],
       },
     ],
@@ -83,6 +88,76 @@ it.each(["he", "en", "ru"] as const)("creates detailed structure in %s", async (
       .getByRole("link", { name: translate(lang, "openProjectManagement") })
       .getAttribute("href"),
   ).toBe(`/manage?project=${result.projectId}`);
+});
+it.each(["he", "en", "ru"] as const)(
+  "saves and submits visible default names without editing them in %s",
+  async (lang) => {
+    const create = vi.fn().mockResolvedValue(result);
+    mount(create, lang);
+    fireEvent.change(screen.getByLabelText(translate(lang, "projectName")), {
+      target: { value: "Community" },
+    });
+    fireEvent.change(screen.getByLabelText(translate(lang, "city")), {
+      target: { value: "Sderot" },
+    });
+    next(lang);
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "addBuilding") }));
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "editorSaveDraft") }));
+    const saved = JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!);
+    expect(saved.buildings.map((b: { name: string }) => b.name)).toEqual([
+      `${translate(lang, "building")} 1`,
+      `${translate(lang, "building")} 2`,
+    ]);
+    const floorLabel = `${translate(lang, "floor")} 0`;
+    expect(saved.buildings[0].floors[0].name).toBe(floorLabel);
+    const floorName = `${translate(lang, "editorFloorName")} ${saved.buildings[0].name} 0`;
+    fireEvent.click(screen.getByRole("button", { name: floorName }));
+    expect((screen.getByRole("textbox", { name: floorName }) as HTMLInputElement).value).toBe(
+      floorLabel,
+    );
+    fireEvent.keyDown(screen.getByRole("textbox", { name: floorName }), { key: "Enter" });
+    next(lang);
+    next(lang);
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "create") }));
+    await screen.findByRole("heading", { name: translate(lang, "setupCreated") });
+    expect(create.mock.calls[0][0].buildings[0]).toMatchObject({
+      name: `${translate(lang, "building")} 1`,
+      structure: [{ number: 0, name: floorLabel }],
+    });
+  },
+);
+it("restores older drafts with actual defaults for missing building and floor names", () => {
+  localStorage.setItem(
+    SETUP_DRAFT_KEY,
+    JSON.stringify({
+      version: 2,
+      revision: "old-draft",
+      name: "Community",
+      city: "Sderot",
+      step: 1,
+      buildings: [
+        {
+          id: "b",
+          name: "",
+          address: "Example street 5",
+          floors: [{ id: "f", number: 0, name: "", type: "parking", apartments: [] }],
+        },
+      ],
+    }),
+  );
+  mount(vi.fn());
+  fireEvent.click(screen.getByRole("button", { name: "Restore saved draft" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  const saved = JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!);
+  expect(saved.buildings[0]).toMatchObject({
+    id: "b",
+    name: "Building 1",
+    address: "Example street 5",
+    floors: [{ id: "f", number: 0, name: "Floor 0", type: "parking" }],
+  });
+  expect(
+    screen.getByRole("button", { name: "Continue to next step" }).hasAttribute("disabled"),
+  ).toBe(false);
 });
 it("prevents duplicate submit and navigation during save", async () => {
   let finish!: (value: ProjectSetupResult) => void;

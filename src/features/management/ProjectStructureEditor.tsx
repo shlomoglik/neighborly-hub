@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, ChevronDown, ChevronUp, GripVertical, Link2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,7 @@ function InlineName({
         className="min-w-0 truncate rounded px-1 text-start font-medium hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary"
         aria-label={label}
         onClick={() => {
-          setDraft(value);
+          setDraft(value || placeholder || "");
           setEditing(true);
         }}
       >
@@ -145,7 +145,19 @@ export function ProjectStructureEditor({
     (a, b) => b - a,
   );
   const section = buildings.find((b) => b.id === selected) ?? buildings[0];
-  const valid = validateDraft(buildings).success;
+  const validation = useMemo(() => validateDraft(buildings), [buildings]);
+  const valid = validation.success;
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || validation.success) return;
+    console.warn(
+      "[ProjectStructureEditor] Invalid layout (field indexes are zero-based):",
+      validation.error.issues.map((issue) => ({
+        field: issue.path.join("."),
+        code: issue.code,
+        message: issue.message,
+      })),
+    );
+  }, [validation]);
   const bulkBuilding = buildings.find((b) => b.id === bulk?.building);
   const bulkFloor = bulkBuilding?.floors.find((f) => f.id === bulk?.floor);
   const normalized = search.trim().normalize("NFKC").toLocaleLowerCase();
