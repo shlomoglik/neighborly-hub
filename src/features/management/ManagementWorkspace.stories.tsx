@@ -95,6 +95,9 @@ function Example({
                 current.map((b) => updated.find((next) => next.id === b.id) ?? b),
               )
             }
+            buildingOptions={buildings}
+            selectedBuildingIds={buildingIds}
+            onBuildingSelectionChange={setBuilding}
           />
         ) : null
       }

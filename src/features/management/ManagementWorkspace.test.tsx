@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
 import { ManagementWorkspace, type ManagementWorkspaceProps } from "./ManagementWorkspace";
+import { ProjectStructureEditor } from "./ProjectStructureEditor";
 afterEach(cleanup);
 function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> = {}) {
   const props: ManagementWorkspaceProps = {
@@ -29,7 +30,6 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
       canAddBuilding: false,
       counts: { buildings: 2, floors: 0, apartments: 0 },
     },
-    structure: <div data-testid="shared-editor">Shared structure editor</div>,
     onBuildingChange: vi.fn(),
     onPageChange: vi.fn(),
     onRefresh: vi.fn(),
@@ -44,7 +44,52 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
         t: (key, vars) => translate(lang, key, vars),
       }}
     >
-      <ManagementWorkspace {...value} />
+      <ManagementWorkspace
+        {...value}
+        structure={
+          value.status === "ready" && value.data ? (
+            <div data-testid="shared-editor">
+              <fieldset disabled={value.editingBusy}>
+                <ProjectStructureEditor
+                  mode={value.mode}
+                  buildings={value.data.buildings
+                    .filter(
+                      (building) =>
+                        !value.buildingIds.length || value.buildingIds.includes(building.id),
+                    )
+                    .map((building) => ({
+                      id: building.id,
+                      name: building.name,
+                      address: building.address ?? "",
+                      floors: building.floors.map((floor) => ({
+                        id: floor.id,
+                        number: floor.number,
+                        name: floor.name ?? "",
+                        type: (floor.type ?? "residential") as
+                          "residential" | "commercial" | "parking",
+                        apartments: floor.apartments.map((unit) => ({
+                          id: unit.id,
+                          number: unit.number,
+                          type: (unit.type ?? "residential") as
+                            "residential" | "commercial" | "parking",
+                          linked: unit.linked,
+                        })),
+                      })),
+                    }))}
+                  buildingOptions={value.data.buildings}
+                  selectedBuildingIds={value.buildingIds}
+                  onBuildingSelectionChange={value.onBuildingChange}
+                  buildingSelectionDisabled={value.editingBusy}
+                  onChange={vi.fn()}
+                  projectName={value.data.name}
+                />
+              </fieldset>
+            </div>
+          ) : (
+            value.structure
+          )
+        }
+      />
     </I18nContext.Provider>
   );
   const rendered = render(view(props));

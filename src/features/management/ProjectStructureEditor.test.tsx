@@ -62,6 +62,12 @@ it.each(["he", "en", "ru"] as const)("renders the compact read-only map in %s", 
   const accordion = screen.getByRole("button", {
     name: `${translate(lang, "editorCollapse")} Building Alon - B1`,
   });
+  const toggleAll = screen.getByRole("button", { name: translate(lang, "editorCollapse") });
+  fireEvent.click(toggleAll);
+  expect(accordion.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getByRole("button", { name: translate(lang, "editorExpand") })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: translate(lang, "editorExpand") }));
+  expect(accordion.getAttribute("aria-expanded")).toBe("true");
   fireEvent.click(accordion);
   expect(accordion.getAttribute("aria-expanded")).toBe("false");
   expect(accordion.closest("article")?.querySelector(".hidden")).toBeTruthy();
