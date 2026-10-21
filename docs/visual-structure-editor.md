@@ -6,24 +6,24 @@ The wizard mockup specifies the structure step of a four-step flow. The Componen
 
 The central domain decision is that a unit's business label (`25B`, `Studio-X`, `PH-1`) is independent of its ordinal position. A drag changes order, not identity or name. Floor level is also separate from its optional display name. Unit types describe residential, commercial or parking use; they do not create separate parallel hierarchies. Empty floors of any type remain valid. A floor's type supplies the default for new units, while each existing unit may retain a different type.
 
-| Mockup behavior                    | Implementation                                                                                       |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Four steps                         | Project details → structure → types → review/create                                                  |
-| Building/floor hierarchy           | Shared `ProjectStructureEditor`, collapsible cards and compact inline unit chips                     |
-| Direct editing                     | Click label, Enter or blur to commit, Escape to cancel                                               |
-| Order independent of name          | Unit array order → persisted `position`; IDs/labels stay stable during moves                         |
-| Drag between floors                | Within one building; explicit earlier/later and target-floor controls also support keyboard/touch    |
-| Search and type filters            | Building, floor name/level and unit labels; counts always describe the full draft                    |
-| Empty commercial/parking floors    | Typed empty/drop areas with an add-unit action; no artificial placeholder units                      |
-| Bulk creation                      | Duplicate floors above a source, shift higher levels, preview counts, confirm before applying        |
-| Copy into existing floors          | Preview replacement, retain linked units, allocate new unique labels; no copied relationships        |
-| Copy across buildings during setup | Reuse source layout, fresh IDs, retain target names/addresses; confirm replacement                   |
-| Project summary                    | Derived building/floor/unit counts, type percentages and selected building section                   |
-| Compare buildings                  | Horizontally scrollable table with rows aligned on numeric floor level                               |
-| Validation                         | Shared client/server bounds and normalized duplicate detection; review cannot continue while invalid |
-| Linked units                       | Visible indicator and disabled destructive actions; fresh server reference checks protect all writes |
-| Draft persistence                  | Versioned device-local setup draft, explicit restore, save errors and cross-tab conflict handling    |
-| Existing project editing           | Same editor, authorized building snapshot save, optimistic version check and atomic transaction      |
+| Mockup behavior                    | Implementation                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Four steps                         | Project details → structure → types → review/create                                                                |
+| Building/floor hierarchy           | Shared `ProjectStructureEditor`, collapsible cards and compact inline unit chips                                   |
+| Direct editing                     | Click label, Enter or blur to commit, Escape to cancel                                                             |
+| Order independent of name          | Unit array order → persisted `position`; IDs/labels stay stable during moves                                       |
+| Drag between floors                | Within one building; explicit earlier/later and target-floor controls also support keyboard/touch                  |
+| Search and type filters            | Building, floor name/level and unit labels; counts always describe the full draft                                  |
+| Empty commercial/parking floors    | Typed empty/drop areas with an add-unit action; no artificial placeholder units                                    |
+| Bulk creation                      | Duplicate floors above a source, shift higher levels, preview counts, confirm before applying                      |
+| Copy into existing floors          | Preview replacement, retain linked units, allocate new unique labels; no copied relationships                      |
+| Copy across buildings during setup | Explicit target selection in a dialog; replace only selected layouts with fresh IDs, retain target names/addresses |
+| Project summary                    | Derived building/floor/unit counts, type percentages and selected building section                                 |
+| Compare buildings                  | Horizontally scrollable table with rows aligned on numeric floor level                                             |
+| Validation                         | Shared client/server bounds and normalized duplicate detection; review cannot continue while invalid               |
+| Linked units                       | Visible indicator and disabled destructive actions; fresh server reference checks protect all writes               |
+| Draft persistence                  | Versioned device-local setup draft, explicit restore, save errors and cross-tab conflict handling                  |
+| Existing project editing           | Same editor, authorized building snapshot save, optimistic version check and atomic transaction                    |
 
 ## Deliberate decisions
 
