@@ -145,13 +145,21 @@ export const Progress: Story = { render: () => <StepsDemo /> };
 export const ResponsiveDetails: Story = { render: () => <PanelDemo /> };
 export const Avatars: Story = { render: () => <AvatarsDemo /> };
 
-function BuildingsDemo({ overflow = false }: { overflow?: boolean }) {
+function BuildingsDemo({
+  overflow = false,
+  multiple = false,
+}: {
+  overflow?: boolean;
+  multiple?: boolean;
+}) {
   const { t } = useI18n();
   const [building, setBuilding] = useState("");
+  const [buildingIds, setBuildingIds] = useState<string[]>([]);
   return (
     <BuildingSelector
-      value={building}
-      onChange={setBuilding}
+      {...(multiple
+        ? { multiple: true as const, value: buildingIds, onChange: setBuildingIds }
+        : { value: building, onChange: setBuilding })}
       buildings={Array.from({ length: overflow ? 12 : 3 }, (_, index) => ({
         id: String(index + 1),
         name: overflow
@@ -174,5 +182,9 @@ function BannerDemo() {
   );
 }
 export const BuildingTabs: Story = { render: () => <BuildingsDemo /> };
+export const BuildingMultiple: Story = { render: () => <BuildingsDemo multiple /> };
+export const BuildingMultipleOverflow: Story = {
+  render: () => <BuildingsDemo multiple overflow />,
+};
 export const BuildingTabsOverflow: Story = { render: () => <BuildingsDemo overflow /> };
 export const BirthdaySummary: Story = { render: () => <BannerDemo /> };

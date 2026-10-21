@@ -30,8 +30,8 @@ export type ManagementWorkspaceProps = {
   discovery: ManagementProjects | null;
   data: ManagementHierarchy | null;
   selectedProjectId: string;
-  buildingId: string;
-  onBuildingChange: (id: string) => void;
+  buildingIds: string[];
+  onBuildingChange: (ids: string[]) => void;
   onPageChange: (page: number) => void;
   onRefresh: () => void;
   onEdit?: (target: StructureEditTarget) => void;
@@ -169,8 +169,8 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
       {status === "unavailable" && (
         <div className="space-y-3">
           <SystemFeedback kind="private" message={t("managementUnavailable")} onRetry={refresh} />
-          {p.buildingId && (
-            <Button variant="outline" onClick={() => p.onBuildingChange("")}>
+          {p.buildingIds.length > 0 && (
+            <Button variant="outline" onClick={() => p.onBuildingChange([])}>
               {t("allBuildings")}
             </Button>
           )}
@@ -204,8 +204,8 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
           {data.buildings.length > 1 && (
             <BuildingSelector
               buildings={data.buildings}
-              includeAll={false}
-              value={p.buildingId || data.buildings[0].id}
+              multiple
+              value={p.buildingIds}
               onChange={p.onBuildingChange}
               disabled={p.editingBusy}
             />

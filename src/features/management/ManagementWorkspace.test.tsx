@@ -9,7 +9,7 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
   const props: ManagementWorkspaceProps = {
     status: "ready",
     selectedProjectId: "p",
-    buildingId: "",
+    buildingIds: [],
     discovery: {
       projects: [{ id: "p", name: "Saved project", city: "Sderot" }],
       page: 1,
@@ -84,8 +84,8 @@ it.each(["he", "en", "ru"] as const)(
     expect(screen.queryByRole("navigation", { name: translate(lang, "chooseProject") })).toBeNull();
     expect(screen.getByTestId("shared-editor")).toBeTruthy();
     expect(screen.getByText(translate(lang, "managementCounts", p.data!.counts))).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "Building B" }));
-    expect(p.onBuildingChange).toHaveBeenCalledWith("b");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Building B" }));
+    expect(p.onBuildingChange).toHaveBeenCalledWith(["b"]);
     expect(
       screen.queryByRole("button", { name: translate(lang, "structureRenameBuilding") }),
     ).toBeNull();
@@ -159,7 +159,10 @@ it("uses server capabilities for staff links and disables building switches whil
     screen.getByRole("link", { name: translate("en", "staffManagement") }).getAttribute("href"),
   ).toBe("/manage/staff/p");
   expect(
-    screen.getByRole("radio", { name: "Building B" }).closest("fieldset")?.hasAttribute("disabled"),
+    screen
+      .getByRole("checkbox", { name: "Building B" })
+      .closest("fieldset")
+      ?.hasAttribute("disabled"),
   ).toBe(true);
 });
 it("restores heading focus after an explicit refresh", () => {
@@ -168,4 +171,17 @@ it("restores heading focus after an explicit refresh", () => {
   p.update({ status: "loading", data: null });
   p.update({ status: "ready" });
   expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Saved project" }));
+});
+it("supports multiple building chips and an explicit all-buildings reset", () => {
+  const p = mount("en", { buildingIds: ["a"] });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Building B" }));
+  expect(p.onBuildingChange).toHaveBeenLastCalledWith(["a", "b"]);
+  p.update({ buildingIds: ["a", "b"] });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Building A" }));
+  expect(p.onBuildingChange).toHaveBeenLastCalledWith(["b"]);
+  p.update({ buildingIds: ["b"] });
+  fireEvent.click(screen.getByRole("checkbox", { name: "All buildings" }));
+  expect(p.onBuildingChange).toHaveBeenLastCalledWith([]);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Building B" }));
+  expect(p.onBuildingChange).toHaveBeenLastCalledWith([]);
 });

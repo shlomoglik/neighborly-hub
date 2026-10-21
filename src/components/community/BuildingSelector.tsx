@@ -1,19 +1,17 @@
 "use client";
 import { useId } from "react";
 import { useI18n } from "@/lib/i18n/context";
-export function BuildingSelector({
-  buildings,
-  value,
-  onChange,
-  includeAll = true,
-  disabled = false,
-}: {
+type BuildingSelectorProps = {
   buildings: readonly { id: string; name: string }[];
-  value: string;
-  onChange: (id: string) => void;
   includeAll?: boolean;
   disabled?: boolean;
-}) {
+} & (
+  | { multiple: true; value: string[]; onChange: (ids: string[]) => void }
+  | { multiple?: false; value: string; onChange: (id: string) => void }
+);
+
+export function BuildingSelector(props: BuildingSelectorProps) {
+  const { buildings, value, includeAll = true, disabled = false } = props;
   const { t } = useI18n();
   const name = useId();
   return (
@@ -27,11 +25,27 @@ export function BuildingSelector({
           <label key={b.id} className="relative shrink-0 cursor-pointer">
             <input
               className="peer sr-only"
-              type="radio"
+              type={props.multiple ? "checkbox" : "radio"}
               name={name}
               value={b.id}
-              checked={value === b.id}
-              onChange={() => onChange(b.id)}
+              checked={
+                props.multiple
+                  ? b.id
+                    ? props.value.includes(b.id)
+                    : !props.value.length
+                  : value === b.id
+              }
+              onChange={() => {
+                if (props.multiple) {
+                  props.onChange(
+                    !b.id
+                      ? []
+                      : props.value.includes(b.id)
+                        ? props.value.filter((id) => id !== b.id)
+                        : [...props.value, b.id],
+                  );
+                } else props.onChange(b.id);
+              }}
             />
             <span className="flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 whitespace-nowrap text-center text-sm transition-colors duration-150 peer-checked:border-primary peer-checked:bg-primary/10 peer-focus-visible:outline-2 peer-focus-visible:outline-primary">
               <bdi>{b.name}</bdi>

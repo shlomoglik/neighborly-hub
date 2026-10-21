@@ -126,7 +126,11 @@ export function ManagedStructureEditor({
     }
   }
   return (
-    <section dir={dir} className="min-w-0 space-y-4" aria-label={t("editorTitle")}>
+    <section
+      dir={dir}
+      className="min-w-0 space-y-4"
+      aria-label={`${t("editorTitle")} · ${original.name}`}
+    >
       <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
       <fieldset disabled={busy || refreshing || !!error} className="min-w-0">
         <ProjectStructureEditor

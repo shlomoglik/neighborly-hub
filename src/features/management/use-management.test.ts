@@ -47,7 +47,7 @@ it("supports direct links outside the discovery page, project changes and buildi
   expect(result.current.status).toBe("ready");
   const projectCalls = vi.mocked(api.projects).mock.calls.length;
   const hierarchyCalls = vi.mocked(api.hierarchy).mock.calls.length;
-  act(() => result.current.onBuildingChange("b"));
+  act(() => result.current.onBuildingChange(["b"]));
   expect(result.current.status).toBe("ready");
   expect(result.current.data).toEqual(data);
   expect(result.current.discovery).toEqual({ ...discovery, projects: [] });
@@ -57,7 +57,7 @@ it("supports direct links outside the discovery page, project changes and buildi
   rerender({ id: "other" });
   expect(result.current.data).toBeNull();
   expect(result.current.discovery).toBeNull();
-  expect(result.current.buildingId).toBe("");
+  expect(result.current.buildingIds).toEqual([]);
   await tick();
   expect(api.hierarchy).toHaveBeenLastCalledWith("other", expect.any(AbortSignal));
 });
@@ -107,14 +107,14 @@ it("does not silently switch a revoked project or building to another", async ()
   const api = service();
   const { result } = renderHook(() => useManagement("p", api));
   await tick();
-  act(() => result.current.onBuildingChange("b"));
+  act(() => result.current.onBuildingChange(["b"]));
   await tick();
   vi.mocked(api.hierarchy).mockResolvedValue({ ...data, buildings: [] });
   act(() => result.current.onRefresh());
   expect(result.current.data).toBeNull();
   await tick();
   expect(result.current.status).toBe("unavailable");
-  expect(result.current.buildingId).toBe("b");
+  expect(result.current.buildingIds).toEqual(["b"]);
   vi.mocked(api.hierarchy).mockRejectedValue(new ManagementRequestError(404));
   act(() => result.current.onRefresh());
   await tick();
@@ -210,18 +210,41 @@ it("filters locally without loading and does not recover access by changing a fi
   const { result } = renderHook(() => useManagement("p", api));
   await tick();
   const calls = vi.mocked(api.hierarchy).mock.calls.length;
-  act(() => result.current.onBuildingChange("missing"));
+  act(() => result.current.onBuildingChange(["missing"]));
   expect(result.current.status).toBe("unavailable");
   expect(result.current.data).toBeNull();
-  act(() => result.current.onBuildingChange("b"));
+  act(() => result.current.onBuildingChange(["b"]));
   expect(result.current.status).toBe("ready");
-  expect(result.current.buildingId).toBe("b");
-  act(() => result.current.onBuildingChange(""));
+  expect(result.current.buildingIds).toEqual(["b"]);
+  act(() => result.current.onBuildingChange([]));
   expect(result.current.status).toBe("ready");
   await tick();
   expect(api.hierarchy).toHaveBeenCalledTimes(calls);
   act(() => result.current.onAccessLost(403));
-  act(() => result.current.onBuildingChange("b"));
+  act(() => result.current.onBuildingChange(["b"]));
   expect(result.current.status).toBe("unavailable");
   expect(result.current.data).toBeNull();
+});
+it("keeps multiple building filters local and rejects a revoked selection", async () => {
+  const api = service();
+  vi.mocked(api.hierarchy).mockResolvedValue({
+    ...data,
+    buildings: [...data.buildings, { id: "c", name: "Other", floors: [] }],
+  });
+  const { result } = renderHook(() => useManagement("p", api));
+  await tick();
+  const calls = vi.mocked(api.hierarchy).mock.calls.length;
+  act(() => result.current.onBuildingChange(["b", "c"]));
+  expect(result.current.status).toBe("ready");
+  expect(result.current.buildingIds).toEqual(["b", "c"]);
+  await tick();
+  expect(api.hierarchy).toHaveBeenCalledTimes(calls);
+  vi.mocked(api.hierarchy).mockResolvedValue(data);
+  act(() => result.current.onRefresh());
+  await tick();
+  expect(result.current.status).toBe("unavailable");
+  expect(result.current.data).toBeNull();
+  act(() => result.current.onBuildingChange([]));
+  expect(result.current.status).toBe("ready");
+  expect(result.current.data).toEqual(data);
 });

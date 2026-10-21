@@ -25,7 +25,7 @@ function state(): ReturnType<typeof useManagement> {
     key: "internal-read-key",
     status: "ready",
     selectedProjectId: projectId,
-    buildingId,
+    buildingIds: [buildingId],
     discovery: {
       projects: [],
       page: 1,
@@ -101,11 +101,16 @@ it("renders the actual shared structure editor inline without spreading the inte
   expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
   expect(JSON.stringify(errors.mock.calls)).not.toContain('containing a "key"');
 });
-it("remembers the default building selection for authorization revalidation", () => {
+it("shows all authorized buildings by default without forcing a selection", () => {
   const initial = state();
-  vi.mocked(useManagement).mockReturnValue({ ...initial, buildingId: "" });
+  vi.mocked(useManagement).mockReturnValue({ ...initial, buildingIds: [] });
   render(view());
-  expect(initial.onBuildingChange).toHaveBeenCalledWith(buildingId);
+  expect(initial.onBuildingChange).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
+  expect(
+    (screen.getByRole("checkbox", { name: "All buildings" }) as HTMLInputElement).checked,
+  ).toBe(true);
 });
 it("preserves the draft during revalidation and removes it when authorization is lost", async () => {
   const initial = state();
@@ -158,13 +163,13 @@ it("warns before discarding changes on building switches", () => {
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   render(view());
   editUnit();
-  fireEvent.click(screen.getByRole("radio", { name: "Other building" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Other building" }));
   expect(confirm).toHaveBeenCalledOnce();
   expect(initial.onBuildingChange).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
   confirm.mockReturnValue(true);
-  fireEvent.click(screen.getByRole("radio", { name: "Other building" }));
-  expect(initial.onBuildingChange).toHaveBeenCalledWith(otherId);
+  fireEvent.click(screen.getByRole("checkbox", { name: "Other building" }));
+  expect(initial.onBuildingChange).toHaveBeenCalledWith([buildingId, otherId]);
 });
 it("keeps stale edits on the original version and provides explicit reload on conflicts", async () => {
   const initial = state();
@@ -205,4 +210,95 @@ it("cancel resets the inline draft without sending a write", async () => {
     expect(screen.getByRole("button", { name: "Unit name Building 1" })).toBeTruthy(),
   );
   expect(privateRequest).not.toHaveBeenCalled();
+});
+it("shows only the selected subset and restores all buildings", () => {
+  const initial = state();
+  const third = { id: "third", name: "Third building", version: "d".repeat(64), floors: [] };
+  const data = { ...initial.data!, buildings: [...initial.data!.buildings, third] };
+  vi.mocked(useManagement).mockReturnValue({
+    ...initial,
+    data,
+    buildingIds: [buildingId, otherId],
+  });
+  const rendered = render(view());
+  expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Add floor Third building" })).toBeNull();
+  vi.mocked(useManagement).mockReturnValue({ ...initial, data, buildingIds: [] });
+  rendered.rerender(view());
+  expect(screen.getByRole("button", { name: "Add floor Third building" })).toBeTruthy();
+});
+it("saving one building preserves another building's dirty draft and refreshes only the saved draft", async () => {
+  const initial = { ...state(), buildingIds: [] };
+  vi.mocked(useManagement).mockReturnValue(initial);
+  vi.mocked(privateRequest).mockResolvedValue({});
+  const rendered = render(view());
+  editUnit();
+  fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
+  const other = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Other building`,
+  });
+  fireEvent.click(within(other).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(initial.onRefresh).toHaveBeenCalledOnce());
+  vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
+  rendered.rerender(view());
+  const updated = {
+    ...initial.data!,
+    buildings: initial.data!.buildings.map((b) =>
+      b.id === otherId ? { ...b, version: "c".repeat(64) } : b,
+    ),
+  };
+  vi.mocked(useManagement).mockReturnValue({ ...initial, data: updated });
+  rendered.rerender(view());
+  await waitFor(() =>
+    expect(
+      within(
+        screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
+      )
+        .getByRole("button", { name: "Save" })
+        .hasAttribute("disabled"),
+    ).toBe(true),
+  );
+  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
+  const first = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Building`,
+  });
+  expect(within(first).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(false);
+  expect(privateRequest).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.any(AbortSignal),
+    "PUT",
+    expect.objectContaining({ id: otherId }),
+  );
+});
+it("canceling a building leaves the other building's unsaved changes intact", () => {
+  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
+  render(view());
+  editUnit();
+  fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
+  const other = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Other building`,
+  });
+  fireEvent.click(within(other).getByRole("button", { name: "Cancel" }));
+  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
+  expect(
+    within(
+      screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
+    )
+      .getByRole("button", { name: "Save" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(privateRequest).not.toHaveBeenCalled();
+});
+it("immediately removes a revoked building while all buildings are displayed", () => {
+  const initial = { ...state(), buildingIds: [] };
+  vi.mocked(useManagement).mockReturnValue(initial);
+  const rendered = render(view());
+  vi.mocked(useManagement).mockReturnValue({
+    ...initial,
+    data: { ...initial.data!, buildings: [initial.data!.buildings[0]] },
+  });
+  rendered.rerender(view());
+  expect(screen.queryByRole("button", { name: "Add floor Other building" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
 });
