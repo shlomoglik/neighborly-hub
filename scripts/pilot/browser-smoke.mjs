@@ -157,10 +157,8 @@ try {
       await button(adminPage, "editorNext").click();
       await button(adminPage, "create").click();
       await adminPage.getByRole("link", { name: t.openProjectManagement, exact: true }).click();
-      await adminPage.waitForURL(
-        (url) => url.pathname === "/manage" && !!url.searchParams.get("project"),
-      );
-      projectId = new URL(adminPage.url()).searchParams.get("project");
+      await adminPage.waitForURL((url) => /^\/manage\/project\/[0-9a-f-]{36}$/.test(url.pathname));
+      projectId = new URL(adminPage.url()).pathname.split("/").at(-1);
       assert.match(projectId, /^[0-9a-f-]{36}$/);
       await adminPage.getByRole("link", { name: t.inviteManagement, exact: true }).click();
       await adminPage.waitForURL(`${origin}/manage/invitations/${projectId}`);

@@ -89,7 +89,7 @@ it.each(["he", "en", "ru"] as const)("creates detailed structure in %s", async (
     screen
       .getByRole("link", { name: translate(lang, "openProjectManagement") })
       .getAttribute("href"),
-  ).toBe(`/manage?project=${result.projectId}`);
+  ).toBe(`/manage/project/${result.projectId}`);
 });
 it.each(["he", "en", "ru"] as const)(
   "saves and submits visible default names without editing them in %s",

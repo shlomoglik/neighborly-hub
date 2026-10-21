@@ -40,4 +40,4 @@ export type ManagementHierarchy = ManagementProject & {
   counts: { buildings: number; floors: number; apartments: number };
 };
 export const managementHref = (projectId: string) =>
-  `/manage?project=${encodeURIComponent(projectId)}`;
+  `/manage/project/${encodeURIComponent(projectId)}`;

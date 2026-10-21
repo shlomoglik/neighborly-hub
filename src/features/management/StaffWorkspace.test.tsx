@@ -76,7 +76,7 @@ it.each(["he", "en", "ru"] as const)(
     );
     expect(
       screen.getByRole("link", { name: translate(lang, "backToProject") }).getAttribute("href"),
-    ).toBe(`/manage?project=${projectId}`);
+    ).toBe(`/manage/project/${projectId}`);
   },
 );
 it("requires explicit confirmation before revoking and allows cancellation", async () => {

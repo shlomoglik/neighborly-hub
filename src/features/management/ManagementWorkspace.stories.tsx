@@ -2,30 +2,58 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useI18n } from "@/lib/i18n";
 import { ManagementWorkspace } from "./ManagementWorkspace";
+import { ProjectStructureEditor } from "./ProjectStructureEditor";
+import type { DraftBuilding } from "./project-structure-draft";
 import type { ManagementStatus } from "./use-management";
+
 function Example({
   status = "ready",
   admin = true,
   empty = false,
+  list = false,
 }: {
   status?: ManagementStatus;
   admin?: boolean;
   empty?: boolean;
+  list?: boolean;
 }) {
   const { t } = useI18n();
   const [buildingId, setBuilding] = useState("");
+  const [draft, setDraft] = useState<DraftBuilding[]>(() => [
+    {
+      id: "a",
+      name: t("demoBuilding"),
+      address: "",
+      floors: [
+        { id: "f0", number: 0, name: "", type: "commercial", apartments: [] },
+        {
+          id: "f1",
+          number: 1,
+          name: "",
+          type: "residential",
+          apartments: [
+            { id: "u2", number: "2", type: "residential" },
+            { id: "u10", number: "10", type: "residential" },
+          ],
+        },
+      ],
+    },
+    ...(admin ? [{ id: "b", name: t("demoBuilding") + " 2", address: "", floors: [] }] : []),
+  ]);
   const project = { id: "synthetic-project", name: t("demoProject"), city: t("demoCity") };
+  const buildings = empty ? [] : draft;
+  const selected = buildingId || buildings[0]?.id;
   return (
     <ManagementWorkspace
       onEdit={() => {}}
       status={status}
-      selectedProjectId={project.id}
+      selectedProjectId={list ? "" : project.id}
       buildingId={buildingId}
       discovery={
-        status === "loading" || status === "expired" || status === "error"
+        ["loading", "expired", "error"].includes(status)
           ? null
           : {
-              projects: empty || status === "forbidden" ? [] : [project],
+              projects: (empty && list) || status === "forbidden" ? [] : [project],
               page: 1,
               hasNext: false,
               canCreateProject: admin,
@@ -33,40 +61,39 @@ function Example({
             }
       }
       data={
-        empty
-          ? {
-              ...project,
-              buildings: [],
-              canAddBuilding: admin,
-              counts: { buildings: 0, floors: 0, apartments: 0 },
-            }
+        list
+          ? null
           : {
               ...project,
-              buildings: [
-                {
-                  id: "a",
-                  name: t("demoBuilding"),
-                  floors: [
-                    { id: "f0", number: 0, apartments: [] },
-                    {
-                      id: "f1",
-                      number: 1,
-                      apartments: [
-                        { id: "u2", number: "2" },
-                        { id: "u10", number: "10" },
-                      ],
-                    },
-                  ],
-                },
-                ...(admin ? [{ id: "b", name: t("demoBuilding") + " 2", floors: [] }] : []),
-              ],
+              buildings,
               canAddBuilding: admin,
-              counts: { buildings: admin ? 2 : 1, floors: 2, apartments: 2 },
+              counts: {
+                buildings: buildings.length,
+                floors: buildings.reduce((n, b) => n + b.floors.length, 0),
+                apartments: buildings.reduce(
+                  (n, b) => n + b.floors.reduce((n, f) => n + f.apartments.length, 0),
+                  0,
+                ),
+              },
             }
       }
       onBuildingChange={setBuilding}
       onPageChange={() => {}}
       onRefresh={() => {}}
+      structure={
+        !list && buildings.length > 0 ? (
+          <ProjectStructureEditor
+            managed
+            buildings={buildings.filter((b) => b.id === selected)}
+            projectName={project.name}
+            onChange={(updated) =>
+              setDraft((current) =>
+                current.map((b) => updated.find((next) => next.id === b.id) ?? b),
+              )
+            }
+          />
+        ) : null
+      }
     />
   );
 }
@@ -77,12 +104,13 @@ const meta = {
 } satisfies Meta<typeof Example>;
 export default meta;
 type Story = StoryObj<typeof meta>;
+export const ProjectList: Story = { args: { list: true } };
 export const Administrator: Story = {};
 export const ScopedManager: Story = { args: { admin: false } };
 export const Loading: Story = { args: { status: "loading" } };
 export const EmptyProject: Story = { args: { empty: true } };
-export const EmptyDiscovery: Story = { args: { empty: true, status: "empty" } };
+export const EmptyDiscovery: Story = { args: { empty: true, list: true, status: "empty" } };
 export const NoManagementAccess: Story = { args: { admin: false, status: "forbidden" } };
 export const Unavailable: Story = { args: { admin: false, status: "unavailable" } };
-export const Expired: Story = { args: { admin: false, status: "expired" } };
+export const Expired: Story = { args: { status: "expired" } };
 export const Error: Story = { args: { status: "error" } };

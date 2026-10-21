@@ -2,13 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { privateRequest, PrivateRequestError } from "@/features/shared/private-api";
 import { ProjectStructureEditor } from "./ProjectStructureEditor";
@@ -28,6 +21,8 @@ export function ManagedStructureEditor({
   onSaved,
   onReload,
   onAccessLost,
+  onDirtyChange,
+  onBusyChange,
 }: {
   data: ManagementHierarchy;
   initialId: string;
@@ -36,6 +31,8 @@ export function ManagedStructureEditor({
   onSaved: () => void;
   onReload: () => void;
   onAccessLost: (status: number) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const { t, dir } = useI18n();
   const original = data.buildings.find((b) => b.id === initialId)!;
@@ -73,6 +70,14 @@ export function ManagedStructureEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<TKey | null>(null);
   const pending = useRef<AbortController | null>(null);
+  const initialDraft = useRef(buildings);
+  const dirty = JSON.stringify(buildings) !== JSON.stringify(initialDraft.current);
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
   useEffect(() => () => pending.current?.abort(), []);
   async function save() {
     if (pending.current || refreshing || error) return;
@@ -121,56 +126,39 @@ export function ManagedStructureEditor({
     }
   }
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open && !busy) onClose();
-      }}
-    >
-      <DialogContent
-        dir={dir}
-        className="max-h-[95dvh] overflow-y-auto sm:max-w-[95vw]"
-        onEscapeKeyDown={(e) => {
-          if (busy) e.preventDefault();
-        }}
-        onInteractOutside={(e) => {
-          if (busy) e.preventDefault();
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            {t("editorTitle")} · <bdi>{original.name}</bdi>
-          </DialogTitle>
-          <DialogDescription>{t("editorCopyHint")}</DialogDescription>
-        </DialogHeader>
-        <fieldset disabled={busy || refreshing || !!error} className="min-w-0">
-          <ProjectStructureEditor
-            managed
-            buildings={buildings}
-            onChange={setBuildings}
-            projectName={data.name}
-          />
-        </fieldset>
-        {error && (
-          <div role="alert">
-            <p>{t(error)}</p>
-            <Button variant="outline" disabled={busy} onClick={onReload}>
-              {t("refreshManagement")}
-            </Button>
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button
-            disabled={busy || refreshing || !!error || !validateDraft(buildings).success}
-            onClick={save}
-          >
-            {t(busy ? "saving" : "save")}
+    <section dir={dir} className="min-w-0 space-y-4" aria-label={t("editorTitle")}>
+      <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
+      <fieldset disabled={busy || refreshing || !!error} className="min-w-0">
+        <ProjectStructureEditor
+          managed
+          buildings={buildings}
+          onChange={setBuildings}
+          projectName={data.name}
+        />
+      </fieldset>
+      {error && (
+        <div
+          role="alert"
+          className="space-y-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3"
+        >
+          <p>{t(error)}</p>
+          <Button variant="outline" disabled={busy || refreshing} onClick={onReload}>
+            {t("refreshManagement")}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" disabled={busy || refreshing} onClick={onClose}>
+          {t("cancel")}
+        </Button>
+        <Button
+          loading={busy}
+          disabled={refreshing || !!error || !validateDraft(buildings).success || !dirty}
+          onClick={save}
+        >
+          {t("save")}
+        </Button>
+      </div>
+    </section>
   );
 }

@@ -1,6 +1,8 @@
 # Live management workspace
 
-`/manage` requires a verified Better Auth database session. Discovery is paginated; selecting a project opens `/manage?project=<uuid>`. Refresh and direct links retain that selection, including projects outside the current discovery page. The setup wizard links its returned project ID directly to this workspace.
+`/manage` requires a verified Better Auth database session and lists authorized project cards. Opening a card navigates to `/manage/project/<uuid>`, with a management → project breadcrumb. Legacy `/manage?project=<uuid>` links redirect to that page. The setup wizard, invitations and staff links use the same project URL. Direct project links remain independent of discovery pagination.
+
+The project page uses the wizard's `ProjectStructureEditor` inline through `ManagedStructureEditor`, one selected authorized building at a time. The duplicate floor/apartment tile forms and layout-mode buttons are removed from this flow. Users edit floor levels, names, types and units with the same controls as setup, then explicitly save that building using the existing atomic, version-checked PUT endpoint. Adding a building retains the independently authorized structural create endpoint. Switching buildings or explicitly refreshing with unsaved changes requires confirmation; Cancel resets the current draft.
 
 ## Read API and authorization
 
@@ -13,13 +15,13 @@ Every read uses SQL `EXISTS` predicates against current global/staff grants. No 
 
 Anonymous API requests receive 401. Malformed, nonexistent and unauthorized detail identifiers all receive the same generic 404. Invalid pagination receives 400. Unexpected failures receive generic 500 responses without exception details. Server logs record the failing operation and a bounded PostgreSQL SQLSTATE code when available, excluding exception messages, SQL, parameters and identity data. All responses, including errors, use `Cache-Control: private, no-store` and `Vary: Cookie`.
 
-DTOs contain no residents, households, contacts, ownership, identity links, raw roles or session values. Structural apartments do not establish occupancy. The workspace uses neutral, noninteractive apartment tiles rather than occupancy-dependent `ApartmentMap` tiles.
+DTOs contain no residents, households, contacts, ownership, identity links, raw roles or session values. Structural apartments do not establish occupancy. The shared editor displays unit labels and types without resident or occupancy information.
 
 ## Client coordination
 
 The API adapter, `useManagement` coordinator and pure `ManagementWorkspace` presentation are separate. All request keys immediately invalidate the previous discovery/hierarchy during render. Obsolete requests are aborted and late responses ignored even if a transport ignores cancellation. Errors never fall back to mocks or another project. A revoked selected building shows an unavailable state until the user explicitly changes selection.
 
-Revalidation runs on the refresh action, focus, visibility and page lifecycle events. The management workspace does not poll: a visible page remains stable until one of these triggers, and server-side authorization is checked on every read and mutation. Hidden/cached pages clear data and reload on return. Expired sessions show a sign-in action; network/server failures have explicit retry. Initial and selection changes use existing reduced-motion-aware skeletons and transitions. User-triggered loading restores keyboard focus to the selected building or workspace heading. Hebrew RTL, English and Russian share typed dictionaries.
+Revalidation runs on the refresh action, focus, visibility and page lifecycle events. The management workspace does not poll. The inline draft and its original expected version survive revalidation while editing is disabled; revoked access removes the editor. Save conflicts require explicit reload. Server-side authorization is checked on every read and mutation. Expired sessions show a sign-in action; network/server failures have explicit retry. Project loads use reduced-motion-aware skeletons. Explicit refresh restores heading focus. Hebrew RTL, English and Russian share typed dictionaries.
 
 Storybook mounts only synthetic presentation fixtures; it never calls authenticated APIs. Screenshots remain on demand.
 

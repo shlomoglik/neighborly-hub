@@ -1,21 +1,30 @@
 "use client";
-import { RefreshButton } from "@/components/community/RefreshButton";
 import Link from "next/link";
-import { invitationAdminHref } from "@/lib/access/invitation-contracts";
-import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
-import { staffHref } from "@/lib/access/staff-contracts";
-import { useEffect, useRef } from "react";
+import { useRef, useEffect, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   managementHref,
   type ManagementHierarchy,
   type ManagementProjects,
 } from "@/lib/access/management-contracts";
+import { invitationAdminHref } from "@/lib/access/invitation-contracts";
+import { staffHref } from "@/lib/access/staff-contracts";
+import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { BuildingSelector } from "@/components/community/BuildingSelector";
+import { RefreshButton } from "@/components/community/RefreshButton";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
 import type { ManagementStatus } from "./use-management";
+
 export type ManagementWorkspaceProps = {
   status: ManagementStatus;
   discovery: ManagementProjects | null;
@@ -27,94 +36,128 @@ export type ManagementWorkspaceProps = {
   onRefresh: () => void;
   onEdit?: (target: StructureEditTarget) => void;
   editingBusy?: boolean;
-  onVisual?: (buildingId: string) => void;
-  onLayout?: (buildingId: string) => void;
+  structure?: ReactNode;
 };
-/** Pure presentation; stories never mount the live request coordinator. */
+
+/** Pure navigation and page presentation; the shared editor owns structure rendering. */
 export function ManagementWorkspace(p: ManagementWorkspaceProps) {
   const { t } = useI18n();
-  const { discovery, data, status } = p;
+  const { data, discovery, status } = p;
+  const detail = !!p.selectedProjectId;
   const heading = useRef<HTMLHeadingElement>(null);
-  const buildingControls = useRef<HTMLDivElement>(null);
-  const restoreFocus = useRef<"building" | "heading" | null>(null);
+  const restoreFocus = useRef(false);
   useEffect(() => {
-    if (status === "loading" || !restoreFocus.current) return;
-    const target =
-      restoreFocus.current === "building" && status === "ready"
-        ? buildingControls.current?.querySelector<HTMLInputElement>("input:checked")
-        : null;
-    (target ?? heading.current)?.focus();
-    restoreFocus.current = null;
-  }, [status, data]);
+    if (status !== "loading" && restoreFocus.current) {
+      heading.current?.focus();
+      restoreFocus.current = false;
+    }
+  }, [status]);
   const refresh = () => {
-    restoreFocus.current = "heading";
+    restoreFocus.current = true;
     p.onRefresh();
   };
-  const changePage = (page: number) => {
-    restoreFocus.current = "heading";
-    p.onPageChange(page);
-  };
-  const changeBuilding = (id: string) => {
-    restoreFocus.current = "building";
-    p.onBuildingChange(id);
-  };
   return (
-    <section className="space-y-5" aria-label={t("manage")}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
-          {t("manage")}
-        </h1>
-        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+    <section className="min-w-0 space-y-5" aria-label={t("manage")}>
+      {detail && (
+        <Breadcrumb aria-label={t("managementBreadcrumb")}>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/manage">{t("manage")}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="rtl:rotate-180" />
+            <BreadcrumbItem>
+              <BreadcrumbPage>
+                <bdi>{data?.name ?? t("project")}</bdi>
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      )}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
+            <bdi>{data?.name ?? t("manage")}</bdi>
+          </h1>
+          {data && (
+            <>
+              <p className="text-muted-foreground">
+                <bdi>{data.city}</bdi>
+              </p>
+              <p role="status" className="text-sm text-muted-foreground">
+                {t("managementCounts", data.counts)}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <RefreshButton
             onClick={refresh}
             disabled={status === "loading" || p.editingBusy}
             label={t("refreshManagement")}
           />
-          {discovery?.canCreateProject && (
+          {!detail && discovery?.canCreateProject && (
             <Button asChild>
               <Link href="/manage/setup">{t("newProject")}</Link>
             </Button>
           )}
+          {data && (
+            <>
+              <Button variant="outline" asChild>
+                <Link href={invitationAdminHref(data.id)}>{t("inviteManagement")}</Link>
+              </Button>
+              {discovery?.canCreateProject && (
+                <Button variant="outline" asChild>
+                  <Link href={staffHref(data.id)}>{t("staffManagement")}</Link>
+                </Button>
+              )}
+            </>
+          )}
         </div>
-      </div>
-      {discovery && (
-        <nav aria-label={t("chooseProject")} className="space-y-3 rounded-2xl border bg-card p-4">
-          <h2 className="font-bold">{t("chooseProject")}</h2>
-          <ul className="grid gap-2 sm:grid-cols-2">
+      </header>
+      {!detail && discovery && (
+        <nav aria-label={t("chooseProject")} className="space-y-4">
+          <h2 className="font-semibold">{t("chooseProject")}</h2>
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {discovery.projects.map((project) => (
               <li key={project.id}>
                 <Link
                   href={managementHref(project.id)}
-                  aria-current={p.selectedProjectId === project.id ? "page" : undefined}
-                  className={`community-interactive block rounded-xl border p-3 focus-visible:outline-2 focus-visible:outline-primary ${p.selectedProjectId === project.id ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
+                  className="community-interactive block space-y-2 rounded-2xl border bg-card p-5 shadow-warm transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-primary"
                 >
-                  <span className="block font-semibold">
+                  <span className="block text-lg font-semibold">
                     <bdi>{project.name}</bdi>
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="block text-sm text-muted-foreground">
                     <bdi>{project.city}</bdi>
+                  </span>
+                  <span className="block text-sm font-medium text-primary">
+                    {t("managementOpenProject")}
                   </span>
                 </Link>
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              disabled={discovery.page <= 1}
-              onClick={() => changePage(discovery.page - 1)}
-            >
-              {t("directoryPrevious")}
-            </Button>
-            <span>{t("directoryPage", { n: discovery.page })}</span>
-            <Button
-              variant="outline"
-              disabled={!discovery.hasNext}
-              onClick={() => changePage(discovery.page + 1)}
-            >
-              {t("directoryNext")}
-            </Button>
-          </div>
+          {(discovery.hasNext || discovery.page > 1) && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                disabled={discovery.page <= 1}
+                onClick={() => p.onPageChange(discovery.page - 1)}
+              >
+                {t("directoryPrevious")}
+              </Button>
+              <span>{t("directoryPage", { n: discovery.page })}</span>
+              <Button
+                variant="outline"
+                disabled={!discovery.hasNext}
+                onClick={() => p.onPageChange(discovery.page + 1)}
+              >
+                {t("directoryNext")}
+              </Button>
+            </div>
+          )}
         </nav>
       )}
       {status === "loading" && <CommunitySkeleton variant="map" />}
@@ -126,9 +169,11 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
       {status === "unavailable" && (
         <div className="space-y-3">
           <SystemFeedback kind="private" message={t("managementUnavailable")} onRetry={refresh} />
-          <Button variant="outline" onClick={() => changeBuilding("")}>
-            {t("allBuildings")}
-          </Button>
+          {p.buildingId && (
+            <Button variant="outline" onClick={() => p.onBuildingChange("")}>
+              {t("allBuildings")}
+            </Button>
+          )}
           <Link href="/manage" className="block text-primary underline">
             {t("chooseProject")}
           </Link>
@@ -142,200 +187,35 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
           </Button>
         </div>
       )}
-      {status === "ready" && !data && <SystemFeedback kind="empty" message={t("chooseProject")} />}
       {status === "ready" && data && (
-        <div className="community-enter space-y-4">
-          <header className="space-y-2">
-            <h2 className="text-xl font-bold">
-              <bdi>{data.name}</bdi>
-            </h2>
-            <p>
-              <bdi>{data.city}</bdi>
-            </p>
-            <p role="status" className="text-sm text-muted-foreground">
-              {t("managementCounts", data.counts)}
-            </p>
-            <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
-            <Button variant="outline" asChild>
-              <Link href={invitationAdminHref(data.id)}>{t("inviteManagement")}</Link>
-            </Button>
-            {discovery?.canCreateProject && (
-              <Button variant="outline" asChild>
-                <Link href={staffHref(data.id)}>{t("staffManagement")}</Link>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">{t("editorTitle")}</h2>
+            {p.onEdit && data.canAddBuilding && (
+              <Button
+                variant="outline"
+                disabled={p.editingBusy}
+                onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
+              >
+                {t("addBuilding")}
               </Button>
             )}
-          </header>
-          {p.onEdit && data.canAddBuilding && (
-            <Button
-              disabled={p.editingBusy}
-              onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
-            >
-              {t("addBuilding")}
-            </Button>
-          )}
-          <div ref={buildingControls}>
+          </div>
+          {data.buildings.length > 1 && (
             <BuildingSelector
               buildings={data.buildings}
-              value={p.buildingId}
-              onChange={changeBuilding}
+              includeAll={false}
+              value={p.buildingId || data.buildings[0].id}
+              onChange={p.onBuildingChange}
+              disabled={p.editingBusy}
             />
-          </div>
+          )}
           {!data.buildings.length && (
             <SystemFeedback kind="empty" message={t("managementNoBuildings")} />
           )}
-          {data.buildings
-            .filter((b) => !p.buildingId || b.id === p.buildingId)
-            .map((b) => (
-              <section
-                key={b.id}
-                aria-label={`${t("building")} ${b.name}`}
-                className="space-y-4 rounded-2xl border bg-card p-4"
-              >
-                <h3 className="font-bold">
-                  {t("building")} <bdi>{b.name}</bdi>
-                </h3>
-                {b.address && (
-                  <p className="text-sm text-muted-foreground">
-                    <bdi>{b.address}</bdi>
-                  </p>
-                )}
-                {p.onEdit && (
-                  <div className="flex flex-wrap gap-2">
-                    {p.onVisual && (
-                      <Button
-                        variant="outline"
-                        disabled={p.editingBusy}
-                        onClick={() => p.onVisual?.(b.id)}
-                      >
-                        {t("editorTitle")}
-                      </Button>
-                    )}
-                    {p.onLayout && (
-                      <Button
-                        variant="outline"
-                        disabled={p.editingBusy}
-                        onClick={() => p.onLayout?.(b.id)}
-                      >
-                        {t("layoutEdit")}
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      disabled={p.editingBusy}
-                      onClick={() =>
-                        p.onEdit?.({
-                          mode: "update",
-                          entity: "building",
-                          id: b.id,
-                          expected: b.name,
-                          address: b.address,
-                        })
-                      }
-                    >
-                      {t("structureRenameBuilding")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={p.editingBusy}
-                      onClick={() =>
-                        p.onEdit?.({ mode: "create", entity: "floor", buildingId: b.id })
-                      }
-                    >
-                      {t("structureAddFloor")}
-                    </Button>
-                  </div>
-                )}
-                {!b.floors.length && (
-                  <SystemFeedback kind="empty" message={t("managementNoFloors")} />
-                )}
-                {b.floors.map((f) => (
-                  <section
-                    key={f.id}
-                    aria-label={`${t("floor")} ${f.number}`}
-                    className="space-y-2"
-                  >
-                    <h4 className="text-sm font-medium">
-                      {t("floor")} {f.number}
-                    </h4>
-                    {p.onEdit && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="ghost"
-                          disabled={p.editingBusy}
-                          aria-label={t("structureEditFloorLabel", {
-                            n: f.number,
-                            building: b.name,
-                          })}
-                          onClick={() =>
-                            p.onEdit?.({
-                              mode: "update",
-                              entity: "floor",
-                              id: f.id,
-                              expected: f.number,
-                            })
-                          }
-                        >
-                          {t("structureEditFloor")}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          disabled={p.editingBusy}
-                          aria-label={t("structureAddApartmentLabel", {
-                            n: f.number,
-                            building: b.name,
-                          })}
-                          onClick={() =>
-                            p.onEdit?.({ mode: "create", entity: "apartment", floorId: f.id })
-                          }
-                        >
-                          {t("structureAddApartment")}
-                        </Button>
-                      </div>
-                    )}
-                    {!f.apartments.length ? (
-                      <p className="text-sm text-muted-foreground">{t("managementNoApartments")}</p>
-                    ) : (
-                      <ul
-                        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-                        aria-label={t("apartments")}
-                      >
-                        {f.apartments.map((a) => (
-                          <li key={a.id} className="min-w-0 rounded-xl border bg-muted/30 p-3">
-                            <span className="text-xs text-muted-foreground">{t("apartment")}</span>
-                            <bdi className="block break-words font-semibold tabular-nums">
-                              {a.number}
-                            </bdi>
-                            {p.onEdit && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={p.editingBusy}
-                                aria-label={t("structureEditApartmentLabel", {
-                                  n: a.number,
-                                  building: b.name,
-                                })}
-                                onClick={() =>
-                                  p.onEdit?.({
-                                    mode: "update",
-                                    entity: "apartment",
-                                    id: a.id,
-                                    expected: a.number,
-                                  })
-                                }
-                              >
-                                {t("structureEdit")}
-                              </Button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                ))}
-              </section>
-            ))}
         </div>
       )}
+      {(status === "ready" || status === "loading") && p.structure}
     </section>
   );
 }

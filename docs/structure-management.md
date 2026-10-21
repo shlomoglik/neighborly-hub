@@ -1,6 +1,6 @@
 # Authorized structural additions and label changes
 
-The live `/manage?project=<uuid>` workspace supports adding buildings, floors and apartments, renaming buildings, and changing floor/apartment numbers. Existing records are updated in place, preserving their IDs and relationships. There are no project edits, deletions, moves, occupancy changes or resident mutations in this workflow.
+The live `/manage/project/<uuid>` workspace reuses the setup structure editor inline for saved buildings. Its version-checked visual save supports the existing authorized floor/unit operations; see [visual structure editing](visual-structure-editor.md). Adding buildings still uses the scoped structural create dialog. The lower-level create/update APIs documented below remain available and preserve existing IDs and relationships. Legacy `/manage?project=<uuid>` links redirect to the project page.
 
 | Actor                        | Add building      | Rename building / add or renumber floors and apartments |
 | ---------------------------- | ----------------- | ------------------------------------------------------- |

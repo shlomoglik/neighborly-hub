@@ -749,9 +749,20 @@ export const dict = {
     ru: "В вашем доступе: {buildings} домов · {floors} этажей · {apartments} квартир",
   },
   managementStructureHint: {
-    he: "תצוגת מבנה בלבד. אין כאן מידע על אכלוס הדירות.",
-    en: "Structure only. Apartment occupancy is not shown here.",
-    ru: "Только структура. Информация о заселённости квартир здесь не отображается.",
+    he: "ערכו את מבנה הבניין ושמרו את השינויים. השמירה חלה על הבניין הנבחר בלבד.",
+    en: "Edit the building structure and save your changes. Saving applies only to the selected building.",
+    ru: "Измените структуру здания и сохраните изменения. Сохранение относится только к выбранному зданию.",
+  },
+  managementBreadcrumb: {
+    he: "ניווט בניהול",
+    en: "Management navigation",
+    ru: "Навигация управления",
+  },
+  managementOpenProject: { he: "פתיחת הפרויקט", en: "Open project", ru: "Открыть проект" },
+  managementDiscardChanges: {
+    he: "יש שינויים שלא נשמרו. להשליך אותם ולהמשיך?",
+    en: "You have unsaved changes. Discard them and continue?",
+    ru: "Есть несохранённые изменения. Отменить их и продолжить?",
   },
   managementNoBuildings: {
     he: "עדיין אין בניינים בפרויקט.",
