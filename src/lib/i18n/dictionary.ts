@@ -140,10 +140,20 @@ export const dict = {
     en: "Use 0 for a floor without apartments. Apartment numbering is continuous within each building.",
     ru: "Укажите 0 для этажа без квартир. Нумерация квартир сквозная в каждом здании.",
   },
-  layoutCopyAll: {
-    he: "העתקת הפריסה לשאר הבניינים",
-    en: "Copy layout to other buildings",
-    ru: "Копировать план в остальные здания",
+  layoutCopyBuildings: {
+    he: "העתקת פריסה לבניינים נבחרים",
+    en: "Copy layout to selected buildings",
+    ru: "Копировать план в выбранные здания",
+  },
+  layoutCopyBuildingTargets: {
+    he: "בחרו בנייני יעד",
+    en: "Choose target buildings",
+    ru: "Выберите целевые здания",
+  },
+  layoutCopyBuildingsHint: {
+    he: "הקומות והיחידות בבניינים שתבחרו יוחלפו בפריסת בניין המקור. שמות הבניינים והכתובות יישמרו. בניינים עם יחידות מקושרות אינם זמינים להעתקה.",
+    en: "Floors and units in selected buildings will be replaced with the source layout. Building names and addresses are retained. Buildings with linked units cannot be selected.",
+    ru: "Этажи и помещения выбранных зданий будут заменены исходным планом. Названия и адреса сохранятся. Здания со связанными помещениями выбрать нельзя.",
   },
   layoutFloorCount: {
     he: "מספר דירות בקומה {floor} בבניין {building}",

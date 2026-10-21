@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("@/components/AppShell", () => ({
   AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main>,
@@ -309,3 +309,94 @@ it.each(["he", "en", "ru"] as const)("clones a building from its header in %s", 
     screen.getByRole("button", { name: translate(lang, "editorNext") }).hasAttribute("disabled"),
   ).toBe(false);
 });
+
+function saveCopyDraft() {
+  const buildings = ["A", "B", "C"].map((name) => ({
+    id: name,
+    name,
+    address: `${name} street`,
+    floors: [
+      {
+        id: `${name}-floor`,
+        number: 0,
+        name: `${name} ground`,
+        type: "residential",
+        apartments: [
+          {
+            id: `${name}-unit`,
+            number: `${name}-1`,
+            type: "residential",
+            ...(name === "C" ? { linked: true } : {}),
+          },
+        ],
+      },
+    ],
+  }));
+  localStorage.setItem(
+    SETUP_DRAFT_KEY,
+    JSON.stringify({
+      version: 2,
+      revision: "copy-draft",
+      name: "Community",
+      city: "Sderot",
+      step: 1,
+      buildings,
+    }),
+  );
+  return buildings;
+}
+
+it.each(["he", "en", "ru"] as const)(
+  "copies layout only to explicitly selected buildings in %s",
+  (lang) => {
+    const original = saveCopyDraft();
+    mount(vi.fn(), lang);
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "editorRestore") }));
+    const source = screen
+      .getByRole("button", { name: `${translate(lang, "editorCloneBuilding")} A` })
+      .closest("article")!;
+    const open = () =>
+      fireEvent.click(
+        within(source).getByRole("button", { name: translate(lang, "layoutCopyBuildings") }),
+      );
+    open();
+    let dialog = within(screen.getByRole("dialog"));
+    expect(dialog.queryByRole("checkbox", { name: /A street/ })).toBeNull();
+    expect((dialog.getByRole("checkbox", { name: /B street/ }) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    expect((dialog.getByRole("checkbox", { name: /C street/ }) as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    expect(
+      dialog.getByRole("button", { name: translate(lang, "editorApply") }).hasAttribute("disabled"),
+    ).toBe(true);
+    fireEvent.click(dialog.getByRole("checkbox", { name: /B street/ }));
+    fireEvent.click(dialog.getByRole("button", { name: translate(lang, "cancel") }));
+    expect(
+      screen.getByRole("button", {
+        name: `${translate(lang, "editorUnitName")} B B-1`,
+      }),
+    ).toBeTruthy();
+    open();
+    dialog = within(screen.getByRole("dialog"));
+    expect((dialog.getByRole("checkbox", { name: /B street/ }) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    fireEvent.click(dialog.getByRole("checkbox", { name: /B street/ }));
+    fireEvent.click(dialog.getByRole("button", { name: translate(lang, "editorApply") }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "editorSaveDraft") }));
+    const saved = JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!);
+    expect(saved.buildings[0]).toEqual(original[0]);
+    expect(saved.buildings[2]).toEqual(original[2]);
+    expect(saved.buildings[1]).toMatchObject({
+      id: "B",
+      name: "B",
+      address: "B street",
+      floors: [{ number: 0, name: "A ground", apartments: [{ number: "A-1" }] }],
+    });
+    expect(saved.buildings[1].floors[0].id).not.toBe(original[0].floors[0].id);
+    expect(saved.buildings[1].floors[0].id).not.toBe(original[1].floors[0].id);
+  },
+);

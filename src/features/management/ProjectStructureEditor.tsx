@@ -148,6 +148,22 @@ export function ProjectStructureEditor({
   const [bulk, setBulk] = useState<{ building: string; floor: string } | null>(null);
   const [copies, setCopies] = useState(1);
   const [targets, setTargets] = useState<string[]>([]);
+  const [copySourceId, setCopySourceId] = useState<string | null>(null);
+  const [buildingTargets, setBuildingTargets] = useState<string[]>([]);
+  const copySource = buildings.find((b) => b.id === copySourceId);
+  const copyTargets = buildings.filter(
+    (b) =>
+      b.id !== copySourceId &&
+      buildingTargets.includes(b.id) &&
+      !b.floors.some((f) => f.apartments.some((u) => u.linked)),
+  );
+  const copyTargetIds = new Set(copyTargets.map((b) => b.id));
+  const copyValid =
+    !!copySource &&
+    copyTargets.length > 0 &&
+    validateDraft(
+      buildings.map((b) => (copyTargetIds.has(b.id) ? { ...b, floors: copySource.floors } : b)),
+    ).success;
   const update = (id: string, fn: (b: DraftBuilding) => DraftBuilding) =>
     onChange(buildings.map((b) => (b.id === id ? fn(b) : b)));
   const floorUpdate = (bid: string, fid: string, fn: (f: DraftFloor) => DraftFloor) =>
@@ -397,15 +413,11 @@ export function ProjectStructureEditor({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          if (window.confirm(t("editorCopyHint")))
-                            onChange(
-                              buildings.map((target) =>
-                                target.id === b.id ? target : copyBuildingLayout(b, target),
-                              ),
-                            );
+                          setCopySourceId(b.id);
+                          setBuildingTargets([]);
                         }}
                       >
-                        {t("layoutCopyAll")}
+                        {t("layoutCopyBuildings")}
                       </Button>
                     )}
                     {[...b.floors]
@@ -823,6 +835,68 @@ export function ProjectStructureEditor({
           </section>
         </aside>
       </div>
+      <Dialog
+        open={!!copySource}
+        onOpenChange={(open) => {
+          if (!open) setCopySourceId(null);
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {t("layoutCopyBuildings")} · <bdi>{copySource?.name}</bdi>
+            </DialogTitle>
+            <DialogDescription>{t("layoutCopyBuildingsHint")}</DialogDescription>
+          </DialogHeader>
+          <fieldset className="space-y-3">
+            <legend className="mb-2 font-medium">{t("layoutCopyBuildingTargets")}</legend>
+            {buildings
+              .filter((b) => b.id !== copySourceId)
+              .map((b) => (
+                <label key={b.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={buildingTargets.includes(b.id)}
+                    disabled={b.floors.some((f) => f.apartments.some((u) => u.linked))}
+                    onChange={(e) =>
+                      setBuildingTargets((ids) =>
+                        e.target.checked ? [...ids, b.id] : ids.filter((id) => id !== b.id),
+                      )
+                    }
+                  />
+                  <bdi>{b.name}</bdi>
+                  <span className="text-xs text-muted-foreground">
+                    <bdi>{b.address}</bdi>
+                  </span>
+                </label>
+              ))}
+          </fieldset>
+          {copyTargets.length > 0 && !copyValid && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("editorInvalid")}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setCopySourceId(null)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              disabled={!copyValid}
+              onClick={() => {
+                if (!copySource || !copyValid) return;
+                onChange(
+                  buildings.map((b) =>
+                    copyTargetIds.has(b.id) ? copyBuildingLayout(copySource, b) : b,
+                  ),
+                );
+                setCopySourceId(null);
+              }}
+            >
+              {t("editorApply")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={!!bulk}
         onOpenChange={(open) => {
