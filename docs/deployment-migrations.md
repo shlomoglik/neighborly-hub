@@ -31,7 +31,7 @@ A transaction-scoped PostgreSQL advisory lock serializes runners before checking
 
 Use additive, backward-compatible migrations: the previous version continues serving while the new build migrates, and a later publication failure cannot safely undo a committed schema change. Renames, drops, expensive backfills and nontransactional commands such as `CREATE INDEX CONCURRENTLY` require a separately planned rollout. Application rollback does not roll the database back. Restoring or manually editing history is not an automatic recovery mechanism.
 
-CLI/build failures do not print connection strings, raw driver errors, SQL, parameters or row values. Static validation failures explain configuration/history problems; SQLSTATE codes are available from the manual CLI. Use the database provider's protected logs for detailed diagnostics.
+CLI/build failures do not print connection strings, raw driver errors, SQL, parameters or row values. Static validation failures explain configuration/history problems; Deployment failures report the failing stage (configuration, build or migration), a validated SQLSTATE or known connection error code, and a fixed diagnostic hint when available. Unknown codes are reported as unavailable. SQLSTATE codes are also available from the manual CLI. Use the database provider's protected logs for detailed diagnostics.
 
 ## Verification
 
