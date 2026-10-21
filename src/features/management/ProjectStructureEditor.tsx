@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Building2,
   ChevronDown,
@@ -130,6 +130,8 @@ export type ProjectStructureEditorProps = {
   projectName: string;
   typesOnly?: boolean;
   managed?: boolean;
+  buildingActions?: (id: string) => ReactNode;
+  disabledBuildings?: string[];
 };
 export function ProjectStructureEditor({
   buildings,
@@ -137,6 +139,8 @@ export function ProjectStructureEditor({
   projectName,
   typesOnly = false,
   managed = false,
+  buildingActions,
+  disabledBuildings = [],
 }: ProjectStructureEditorProps) {
   const { t } = useI18n();
   const [search, setSearch] = useState("");
@@ -284,6 +288,7 @@ export function ProjectStructureEditor({
                     {visible.map((b) => (
                       <th key={b.id} className="min-w-40 border p-3">
                         <bdi>{b.name}</bdi>
+                        {buildingActions?.(b.id)}
                       </th>
                     ))}
                   </tr>
@@ -325,422 +330,440 @@ export function ProjectStructureEditor({
             visible.map((b) => (
               <article
                 key={b.id}
+                role={managed ? "region" : undefined}
+                aria-label={managed ? `${t("editorTitle")} · ${b.name}` : undefined}
                 className="min-w-0 overflow-hidden rounded-3xl border bg-card shadow-warm"
               >
-                <header className="flex flex-wrap items-center gap-2 border-b p-4">
-                  <button
-                    type="button"
-                    aria-label={`${t("editorCollapse")} ${t("building")} ${b.name}`}
-                    aria-expanded={!collapsed.includes(b.id)}
-                    onClick={() =>
-                      setCollapsed((v) =>
-                        v.includes(b.id) ? v.filter((id) => id !== b.id) : [...v, b.id],
-                      )
-                    }
-                    className="rounded-lg p-2 hover:bg-muted"
-                  >
-                    <Building2 className="size-5 text-primary" />
-                  </button>
-                  <InlineName
-                    label={t("building")}
-                    value={b.name}
-                    onChange={(name) => update(b.id, (b) => ({ ...b, name }))}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {b.floors.length} {t("floors")} ·{" "}
-                    {t("editorCount", { n: b.floors.reduce((n, f) => n + f.apartments.length, 0) })}
-                  </span>
-                  {!typesOnly && (
-                    <div className="ms-auto flex max-w-full flex-wrap items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        aria-label={`${t("editorAddFloor")} ${b.name}`}
-                        disabled={b.floors.length >= 200}
-                        onClick={() => {
-                          update(b.id, (b) => ({
-                            ...b,
-                            floors: [
-                              ...b.floors,
-                              newFloor(Math.max(...b.floors.map((f) => f.number)) + 1),
-                            ],
-                          }));
-                          setCollapsed((ids) => ids.filter((id) => id !== b.id));
-                        }}
-                      >
-                        <Plus aria-hidden className="size-4" />
-                        {t("editorAddFloor")}
-                      </Button>
-                      {!managed && buildings.length > 1 && (
+                <fieldset disabled={disabledBuildings.includes(b.id)} className="min-w-0">
+                  <header className="flex flex-wrap items-center gap-2 border-b p-4">
+                    <button
+                      type="button"
+                      aria-label={`${t("editorCollapse")} ${t("building")} ${b.name}`}
+                      aria-expanded={!collapsed.includes(b.id)}
+                      onClick={() =>
+                        setCollapsed((v) =>
+                          v.includes(b.id) ? v.filter((id) => id !== b.id) : [...v, b.id],
+                        )
+                      }
+                      className="rounded-lg p-2 hover:bg-muted"
+                    >
+                      <Building2 className="size-5 text-primary" />
+                    </button>
+                    <InlineName
+                      label={t("building")}
+                      value={b.name}
+                      onChange={(name) => update(b.id, (b) => ({ ...b, name }))}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {b.floors.length} {t("floors")} ·{" "}
+                      {t("editorCount", {
+                        n: b.floors.reduce((n, f) => n + f.apartments.length, 0),
+                      })}
+                    </span>
+                    {!typesOnly && (
+                      <div className="ms-auto flex max-w-full flex-wrap items-center gap-1">
                         <Button
                           variant="outline"
                           size="sm"
+                          aria-label={`${t("editorAddFloor")} ${b.name}`}
+                          disabled={b.floors.length >= 200}
                           onClick={() => {
-                            setCopySourceId(b.id);
-                            setBuildingTargets([]);
+                            update(b.id, (b) => ({
+                              ...b,
+                              floors: [
+                                ...b.floors,
+                                newFloor(Math.max(...b.floors.map((f) => f.number)) + 1),
+                              ],
+                            }));
+                            setCollapsed((ids) => ids.filter((id) => id !== b.id));
                           }}
                         >
-                          {t("layoutCopyBuildings")}
+                          <Plus aria-hidden className="size-4" />
+                          {t("editorAddFloor")}
                         </Button>
-                      )}
-                      {!managed && (
+                        {!managed && buildings.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCopySourceId(b.id);
+                              setBuildingTargets([]);
+                            }}
+                          >
+                            {t("layoutCopyBuildings")}
+                          </Button>
+                        )}
+                        {!managed && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`${t("editorCloneBuilding")} ${b.name}`}
+                            title={t("editorCloneBuilding")}
+                            disabled={
+                              buildings.length >= MAX_SETUP_BUILDINGS ||
+                              floorCount + b.floors.length > MAX_SETUP_FLOORS ||
+                              count + b.floors.reduce((n, f) => n + f.apartments.length, 0) >
+                                MAX_SETUP_APARTMENTS
+                            }
+                            onClick={() => {
+                              const cloned = cloneBuilding(b, buildings);
+                              onChange(
+                                buildings.flatMap((current) =>
+                                  current.id === b.id ? [current, cloned] : [current],
+                                ),
+                              );
+                            }}
+                          >
+                            <Copy aria-hidden className="size-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label={`${t("editorCloneBuilding")} ${b.name}`}
-                          title={t("editorCloneBuilding")}
+                          aria-label={`${t("remove")} ${t("building")} ${b.name}`}
                           disabled={
-                            buildings.length >= MAX_SETUP_BUILDINGS ||
-                            floorCount + b.floors.length > MAX_SETUP_FLOORS ||
-                            count + b.floors.reduce((n, f) => n + f.apartments.length, 0) >
-                              MAX_SETUP_APARTMENTS
+                            managed ||
+                            buildings.length === 1 ||
+                            b.floors.some((f) => f.apartments.some((u) => u.linked))
                           }
                           onClick={() => {
-                            const cloned = cloneBuilding(b, buildings);
-                            onChange(
-                              buildings.flatMap((current) =>
-                                current.id === b.id ? [current, cloned] : [current],
-                              ),
-                            );
+                            if (window.confirm(t("editorDelete")))
+                              onChange(buildings.filter((x) => x.id !== b.id));
                           }}
                         >
-                          <Copy aria-hidden className="size-4" />
+                          <Trash2 className="size-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`${t("remove")} ${t("building")} ${b.name}`}
-                        disabled={
-                          managed ||
-                          buildings.length === 1 ||
-                          b.floors.some((f) => f.apartments.some((u) => u.linked))
-                        }
-                        onClick={() => {
-                          if (window.confirm(t("editorDelete")))
-                            onChange(buildings.filter((x) => x.id !== b.id));
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  )}
-                </header>
-                {!collapsed.includes(b.id) && (
-                  <div className="space-y-2 p-3">
-                    {!typesOnly && (
-                      <label className="flex flex-wrap items-center gap-2 text-sm">
-                        <span>{t("buildingAddress")}</span>
-                        <Input
-                          className="min-w-40 flex-1"
-                          value={b.address}
-                          maxLength={500}
-                          autoComplete="street-address"
-                          onChange={(e) => update(b.id, (b) => ({ ...b, address: e.target.value }))}
-                        />
-                      </label>
+                      </div>
                     )}
-                    {[...b.floors]
-                      .sort((a, b) => b.number - a.number)
-                      .filter(
-                        (f) =>
-                          (matches(b.name) ||
-                            matches(f.name) ||
-                            matches(String(f.number)) ||
-                            f.apartments.some((u) => matches(u.number))) &&
-                          (filter === "all" ||
-                            f.type === filter ||
-                            f.apartments.some((u) => u.type === filter)),
-                      )
-                      .map((f) => (
-                        <section
-                          key={f.id}
-                          className={`min-w-0 space-y-2 rounded-2xl border bg-background/60 p-3 ${drag?.building === b.id ? "border-dashed border-primary" : "border-border/70"}`}
-                          onDragOver={(e) => {
-                            if (drag?.building === b.id) e.preventDefault();
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (drag?.building === b.id)
-                              update(b.id, (b) => moveUnit(b, drag.unit, f.id));
-                            setDrag(null);
-                          }}
-                        >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              className="rounded p-1 hover:bg-muted"
-                              aria-label={`${t("floor")} ${f.number}`}
-                              aria-expanded={!collapsed.includes(f.id)}
-                              onClick={() =>
-                                setCollapsed((v) =>
-                                  v.includes(f.id) ? v.filter((id) => id !== f.id) : [...v, f.id],
-                                )
-                              }
-                            >
-                              <ChevronDown
-                                className={`size-4 ${collapsed.includes(f.id) ? "-rotate-90" : ""}`}
-                              />
-                            </button>
-                            <Input
-                              type="number"
-                              aria-label={`${t("editorLevel")} ${b.name} ${f.number}`}
-                              className="h-8 w-20"
-                              min={-1000}
-                              max={1000}
-                              value={f.number}
-                              disabled={typesOnly}
-                              onChange={(e) =>
-                                floorUpdate(b.id, f.id, (f) => ({
-                                  ...f,
-                                  number: Number(e.target.value),
-                                }))
-                              }
-                            />
-                            <InlineName
-                              label={`${t("editorFloorName")} ${b.name} ${f.number}`}
-                              placeholder={`${t("floor")} ${f.number}`}
-                              value={f.name}
-                              onChange={(name) => floorUpdate(b.id, f.id, (f) => ({ ...f, name }))}
-                            />
-                            <TypeSelect
-                              label={`${t("editorType")} ${b.name} ${f.number}`}
-                              value={f.type}
-                              onChange={(type) => floorUpdate(b.id, f.id, (f) => ({ ...f, type }))}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {t("editorCount", { n: f.apartments.length })}
-                            </span>
-                            {!typesOnly && (
-                              <div className="ms-auto flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setBulk({ building: b.id, floor: f.id });
-                                    setCopies(1);
-                                    setTargets([]);
-                                  }}
-                                >
-                                  {t("editorDuplicate")}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label={`${t("remove")} ${t("floor")} ${f.number}`}
-                                  disabled={
-                                    b.floors.length === 1 || f.apartments.some((u) => u.linked)
-                                  }
-                                  onClick={() => {
-                                    if (window.confirm(t("editorDelete")))
-                                      update(b.id, (b) => ({
-                                        ...b,
-                                        floors: b.floors.filter((x) => x.id !== f.id),
-                                      }));
-                                  }}
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          {!collapsed.includes(f.id) && (
-                            <>
-                              {!f.apartments.length && (
-                                <p
-                                  className={`rounded-xl border border-dashed p-4 text-sm ${typeStyle[f.type]}`}
-                                >
-                                  {t("editorEmpty")}
-                                </p>
-                              )}
-                              <div className="flex flex-wrap gap-2">
-                                {f.apartments
-                                  .filter(
-                                    (u) =>
-                                      (filter === "all" || u.type === filter) &&
-                                      (matches(b.name) ||
-                                        matches(f.name) ||
-                                        matches(String(f.number)) ||
-                                        matches(u.number)),
+                  </header>
+                  {!collapsed.includes(b.id) && (
+                    <div className="space-y-2 p-3">
+                      {!typesOnly && (
+                        <label className="flex flex-wrap items-center gap-2 text-sm">
+                          <span>{t("buildingAddress")}</span>
+                          <Input
+                            className="min-w-40 flex-1"
+                            value={b.address}
+                            maxLength={500}
+                            autoComplete="street-address"
+                            onChange={(e) =>
+                              update(b.id, (b) => ({ ...b, address: e.target.value }))
+                            }
+                          />
+                        </label>
+                      )}
+                      {[...b.floors]
+                        .sort((a, b) => b.number - a.number)
+                        .filter(
+                          (f) =>
+                            (matches(b.name) ||
+                              matches(f.name) ||
+                              matches(String(f.number)) ||
+                              f.apartments.some((u) => matches(u.number))) &&
+                            (filter === "all" ||
+                              f.type === filter ||
+                              f.apartments.some((u) => u.type === filter)),
+                        )
+                        .map((f) => (
+                          <section
+                            key={f.id}
+                            className={`min-w-0 space-y-2 rounded-2xl border bg-background/60 p-3 ${drag?.building === b.id ? "border-dashed border-primary" : "border-border/70"}`}
+                            onDragOver={(e) => {
+                              if (drag?.building === b.id) e.preventDefault();
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (drag?.building === b.id)
+                                update(b.id, (b) => moveUnit(b, drag.unit, f.id));
+                              setDrag(null);
+                            }}
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                className="rounded p-1 hover:bg-muted"
+                                aria-label={`${t("floor")} ${f.number}`}
+                                aria-expanded={!collapsed.includes(f.id)}
+                                onClick={() =>
+                                  setCollapsed((v) =>
+                                    v.includes(f.id) ? v.filter((id) => id !== f.id) : [...v, f.id],
                                   )
-                                  .map((u) => {
-                                    const index = f.apartments.findIndex((x) => x.id === u.id);
-                                    return (
-                                      <div
-                                        key={u.id}
-                                        className="min-w-0 max-w-full rounded-xl border bg-card p-2"
-                                        onDragOver={(e) => {
-                                          if (drag?.building === b.id) e.preventDefault();
-                                        }}
-                                        onDrop={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          if (drag?.building === b.id)
-                                            update(b.id, (b) => moveUnit(b, drag.unit, f.id, u.id));
-                                          setDrag(null);
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1">
-                                          {!typesOnly && (
-                                            <button
-                                              type="button"
-                                              draggable
-                                              aria-label={`${t("editorMoveTo")} ${u.number}`}
-                                              onClick={() => setMove(move === u.id ? null : u.id)}
-                                              onDragStart={(e) => {
-                                                e.dataTransfer.setData("text/plain", u.id);
-                                                e.dataTransfer.effectAllowed = "move";
-                                                setDrag({ building: b.id, unit: u.id });
-                                              }}
-                                              onDragEnd={() => setDrag(null)}
-                                              className="cursor-grab rounded p-1 text-muted-foreground hover:bg-muted"
-                                            >
-                                              <GripVertical className="size-4" />
-                                            </button>
-                                          )}
-                                          <span
-                                            className={`size-2 shrink-0 rounded-full ${u.type === "residential" ? "bg-primary" : u.type === "commercial" ? "bg-amber-500" : "bg-stone-500"}`}
-                                            aria-hidden
-                                          />
-                                          <span className="text-xs text-muted-foreground" dir="ltr">
-                                            #{index + 1}
-                                          </span>
-                                          <InlineName
-                                            label={`${t("editorUnitName")} ${b.name} ${u.number}`}
-                                            value={u.number}
-                                            onChange={(number) =>
-                                              floorUpdate(b.id, f.id, (f) => ({
-                                                ...f,
-                                                apartments: f.apartments.map((x) =>
-                                                  x.id === u.id ? { ...x, number } : x,
-                                                ),
-                                              }))
-                                            }
-                                          />
-                                          {u.linked && (
-                                            <Link2
-                                              className="size-3"
-                                              aria-label={t("editorLinked")}
+                                }
+                              >
+                                <ChevronDown
+                                  className={`size-4 ${collapsed.includes(f.id) ? "-rotate-90" : ""}`}
+                                />
+                              </button>
+                              <Input
+                                type="number"
+                                aria-label={`${t("editorLevel")} ${b.name} ${f.number}`}
+                                className="h-8 w-20"
+                                min={-1000}
+                                max={1000}
+                                value={f.number}
+                                disabled={typesOnly}
+                                onChange={(e) =>
+                                  floorUpdate(b.id, f.id, (f) => ({
+                                    ...f,
+                                    number: Number(e.target.value),
+                                  }))
+                                }
+                              />
+                              <InlineName
+                                label={`${t("editorFloorName")} ${b.name} ${f.number}`}
+                                placeholder={`${t("floor")} ${f.number}`}
+                                value={f.name}
+                                onChange={(name) =>
+                                  floorUpdate(b.id, f.id, (f) => ({ ...f, name }))
+                                }
+                              />
+                              <TypeSelect
+                                label={`${t("editorType")} ${b.name} ${f.number}`}
+                                value={f.type}
+                                onChange={(type) =>
+                                  floorUpdate(b.id, f.id, (f) => ({ ...f, type }))
+                                }
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {t("editorCount", { n: f.apartments.length })}
+                              </span>
+                              {!typesOnly && (
+                                <div className="ms-auto flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setBulk({ building: b.id, floor: f.id });
+                                      setCopies(1);
+                                      setTargets([]);
+                                    }}
+                                  >
+                                    {t("editorDuplicate")}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={`${t("remove")} ${t("floor")} ${f.number}`}
+                                    disabled={
+                                      b.floors.length === 1 || f.apartments.some((u) => u.linked)
+                                    }
+                                    onClick={() => {
+                                      if (window.confirm(t("editorDelete")))
+                                        update(b.id, (b) => ({
+                                          ...b,
+                                          floors: b.floors.filter((x) => x.id !== f.id),
+                                        }));
+                                    }}
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            {!collapsed.includes(f.id) && (
+                              <>
+                                {!f.apartments.length && (
+                                  <p
+                                    className={`rounded-xl border border-dashed p-4 text-sm ${typeStyle[f.type]}`}
+                                  >
+                                    {t("editorEmpty")}
+                                  </p>
+                                )}
+                                <div className="flex flex-wrap gap-2">
+                                  {f.apartments
+                                    .filter(
+                                      (u) =>
+                                        (filter === "all" || u.type === filter) &&
+                                        (matches(b.name) ||
+                                          matches(f.name) ||
+                                          matches(String(f.number)) ||
+                                          matches(u.number)),
+                                    )
+                                    .map((u) => {
+                                      const index = f.apartments.findIndex((x) => x.id === u.id);
+                                      return (
+                                        <div
+                                          key={u.id}
+                                          className="min-w-0 max-w-full rounded-xl border bg-card p-2"
+                                          onDragOver={(e) => {
+                                            if (drag?.building === b.id) e.preventDefault();
+                                          }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (drag?.building === b.id)
+                                              update(b.id, (b) =>
+                                                moveUnit(b, drag.unit, f.id, u.id),
+                                              );
+                                            setDrag(null);
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-1">
+                                            {!typesOnly && (
+                                              <button
+                                                type="button"
+                                                draggable
+                                                aria-label={`${t("editorMoveTo")} ${u.number}`}
+                                                onClick={() => setMove(move === u.id ? null : u.id)}
+                                                onDragStart={(e) => {
+                                                  e.dataTransfer.setData("text/plain", u.id);
+                                                  e.dataTransfer.effectAllowed = "move";
+                                                  setDrag({ building: b.id, unit: u.id });
+                                                }}
+                                                onDragEnd={() => setDrag(null)}
+                                                className="cursor-grab rounded p-1 text-muted-foreground hover:bg-muted"
+                                              >
+                                                <GripVertical className="size-4" />
+                                              </button>
+                                            )}
+                                            <span
+                                              className={`size-2 shrink-0 rounded-full ${u.type === "residential" ? "bg-primary" : u.type === "commercial" ? "bg-amber-500" : "bg-stone-500"}`}
+                                              aria-hidden
                                             />
-                                          )}
-                                        </div>
-                                        {(typesOnly || move === u.id) && (
-                                          <div className="mt-2 flex flex-wrap items-center gap-1">
-                                            <TypeSelect
-                                              value={u.type}
-                                              label={`${t("editorType")} ${u.number}`}
-                                              onChange={(type) =>
+                                            <span
+                                              className="text-xs text-muted-foreground"
+                                              dir="ltr"
+                                            >
+                                              #{index + 1}
+                                            </span>
+                                            <InlineName
+                                              label={`${t("editorUnitName")} ${b.name} ${u.number}`}
+                                              value={u.number}
+                                              onChange={(number) =>
                                                 floorUpdate(b.id, f.id, (f) => ({
                                                   ...f,
                                                   apartments: f.apartments.map((x) =>
-                                                    x.id === u.id ? { ...x, type } : x,
+                                                    x.id === u.id ? { ...x, number } : x,
                                                   ),
                                                 }))
                                               }
                                             />
-                                            {!typesOnly && (
-                                              <>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  disabled={index === 0}
-                                                  aria-label={`${t("editorBefore")} ${u.number}`}
-                                                  onClick={() =>
-                                                    update(b.id, (b) =>
-                                                      moveUnit(
-                                                        b,
-                                                        u.id,
-                                                        f.id,
-                                                        f.apartments[index - 1]?.id,
-                                                      ),
-                                                    )
-                                                  }
-                                                >
-                                                  <ChevronUp className="size-4" />
-                                                </Button>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  disabled={index === f.apartments.length - 1}
-                                                  aria-label={`${t("editorAfter")} ${u.number}`}
-                                                  onClick={() =>
-                                                    update(b.id, (b) =>
-                                                      moveUnit(
-                                                        b,
-                                                        u.id,
-                                                        f.id,
-                                                        f.apartments[index + 2]?.id,
-                                                      ),
-                                                    )
-                                                  }
-                                                >
-                                                  <ChevronDown className="size-4" />
-                                                </Button>
-                                                <select
-                                                  className="max-w-40 rounded border p-1 text-xs"
-                                                  aria-label={`${t("editorMoveTo")} ${u.number}`}
-                                                  value={f.id}
-                                                  onChange={(e) =>
-                                                    update(b.id, (b) =>
-                                                      moveUnit(b, u.id, e.target.value),
-                                                    )
-                                                  }
-                                                >
-                                                  {b.floors.map((f) => (
-                                                    <option key={f.id} value={f.id}>
-                                                      {f.name || `${t("floor")} ${f.number}`}
-                                                    </option>
-                                                  ))}
-                                                </select>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  aria-label={`${t("remove")} ${u.number}`}
-                                                  disabled={u.linked}
-                                                  title={u.linked ? t("editorLinked") : undefined}
-                                                  onClick={() =>
-                                                    floorUpdate(b.id, f.id, (f) => ({
-                                                      ...f,
-                                                      apartments: f.apartments.filter(
-                                                        (x) => x.id !== u.id,
-                                                      ),
-                                                    }))
-                                                  }
-                                                >
-                                                  <Trash2 className="size-4" />
-                                                </Button>
-                                              </>
+                                            {u.linked && (
+                                              <Link2
+                                                className="size-3"
+                                                aria-label={t("editorLinked")}
+                                              />
                                             )}
                                           </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                {!typesOnly && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="self-start border-dashed"
-                                    disabled={f.apartments.length >= 200}
-                                    aria-label={`${t("editorAddUnit")} ${b.name} ${f.number}`}
-                                    onClick={() =>
-                                      floorUpdate(b.id, f.id, (f) => ({
-                                        ...f,
-                                        apartments: [...f.apartments, nextUnit(b, f)],
-                                      }))
-                                    }
-                                  >
-                                    <Plus className="size-4" />
-                                    {t("editorAddUnit")}
-                                  </Button>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </section>
-                      ))}
-                  </div>
-                )}
+                                          {(typesOnly || move === u.id) && (
+                                            <div className="mt-2 flex flex-wrap items-center gap-1">
+                                              <TypeSelect
+                                                value={u.type}
+                                                label={`${t("editorType")} ${u.number}`}
+                                                onChange={(type) =>
+                                                  floorUpdate(b.id, f.id, (f) => ({
+                                                    ...f,
+                                                    apartments: f.apartments.map((x) =>
+                                                      x.id === u.id ? { ...x, type } : x,
+                                                    ),
+                                                  }))
+                                                }
+                                              />
+                                              {!typesOnly && (
+                                                <>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    disabled={index === 0}
+                                                    aria-label={`${t("editorBefore")} ${u.number}`}
+                                                    onClick={() =>
+                                                      update(b.id, (b) =>
+                                                        moveUnit(
+                                                          b,
+                                                          u.id,
+                                                          f.id,
+                                                          f.apartments[index - 1]?.id,
+                                                        ),
+                                                      )
+                                                    }
+                                                  >
+                                                    <ChevronUp className="size-4" />
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    disabled={index === f.apartments.length - 1}
+                                                    aria-label={`${t("editorAfter")} ${u.number}`}
+                                                    onClick={() =>
+                                                      update(b.id, (b) =>
+                                                        moveUnit(
+                                                          b,
+                                                          u.id,
+                                                          f.id,
+                                                          f.apartments[index + 2]?.id,
+                                                        ),
+                                                      )
+                                                    }
+                                                  >
+                                                    <ChevronDown className="size-4" />
+                                                  </Button>
+                                                  <select
+                                                    className="max-w-40 rounded border p-1 text-xs"
+                                                    aria-label={`${t("editorMoveTo")} ${u.number}`}
+                                                    value={f.id}
+                                                    onChange={(e) =>
+                                                      update(b.id, (b) =>
+                                                        moveUnit(b, u.id, e.target.value),
+                                                      )
+                                                    }
+                                                  >
+                                                    {b.floors.map((f) => (
+                                                      <option key={f.id} value={f.id}>
+                                                        {f.name || `${t("floor")} ${f.number}`}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    aria-label={`${t("remove")} ${u.number}`}
+                                                    disabled={u.linked}
+                                                    title={u.linked ? t("editorLinked") : undefined}
+                                                    onClick={() =>
+                                                      floorUpdate(b.id, f.id, (f) => ({
+                                                        ...f,
+                                                        apartments: f.apartments.filter(
+                                                          (x) => x.id !== u.id,
+                                                        ),
+                                                      }))
+                                                    }
+                                                  >
+                                                    <Trash2 className="size-4" />
+                                                  </Button>
+                                                </>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  {!typesOnly && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="self-start border-dashed"
+                                      disabled={f.apartments.length >= 200}
+                                      aria-label={`${t("editorAddUnit")} ${b.name} ${f.number}`}
+                                      onClick={() =>
+                                        floorUpdate(b.id, f.id, (f) => ({
+                                          ...f,
+                                          apartments: [...f.apartments, nextUnit(b, f)],
+                                        }))
+                                      }
+                                    >
+                                      <Plus className="size-4" />
+                                      {t("editorAddUnit")}
+                                    </Button>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </section>
+                        ))}
+                    </div>
+                  )}
+                </fieldset>
+                {buildingActions?.(b.id)}
               </article>
             ))
           )}

@@ -1,12 +1,12 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useI18n } from "@/lib/i18n";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import { isStructureTargetAvailable } from "./structure-editor-model";
 import { StructureEditor } from "./StructureEditor";
 import { useStructureEditor } from "./use-structure-editor";
-import { ManagedBuildingPanel } from "./ManagedBuildingPanel";
+import { ManagedStructureEditor } from "./ManagedStructureEditor";
 import { ManagementWorkspace } from "./ManagementWorkspace";
 import { useManagement } from "./use-management";
 
@@ -14,20 +14,13 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const workspace = useManagement(projectId);
   const [layout, setLayout] = useState<{ data: ManagementHierarchy } | null>(null);
-  const [states, setStates] = useState<Record<string, { dirty: boolean; busy: boolean }>>({});
+  const [dirty, setDirty] = useState(false);
+  const [structureBusy, setStructureBusy] = useState(false);
   const [revision, setRevision] = useState(0);
-  const dirty = Object.values(states).some((state) => state.dirty);
-  const structureBusy = Object.values(states).some((state) => state.busy);
-  const onStateChange = useCallback((id: string, dirty: boolean, busy: boolean) => {
-    setStates((current) =>
-      current[id]?.dirty === dirty && current[id]?.busy === busy
-        ? current
-        : { ...current, [id]: { dirty, busy } },
-    );
-  }, []);
   const container = useRef<HTMLDivElement>(null);
   const reset = () => {
-    setStates({});
+    setDirty(false);
+    setStructureBusy(false);
     setRevision((n) => n + 1);
   };
   const refresh = () => {
@@ -45,26 +38,21 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (!allowed && target && !editor.busy) onClose();
   }, [allowed, target, editor.busy, onClose]);
-  // Revalidation updates authorized data; each panel retains its own unsaved draft.
+  // Keep authorized data during revalidation; the shared editor retains building drafts.
   useEffect(() => {
     if (workspace.status === "ready" && workspace.data) {
       setLayout({ data: workspace.data });
     } else if (workspace.status !== "loading") {
       setLayout(null);
-      setStates({});
+      setDirty(false);
+      setStructureBusy(false);
     }
   }, [workspace.status, workspace.data]);
   const layoutAllowed =
     !!layout &&
     layout.data.id === projectId &&
     (workspace.status === "loading" || workspace.status === "ready");
-  const buildings =
-    layout?.data.buildings.filter(
-      (b) =>
-        (!workspace.buildingIds.length || workspace.buildingIds.includes(b.id)) &&
-        (workspace.status === "loading" ||
-          !!workspace.data?.buildings.some((current) => current.id === b.id)),
-    ) ?? [];
+  const structureData = workspace.status === "ready" ? workspace.data : layout?.data;
   return (
     <AppShell wide>
       <div ref={container} className="mx-auto min-w-0 max-w-7xl">
@@ -77,7 +65,8 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           onPageChange={workspace.onPageChange}
           onBuildingChange={(id) => {
             if (!structureBusy && discard()) {
-              setStates({});
+              setDirty(false);
+              setStructureBusy(false);
               setRevision((n) => n + 1);
               workspace.onBuildingChange(id);
             }
@@ -93,24 +82,17 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           }}
           editingBusy={editor.busy || structureBusy}
           structure={
-            layout && layoutAllowed ? (
-              <div key={revision} className="min-w-0 space-y-6">
-                {buildings.map((building) => (
-                  <ManagedBuildingPanel
-                    key={building.id}
-                    data={layout.data}
-                    buildingId={building.id}
-                    refreshing={
-                      workspace.status === "loading" ||
-                      !!target ||
-                      (structureBusy && !states[building.id]?.busy)
-                    }
-                    onStateChange={onStateChange}
-                    onRefresh={workspace.onRefresh}
-                    onAccessLost={workspace.onAccessLost}
-                  />
-                ))}
-              </div>
+            structureData && layoutAllowed ? (
+              <ManagedStructureEditor
+                key={`${projectId}:${revision}`}
+                data={structureData}
+                buildingIds={workspace.buildingIds}
+                refreshing={workspace.status === "loading" || !!target}
+                onDirtyChange={setDirty}
+                onBusyChange={setStructureBusy}
+                onSaved={workspace.onRefresh}
+                onAccessLost={workspace.onAccessLost}
+              />
             ) : null
           }
         />

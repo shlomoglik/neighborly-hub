@@ -120,10 +120,7 @@ it("preserves the draft during revalidation and removes it when authorization is
   vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
   rendered.rerender(view());
   expect(
-    screen
-      .getByRole("button", { name: "Unit name Building Suite-A" })
-      .closest("fieldset")
-      ?.hasAttribute("disabled"),
+    screen.getByRole("button", { name: "Unit name Building Suite-A" }).matches(":disabled"),
   ).toBe(true);
   vi.mocked(useManagement).mockReturnValue({ ...initial, status: "unavailable", data: null });
   rendered.rerender(view());
@@ -314,4 +311,65 @@ it("keeps building editors visible after canceling the add-building dialog", asy
   fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
+});
+it("renders one project toolbar, live summary and checks for multiple buildings", () => {
+  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
+  render(view());
+  expect(screen.getAllByRole("textbox", { name: translate("en", "editorSearch") })).toHaveLength(1);
+  expect(screen.getAllByRole("heading", { name: translate("en", "editorSummary") })).toHaveLength(
+    1,
+  );
+  expect(screen.getAllByRole("heading", { name: translate("en", "editorChecks") })).toHaveLength(1);
+  const summary = screen
+    .getByRole("heading", { name: translate("en", "editorSummary") })
+    .closest("section")!;
+  const counts = () => [...summary.querySelectorAll("dd")].map((node) => node.textContent);
+  expect(counts()).toEqual(["2", "2", "1"]);
+  fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
+  expect(counts()).toEqual(["2", "3", "1"]);
+  const other = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Other building`,
+  });
+  fireEvent.click(within(other).getByRole("button", { name: "Cancel" }));
+  expect(counts()).toEqual(["2", "2", "1"]);
+});
+it("searches all selected building drafts through one field without discarding edits", () => {
+  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
+  render(view());
+  editUnit();
+  const search = screen.getByRole("textbox", { name: translate("en", "editorSearch") });
+  fireEvent.change(search, { target: { value: "Other building" } });
+  expect(screen.queryByRole("button", { name: "Add floor Building" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
+  fireEvent.change(search, { target: { value: "Suite-A" } });
+  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Add floor Other building" })).toBeNull();
+  fireEvent.change(search, { target: { value: "" } });
+  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Add floor Other building" })).toBeTruthy();
+});
+it("compares selected buildings in one table", () => {
+  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
+  render(view());
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "editorCompare") }));
+  const table = screen.getByRole("table", { name: translate("en", "editorCompare") });
+  expect(within(table).getByRole("columnheader", { name: /Other building/ })).toBeTruthy();
+  expect(within(table).getByRole("columnheader", { name: /^Building/ })).toBeTruthy();
+  expect(screen.getAllByRole("heading", { name: translate("en", "editorSummary") })).toHaveLength(
+    1,
+  );
+});
+it("updates one shared validation panel when a building draft becomes invalid", () => {
+  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
+  render(view());
+  fireEvent.click(screen.getByRole("button", { name: "Unit name Building 1" }));
+  const input = screen.getByRole("textbox", { name: "Unit name Building 1" });
+  fireEvent.change(input, { target: { value: "" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(screen.getAllByRole("heading", { name: translate("en", "editorChecks") })).toHaveLength(1);
+  expect(screen.getByRole("alert").textContent).toBe(translate("en", "editorInvalid"));
+  const first = screen.getByRole("region", {
+    name: `${translate("en", "editorTitle")} · Building`,
+  });
+  expect(within(first).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
 });
