@@ -38,3 +38,9 @@ CLI/build failures do not print connection strings, raw driver errors, SQL, para
 Unit tests cover transaction wrapper handling, immutable history, Production/Preview isolation, configuration failure, and build-before-migrate failure propagation. The database CI job uses disposable PostgreSQL databases to test fresh initialization, idempotency, atomic rollback/retry, adoption, checksum drift, older releases and concurrent runners, then applies the same runner to the integration database. The pilot browser CI job also initializes its isolated database through this runner. No test needs production secrets.
 
 Official platform references: [conditional build commands](https://vercel.com/kb/guide/dynamic-build-commands), [system environment variables](https://vercel.com/docs/environment-variables/system-environment-variables), [environment scoping](https://vercel.com/docs/environment-variables).
+
+### Diagnosing a failed deployment
+
+Production logs report migration checkpoints: configuration, load-files, create-client, connect-and-begin, lock, history, each apply:<filename>, and commit. A checkpoint records an attempted operation, not success; apply messages do not mean a transaction committed. All pending migrations remain atomic. The failure line includes the last checkpoint, an allowlisted connection/filesystem code or validated SQLSTATE (including nested causes and AggregateError), and a fixed error kind. Unknown errors never print arbitrary messages or stacks.
+
+Pending migrations are expected and run automatically after history validation. Do not infer that missing migration history requires a baseline merely from a failed build. Verify the exact failure and existing schema first.
