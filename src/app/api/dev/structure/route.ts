@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { createStructure, deleteStructure, updateStructure } from "@/lib/db/structure-input";
+import { logger } from "@/lib/logging";
 
 // Node.js is required for the PostgreSQL driver.
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ function errorResponse(error: unknown) {
   if (error instanceof ZodError) {
     return NextResponse.json({ error: "Invalid request", issues: error.issues }, { status: 400 });
   }
-  console.error("Structure operation failed", error);
+  logger.error("dev.structure.failed", error);
   return NextResponse.json({ error: "Structure operation failed" }, { status: 409 });
 }
 

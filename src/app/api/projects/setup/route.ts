@@ -2,6 +2,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { readAuthConfig } from "@/lib/auth/config";
 import { provisionProjectSetup } from "@/lib/access/project-setup";
 import { projectSetupInput } from "@/lib/db/project-setup-input";
+import { logger } from "@/lib/logging";
+import { publicErrorReason } from "@/lib/error-diagnostics";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,9 +11,11 @@ const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
 const json = (body: object, status: number) => Response.json(body, { status, headers });
 
 export async function POST(request: Request) {
+  let phase = "authenticate";
   try {
     const user = await getCurrentUser(request.headers);
     if (!user) return json({ error: "UNAUTHENTICATED" }, 401);
+    phase = "validate-request";
     // Cookie-authenticated writes require an exact, configured origin, including in tests.
     const origin = readAuthConfig(process.env)?.baseURL;
     if (!origin || request.headers.get("origin") !== origin)
@@ -31,12 +35,15 @@ export async function POST(request: Request) {
     }
     const parsed = projectSetupInput.safeParse(value);
     if (!parsed.success) return json({ error: "INVALID_INPUT" }, 400);
+    phase = "connect-database";
     const { db } = await import("@/lib/db/client");
+    phase = "persist-project";
     const result = await provisionProjectSetup(db, user.id, parsed.data);
     return result ? json(result, 201) : json({ error: "FORBIDDEN" }, 403);
-  } catch {
+  } catch (cause) {
+    logger.error("project.setup.failed", cause, { phase });
     // Never serialize database details, session data or raw input into errors.
-    return json({ error: "SETUP_FAILED" }, 500);
+    return json({ error: "SETUP_FAILED", reason: publicErrorReason(cause) }, 500);
   }
 }
 

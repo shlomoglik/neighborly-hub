@@ -10,6 +10,7 @@ import { ProjectSetupRequestError } from "./project-setup-api";
 import { I18nContext } from "@/lib/i18n/context";
 import { directionFor, translate, type Lang } from "@/lib/i18n/dictionary";
 import type { ProjectSetupResult } from "@/lib/db/project-setup-input";
+import type { PublicErrorReason } from "@/lib/error-diagnostics";
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -213,6 +214,36 @@ it("rejects duplicate unit names and lets Escape cancel inline edits", () => {
     screen.getByRole("button", { name: "Continue to next step" }).hasAttribute("disabled"),
   ).toBe(true);
 });
+
+it.each(["he", "en", "ru"] as const)(
+  "shows translated actionable service errors without technical details in %s",
+  async (lang) => {
+    const reasons: [
+      PublicErrorReason,
+      "setupServiceIncomplete" | "setupServiceUnavailable" | "setupLayoutConflict",
+    ][] = [
+      ["SERVICE_SETUP_INCOMPLETE", "setupServiceIncomplete"],
+      ["SERVICE_UNAVAILABLE", "setupServiceUnavailable"],
+      ["LAYOUT_CONFLICT", "setupLayoutConflict"],
+    ];
+    const create = vi.fn();
+    mount(create, lang);
+    review(lang);
+    for (const [reason, key] of reasons) {
+      create.mockRejectedValueOnce(new ProjectSetupRequestError(500, reason));
+      fireEvent.click(screen.getByRole("button", { name: translate(lang, "create") }));
+      await waitFor(() =>
+        expect(screen.getByRole("alert").textContent).toContain(translate(lang, key)),
+      );
+      expect(screen.getByRole("alert").textContent).not.toContain(reason);
+    }
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "back") }));
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "back") }));
+    expect(
+      screen.getByRole("button", { name: `${translate(lang, "editorUnitName")} A 1` }),
+    ).toBeTruthy();
+  },
+);
 it("restores a local draft explicitly, including non-contiguous labels", async () => {
   const first = mount(vi.fn());
   fill();
