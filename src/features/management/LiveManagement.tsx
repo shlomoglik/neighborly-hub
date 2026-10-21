@@ -1,30 +1,35 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useI18n } from "@/lib/i18n";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import { isStructureTargetAvailable } from "./structure-editor-model";
 import { StructureEditor } from "./StructureEditor";
 import { useStructureEditor } from "./use-structure-editor";
-import { ManagedStructureEditor } from "./ManagedStructureEditor";
+import { ManagedBuildingPanel } from "./ManagedBuildingPanel";
 import { ManagementWorkspace } from "./ManagementWorkspace";
 import { useManagement } from "./use-management";
 
 export function LiveManagement({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const workspace = useManagement(projectId);
-  const { onBuildingChange } = workspace;
-  const [layout, setLayout] = useState<{ data: ManagementHierarchy; initialId: string } | null>(
-    null,
-  );
-  const [dirty, setDirty] = useState(false);
-  const [structureBusy, setStructureBusy] = useState(false);
+  const [layout, setLayout] = useState<{ data: ManagementHierarchy } | null>(null);
+  const [states, setStates] = useState<Record<string, { dirty: boolean; busy: boolean }>>({});
+  const [revision, setRevision] = useState(0);
+  const dirty = Object.values(states).some((state) => state.dirty);
+  const structureBusy = Object.values(states).some((state) => state.busy);
+  const onStateChange = useCallback((id: string, dirty: boolean, busy: boolean) => {
+    setStates((current) =>
+      current[id]?.dirty === dirty && current[id]?.busy === busy
+        ? current
+        : { ...current, [id]: { dirty, busy } },
+    );
+  }, []);
   const container = useRef<HTMLDivElement>(null);
-  const selectedId = workspace.buildingId || workspace.data?.buildings[0]?.id;
   const reset = () => {
     setLayout(null);
-    setDirty(false);
-    setStructureBusy(false);
+    setStates({});
+    setRevision((n) => n + 1);
   };
   const refresh = () => {
     reset();
@@ -41,34 +46,26 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (!allowed && target && !editor.busy) onClose();
   }, [allowed, target, editor.busy, onClose]);
-  // Keep the original version and draft during revalidation; save still checks that version.
+  // Revalidation updates authorized data; each panel retains its own unsaved draft.
   useEffect(() => {
-    if (workspace.status === "ready" && workspace.data && selectedId) {
-      // Remember the default selection so losing that building never silently opens another.
-      if (!workspace.buildingId) onBuildingChange(selectedId);
-      if (!layout || layout.data.id !== projectId || layout.initialId !== selectedId)
-        setLayout({ data: workspace.data, initialId: selectedId });
-    } else if (workspace.status !== "loading" && layout) {
+    if (workspace.status === "ready" && workspace.data) {
+      setLayout({ data: workspace.data });
+    } else if (workspace.status !== "loading") {
       setLayout(null);
-      setDirty(false);
-      setStructureBusy(false);
+      setStates({});
     }
-  }, [
-    workspace.status,
-    workspace.data,
-    workspace.buildingId,
-    onBuildingChange,
-    selectedId,
-    layout,
-    projectId,
-  ]);
+  }, [workspace.status, workspace.data]);
   const layoutAllowed =
     !!layout &&
     layout.data.id === projectId &&
-    (workspace.status === "loading" ||
-      (workspace.status === "ready" &&
-        workspace.data?.buildings.some((b) => b.id === layout.initialId) &&
-        layout.initialId === selectedId));
+    (workspace.status === "loading" || workspace.status === "ready");
+  const buildings =
+    layout?.data.buildings.filter(
+      (b) =>
+        (!workspace.buildingIds.length || workspace.buildingIds.includes(b.id)) &&
+        (workspace.status === "loading" ||
+          !!workspace.data?.buildings.some((current) => current.id === b.id)),
+    ) ?? [];
   return (
     <AppShell wide>
       <div ref={container} className="mx-auto min-w-0 max-w-7xl">
@@ -77,11 +74,12 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           discovery={workspace.discovery}
           data={workspace.data}
           selectedProjectId={workspace.selectedProjectId}
-          buildingId={workspace.buildingId}
+          buildingIds={workspace.buildingIds}
           onPageChange={workspace.onPageChange}
           onBuildingChange={(id) => {
             if (!structureBusy && discard()) {
-              reset();
+              setStates({});
+              setRevision((n) => n + 1);
               workspace.onBuildingChange(id);
             }
           }}
@@ -97,17 +95,23 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           editingBusy={editor.busy || structureBusy}
           structure={
             layout && layoutAllowed ? (
-              <ManagedStructureEditor
-                key={layout.data.id + ":" + layout.initialId}
-                {...layout}
-                refreshing={workspace.status === "loading" || !!target}
-                onDirtyChange={setDirty}
-                onBusyChange={setStructureBusy}
-                onClose={reset}
-                onSaved={refresh}
-                onReload={refresh}
-                onAccessLost={workspace.onAccessLost}
-              />
+              <div key={revision} className="min-w-0 space-y-6">
+                {buildings.map((building) => (
+                  <ManagedBuildingPanel
+                    key={building.id}
+                    data={layout.data}
+                    buildingId={building.id}
+                    refreshing={
+                      workspace.status === "loading" ||
+                      !!target ||
+                      (structureBusy && !states[building.id]?.busy)
+                    }
+                    onStateChange={onStateChange}
+                    onRefresh={workspace.onRefresh}
+                    onAccessLost={workspace.onAccessLost}
+                  />
+                ))}
+              </div>
             ) : null
           }
         />

@@ -18,7 +18,7 @@ function Example({
   list?: boolean;
 }) {
   const { t } = useI18n();
-  const [buildingId, setBuilding] = useState("");
+  const [buildingIds, setBuilding] = useState<string[]>([]);
   const [draft, setDraft] = useState<DraftBuilding[]>(() => [
     {
       id: "a",
@@ -42,13 +42,12 @@ function Example({
   ]);
   const project = { id: "synthetic-project", name: t("demoProject"), city: t("demoCity") };
   const buildings = empty ? [] : draft;
-  const selected = buildingId || buildings[0]?.id;
   return (
     <ManagementWorkspace
       onEdit={() => {}}
       status={status}
       selectedProjectId={list ? "" : project.id}
-      buildingId={buildingId}
+      buildingIds={buildingIds}
       discovery={
         ["loading", "expired", "error"].includes(status)
           ? null
@@ -84,7 +83,7 @@ function Example({
         !list && buildings.length > 0 ? (
           <ProjectStructureEditor
             managed
-            buildings={buildings.filter((b) => b.id === selected)}
+            buildings={buildings.filter((b) => !buildingIds.length || buildingIds.includes(b.id))}
             projectName={project.name}
             onChange={(updated) =>
               setDraft((current) =>

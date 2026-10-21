@@ -12,8 +12,8 @@ type Snapshot = {
 };
 export function useManagement(projectId: string, api: ManagementApi = managementApi) {
   const [page, setPage] = useState(1);
-  const [building, setBuilding] = useState({ projectId, id: "" });
-  const buildingId = building.projectId === projectId ? building.id : "";
+  const [building, setBuilding] = useState({ projectId, ids: [] as string[] });
+  const buildingIds = building.projectId === projectId ? building.ids : [];
   const [revision, setRevision] = useState(0);
   const [paused, setPaused] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot>({
@@ -89,15 +89,14 @@ export function useManagement(projectId: string, api: ManagementApi = management
   // it is local and must not restart project discovery or unmount the workspace.
   const unavailableBuilding =
     view.status === "ready" &&
-    !!buildingId &&
-    !view.data?.buildings.some((building) => building.id === buildingId);
+    buildingIds.some((id) => !view.data?.buildings.some((building) => building.id === id));
   return {
     ...view,
     status: unavailableBuilding ? ("unavailable" as const) : view.status,
     data: unavailableBuilding ? null : view.data,
     selectedProjectId: projectId,
-    buildingId,
-    onBuildingChange: (id: string) => setBuilding({ projectId, id }),
+    buildingIds,
+    onBuildingChange: (ids: string[]) => setBuilding({ projectId, ids }),
     onPageChange: setPage,
     onRefresh: () => setRevision((n) => n + 1),
     onAccessLost: (status: number) => {

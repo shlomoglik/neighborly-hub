@@ -749,9 +749,9 @@ export const dict = {
     ru: "В вашем доступе: {buildings} домов · {floors} этажей · {apartments} квартир",
   },
   managementStructureHint: {
-    he: "ערכו את מבנה הבניין ושמרו את השינויים. השמירה חלה על הבניין הנבחר בלבד.",
-    en: "Edit the building structure and save your changes. Saving applies only to the selected building.",
-    ru: "Измените структуру здания и сохраните изменения. Сохранение относится только к выбранному зданию.",
+    he: "ערכו את מבנה הבניין ושמרו את השינויים. השמירה חלה על בניין זה בלבד.",
+    en: "Edit the building structure and save your changes. Saving applies only to this building.",
+    ru: "Измените структуру здания и сохраните изменения. Сохранение относится только к этому зданию.",
   },
   managementBreadcrumb: {
     he: "ניווט בניהול",
