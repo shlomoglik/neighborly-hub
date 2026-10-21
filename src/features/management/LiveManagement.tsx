@@ -1,24 +1,38 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { useI18n } from "@/lib/i18n";
+import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import { isStructureTargetAvailable } from "./structure-editor-model";
 import { StructureEditor } from "./StructureEditor";
 import { useStructureEditor } from "./use-structure-editor";
-import { BuildingLayoutEditor } from "./BuildingLayoutEditor";
 import { ManagedStructureEditor } from "./ManagedStructureEditor";
-import type { ManagementHierarchy } from "@/lib/access/management-contracts";
-import { AppShell } from "@/components/AppShell";
 import { ManagementWorkspace } from "./ManagementWorkspace";
 import { useManagement } from "./use-management";
+
 export function LiveManagement({ projectId }: { projectId: string }) {
+  const { t } = useI18n();
   const workspace = useManagement(projectId);
+  const { onBuildingChange } = workspace;
   const [layout, setLayout] = useState<{ data: ManagementHierarchy; initialId: string } | null>(
     null,
   );
-  const [visual, setVisual] = useState(false);
-  const LayoutEditor = visual ? ManagedStructureEditor : BuildingLayoutEditor;
-  const editor = useStructureEditor(projectId, workspace.onRefresh, workspace.onAccessLost);
-  const { target, onClose } = editor;
+  const [dirty, setDirty] = useState(false);
+  const [structureBusy, setStructureBusy] = useState(false);
   const container = useRef<HTMLDivElement>(null);
+  const selectedId = workspace.buildingId || workspace.data?.buildings[0]?.id;
+  const reset = () => {
+    setLayout(null);
+    setDirty(false);
+    setStructureBusy(false);
+  };
+  const refresh = () => {
+    reset();
+    workspace.onRefresh();
+  };
+  const discard = () => !dirty || window.confirm(t("managementDiscardChanges"));
+  const editor = useStructureEditor(projectId, refresh, workspace.onAccessLost);
+  const { target, onClose } = editor;
   const allowed =
     workspace.status === "loading" ||
     (workspace.status === "ready" &&
@@ -27,52 +41,77 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (!allowed && target && !editor.busy) onClose();
   }, [allowed, target, editor.busy, onClose]);
-  const layoutAllowed =
-    workspace.status === "loading" ||
-    (workspace.status === "ready" &&
-      !!workspace.data &&
-      !!layout &&
-      layout.data.id === projectId &&
-      layout.data.buildings.every((b) =>
-        workspace.data!.buildings.some((current) => current.id === b.id),
-      ));
+  // Keep the original version and draft during revalidation; save still checks that version.
   useEffect(() => {
-    if (layout && (layout.data.id !== projectId || !layoutAllowed)) setLayout(null);
-  }, [layout, layoutAllowed, projectId]);
+    if (workspace.status === "ready" && workspace.data && selectedId) {
+      // Remember the default selection so losing that building never silently opens another.
+      if (!workspace.buildingId) onBuildingChange(selectedId);
+      if (!layout || layout.data.id !== projectId || layout.initialId !== selectedId)
+        setLayout({ data: workspace.data, initialId: selectedId });
+    } else if (workspace.status !== "loading" && layout) {
+      setLayout(null);
+      setDirty(false);
+      setStructureBusy(false);
+    }
+  }, [
+    workspace.status,
+    workspace.data,
+    workspace.buildingId,
+    onBuildingChange,
+    selectedId,
+    layout,
+    projectId,
+  ]);
+  const layoutAllowed =
+    !!layout &&
+    layout.data.id === projectId &&
+    (workspace.status === "loading" ||
+      (workspace.status === "ready" &&
+        workspace.data?.buildings.some((b) => b.id === layout.initialId) &&
+        layout.initialId === selectedId));
   return (
-    <AppShell>
-      <div ref={container}>
+    <AppShell wide>
+      <div ref={container} className="mx-auto min-w-0 max-w-7xl">
         <ManagementWorkspace
-          {...workspace}
-          onEdit={editor.onOpen}
-          editingBusy={editor.busy || !!layout}
-          onVisual={(initialId) => {
-            setVisual(true);
-            if (workspace.data) setLayout({ data: workspace.data, initialId });
+          status={workspace.status}
+          discovery={workspace.discovery}
+          data={workspace.data}
+          selectedProjectId={workspace.selectedProjectId}
+          buildingId={workspace.buildingId}
+          onPageChange={workspace.onPageChange}
+          onBuildingChange={(id) => {
+            if (!structureBusy && discard()) {
+              reset();
+              workspace.onBuildingChange(id);
+            }
           }}
-          onLayout={(initialId) => {
-            setVisual(false);
-            if (workspace.data) setLayout({ data: workspace.data, initialId });
+          onRefresh={() => {
+            if (!structureBusy && discard()) refresh();
           }}
+          onEdit={(target) => {
+            if (!structureBusy && discard()) {
+              reset();
+              editor.onOpen(target);
+            }
+          }}
+          editingBusy={editor.busy || structureBusy}
+          structure={
+            layout && layoutAllowed ? (
+              <ManagedStructureEditor
+                key={layout.data.id + ":" + layout.initialId}
+                {...layout}
+                refreshing={workspace.status === "loading" || !!target}
+                onDirtyChange={setDirty}
+                onBusyChange={setStructureBusy}
+                onClose={reset}
+                onSaved={refresh}
+                onReload={refresh}
+                onAccessLost={workspace.onAccessLost}
+              />
+            ) : null
+          }
         />
       </div>
-      {layout && layout.data.id === projectId && layoutAllowed && (
-        <LayoutEditor
-          key={projectId}
-          {...layout}
-          refreshing={workspace.status === "loading"}
-          onClose={() => setLayout(null)}
-          onSaved={() => {
-            setLayout(null);
-            workspace.onRefresh();
-          }}
-          onReload={() => {
-            setLayout(null);
-            workspace.onRefresh();
-          }}
-          onAccessLost={workspace.onAccessLost}
-        />
-      )}
       {target && allowed && (
         <StructureEditor
           key={JSON.stringify(target)}
@@ -82,7 +121,7 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           onRestoreFocus={() => container.current?.querySelector<HTMLHeadingElement>("h1")?.focus()}
           onReload={() => {
             editor.onClose();
-            workspace.onRefresh();
+            refresh();
           }}
         />
       )}

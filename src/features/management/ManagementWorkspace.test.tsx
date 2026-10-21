@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
@@ -22,19 +22,13 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
       name: "Saved project",
       city: "Sderot",
       buildings: [
-        { id: "a", name: "Empty building", floors: [] },
-        {
-          id: "b",
-          name: "Building",
-          floors: [
-            { id: "f", number: 0, apartments: [] },
-            { id: "g", number: 1, apartments: [{ id: "u", number: "2" }] },
-          ],
-        },
+        { id: "a", name: "Building A", floors: [] },
+        { id: "b", name: "Building B", floors: [] },
       ],
       canAddBuilding: false,
-      counts: { buildings: 2, floors: 2, apartments: 1 },
+      counts: { buildings: 2, floors: 0, apartments: 0 },
     },
+    structure: <div data-testid="shared-editor">Shared structure editor</div>,
     onBuildingChange: vi.fn(),
     onPageChange: vi.fn(),
     onRefresh: vi.fn(),
@@ -60,62 +54,86 @@ function mount(lang: Lang = "en", overrides: Partial<ManagementWorkspaceProps> =
   };
 }
 it.each(["he", "en", "ru"] as const)(
-  "renders saved structure, scoped counts, neutral apartments and empty floors in %s",
+  "navigates from project cards to a dedicated page in %s",
   (lang) => {
-    const props = mount(lang);
-    expect(screen.getByText(translate(lang, "managementCounts", props.data!.counts))).toBeTruthy();
-    expect(screen.getByText(translate(lang, "managementNoFloors"))).toBeTruthy();
-    expect(screen.getByText(translate(lang, "managementNoApartments"))).toBeTruthy();
-    expect(screen.getByText("2")).toBeTruthy();
-    expect(screen.queryByText(translate(lang, "vacant"))).toBeNull();
-    expect(screen.queryByText(translate(lang, "noPending"))).toBeNull();
-    expect(screen.queryByRole("link", { name: translate(lang, "newProject") })).toBeNull();
+    mount(lang, { selectedProjectId: "", data: null, structure: null });
     const link = screen.getByRole("link", { name: /Saved project/ });
-    expect(link.getAttribute("href")).toBe("/manage?project=p");
-    expect(link.getAttribute("aria-current")).toBe("page");
-    fireEvent.click(screen.getByRole("radio", { name: "Building" }));
-    expect(props.onBuildingChange).toHaveBeenCalledWith("b");
+    expect(link.getAttribute("href")).toBe("/manage/project/p");
+    expect(
+      screen.queryByRole("navigation", { name: translate(lang, "managementBreadcrumb") }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: translate(lang, "directoryNext") })).toBeNull();
   },
 );
-it("shows the creation link exclusively for the server capability", () => {
-  mount("en", {
+it.each(["he", "en", "ru"] as const)(
+  "uses breadcrumbs and the shared editor on project pages in %s",
+  (lang) => {
+    const p = mount(lang);
+    const breadcrumb = screen.getByRole("navigation", {
+      name: translate(lang, "managementBreadcrumb"),
+    });
+    expect(
+      within(breadcrumb)
+        .getByRole("link", { name: translate(lang, "manage") })
+        .getAttribute("href"),
+    ).toBe("/manage");
+    expect(
+      within(breadcrumb).getByText("Saved project").getAttribute("aria-current") ??
+        within(breadcrumb).getByText("Saved project").parentElement?.getAttribute("aria-current"),
+    ).toBe("page");
+    expect(screen.queryByRole("navigation", { name: translate(lang, "chooseProject") })).toBeNull();
+    expect(screen.getByTestId("shared-editor")).toBeTruthy();
+    expect(screen.getByText(translate(lang, "managementCounts", p.data!.counts))).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Building B" }));
+    expect(p.onBuildingChange).toHaveBeenCalledWith("b");
+    expect(
+      screen.queryByRole("button", { name: translate(lang, "structureRenameBuilding") }),
+    ).toBeNull();
+  },
+);
+it("retains explicit discovery pagination and admin-only creation", () => {
+  const p = mount("en", {
+    selectedProjectId: "",
+    data: null,
+    structure: null,
     discovery: {
       projects: [],
-      page: 1,
-      hasNext: false,
+      page: 2,
+      hasNext: true,
       canCreateProject: true,
       hasManagementAccess: true,
     },
-    status: "empty",
-    data: null,
   });
-  expect(
-    screen.getByRole("link", { name: translate("en", "newProject") }).getAttribute("href"),
-  ).toBe("/manage/setup");
+  expect(screen.getByRole("link", { name: "New project" }).getAttribute("href")).toBe(
+    "/manage/setup",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  expect(p.onPageChange).toHaveBeenCalledWith(3);
 });
-it.each(["he", "en", "ru"] as const)("localizes all asynchronous states in %s", (lang) => {
-  for (const [status, key] of [
-    ["empty", "managementEmpty"],
-    ["forbidden", "managementForbidden"],
-    ["unavailable", "managementUnavailable"],
-    ["expired", "managementExpired"],
-    ["error", "loadError"],
-    ["loading", "loading"],
-  ] as const) {
-    const p = mount(lang, { status, discovery: null, data: null });
-    expect(screen.getByText(translate(lang, key))).toBeTruthy();
-    if (["error", "forbidden", "unavailable"].includes(status)) {
-      fireEvent.click(screen.getByRole("button", { name: translate(lang, "retry") }));
-      expect(p.onRefresh).toHaveBeenCalledOnce();
+it.each(["he", "en", "ru"] as const)(
+  "localizes failures and hides structure when access is unavailable in %s",
+  (lang) => {
+    for (const [status, key] of [
+      ["empty", "managementEmpty"],
+      ["forbidden", "managementForbidden"],
+      ["unavailable", "managementUnavailable"],
+      ["expired", "managementExpired"],
+      ["error", "loadError"],
+      ["loading", "loading"],
+    ] as const) {
+      const p = mount(lang, { status, discovery: null, data: null });
+      expect(screen.getByText(translate(lang, key))).toBeTruthy();
+      if (status !== "loading") expect(screen.queryByTestId("shared-editor")).toBeNull();
+      if (["error", "forbidden", "unavailable"].includes(status)) {
+        fireEvent.click(screen.getByRole("button", { name: translate(lang, "retry") }));
+        expect(p.onRefresh).toHaveBeenCalledOnce();
+      }
+      cleanup();
     }
-    if (status === "expired")
-      expect(
-        screen.getByRole("link", { name: translate(lang, "signIn") }).getAttribute("href"),
-      ).toBe("/auth");
-    cleanup();
-  }
-});
-it("renders an empty saved project and provides explicit discovery pagination", () => {
+  },
+);
+it("keeps empty projects and scoped building creation available", () => {
+  const onEdit = vi.fn();
   const p = mount("en", {
     data: {
       id: "p",
@@ -125,88 +143,29 @@ it("renders an empty saved project and provides explicit discovery pagination", 
       canAddBuilding: false,
       counts: { buildings: 0, floors: 0, apartments: 0 },
     },
-    discovery: {
-      projects: [],
-      page: 2,
-      hasNext: true,
-      canCreateProject: false,
-      hasManagementAccess: true,
-    },
+    onEdit,
   });
   expect(screen.getByText(translate("en", "managementNoBuildings"))).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: translate("en", "directoryNext") }));
-  expect(p.onPageChange).toHaveBeenCalledWith(3);
+  expect(screen.queryByRole("button", { name: "Add building" })).toBeNull();
+  p.update({ data: { ...p.data!, canAddBuilding: true } });
+  fireEvent.click(screen.getByRole("button", { name: "Add building" }));
+  expect(onEdit).toHaveBeenCalledWith({ mode: "create", entity: "building" });
 });
-
-it("restores keyboard focus after building loads and refresh", () => {
-  const p = mount();
-  fireEvent.click(screen.getByRole("radio", { name: "Building" }));
-  p.update({ status: "loading", data: null, discovery: null, buildingId: "b" });
-  p.update({ status: "ready", buildingId: "b" });
-  expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Building" }));
-  fireEvent.click(screen.getByRole("button", { name: translate("en", "refreshManagement") }));
-  p.update({ status: "loading", data: null, discovery: null });
-  p.update({ status: "ready" });
-  expect(document.activeElement).toBe(
-    screen.getByRole("heading", { name: translate("en", "manage") }),
-  );
-});
-
-it("shows staff management only for the server-derived global administrator capability", () => {
+it("uses server capabilities for staff links and disables building switches while saving", () => {
   const p = mount();
   expect(screen.queryByRole("link", { name: translate("en", "staffManagement") })).toBeNull();
-  p.update({ discovery: { ...p.discovery!, canCreateProject: true } });
+  p.update({ discovery: { ...p.discovery!, canCreateProject: true }, editingBusy: true });
   expect(
     screen.getByRole("link", { name: translate("en", "staffManagement") }).getAttribute("href"),
   ).toBe("/manage/staff/p");
+  expect(
+    screen.getByRole("radio", { name: "Building B" }).closest("fieldset")?.hasAttribute("disabled"),
+  ).toBe(true);
 });
-
-it("provides scoped structure actions using stable parent IDs and current expected labels", () => {
-  const onEdit = vi.fn();
-  const p = mount("en", { onEdit });
-  expect(screen.queryByRole("button", { name: translate("en", "addBuilding") })).toBeNull();
-  fireEvent.click(
-    screen.getAllByRole("button", { name: translate("en", "structureRenameBuilding") })[0],
-  );
-  expect(onEdit).toHaveBeenLastCalledWith({
-    mode: "update",
-    entity: "building",
-    id: "a",
-    expected: "Empty building",
-  });
-  fireEvent.click(screen.getAllByRole("button", { name: translate("en", "structureAddFloor") })[0]);
-  expect(onEdit).toHaveBeenLastCalledWith({ mode: "create", entity: "floor", buildingId: "a" });
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: translate("en", "structureEditApartmentLabel", { n: "2", building: "Building" }),
-    }),
-  );
-  expect(onEdit).toHaveBeenLastCalledWith({
-    mode: "update",
-    entity: "apartment",
-    id: "u",
-    expected: "2",
-  });
-  p.update({ onEdit, data: { ...p.data!, canAddBuilding: true } });
-  fireEvent.click(screen.getByRole("button", { name: translate("en", "addBuilding") }));
-  expect(onEdit).toHaveBeenLastCalledWith({ mode: "create", entity: "building" });
-});
-
-it("keeps project controls mounted while the building filter updates only the results", () => {
+it("restores heading focus after an explicit refresh", () => {
   const p = mount();
-  const projectChooser = screen.getByRole("navigation", { name: translate("en", "chooseProject") });
-  const buildingFilter = screen.getByRole("group", { name: translate("en", "filterBuilding") });
-  const projectHeading = screen.getByRole("heading", { name: "Saved project" });
-  fireEvent.click(screen.getByRole("radio", { name: "Building" }));
-  p.update({ buildingId: "b" });
-  expect(screen.getByRole("navigation", { name: translate("en", "chooseProject") })).toBe(
-    projectChooser,
-  );
-  expect(screen.getByRole("group", { name: translate("en", "filterBuilding") })).toBe(
-    buildingFilter,
-  );
-  expect(screen.getByRole("heading", { name: "Saved project" })).toBe(projectHeading);
-  expect(screen.queryByText(translate("en", "loading"))).toBeNull();
-  expect(screen.queryByRole("region", { name: "Building Empty building" })).toBeNull();
-  expect(screen.getByRole("region", { name: "Building Building" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "refreshManagement") }));
+  p.update({ status: "loading", data: null });
+  p.update({ status: "ready" });
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Saved project" }));
 });

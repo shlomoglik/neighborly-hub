@@ -6,16 +6,21 @@ export function BuildingSelector({
   value,
   onChange,
   includeAll = true,
+  disabled = false,
 }: {
   buildings: readonly { id: string; name: string }[];
   value: string;
   onChange: (id: string) => void;
   includeAll?: boolean;
+  disabled?: boolean;
 }) {
   const { t } = useI18n();
   const name = useId();
   return (
-    <fieldset className="community-enter community-interactive min-w-0 w-full max-w-full">
+    <fieldset
+      disabled={disabled}
+      className="community-enter community-interactive min-w-0 w-full max-w-full disabled:opacity-60"
+    >
       <legend className="sr-only">{t("filterBuilding")}</legend>
       <div className="flex gap-2 overflow-x-auto overscroll-x-contain p-1">
         {[...(includeAll ? [{ id: "", name: t("allBuildings") }] : []), ...buildings].map((b) => (
