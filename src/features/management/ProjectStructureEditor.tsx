@@ -52,14 +52,22 @@ function InlineName({
   label,
   onChange,
   placeholder,
+  readOnly = false,
 }: {
   value: string;
   label: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  if (readOnly)
+    return (
+      <span className="min-w-0 truncate px-1 font-medium" aria-label={label}>
+        <bdi>{value || placeholder || label}</bdi>
+      </span>
+    );
   if (!editing)
     return (
       <button
@@ -103,12 +111,20 @@ function TypeSelect({
   value,
   label,
   onChange,
+  readOnly = false,
 }: {
   value: UnitType;
   label: string;
   onChange: (type: UnitType) => void;
+  readOnly?: boolean;
 }) {
   const { t } = useI18n();
+  if (readOnly)
+    return (
+      <span aria-label={label} className={`rounded-full px-2 py-1 text-xs ${typeStyle[value]}`}>
+        {t(value)}
+      </span>
+    );
   return (
     <select
       aria-label={label}
@@ -129,20 +145,25 @@ export type ProjectStructureEditorProps = {
   onChange: (buildings: DraftBuilding[]) => void;
   projectName: string;
   typesOnly?: boolean;
-  managed?: boolean;
+  mode?: "view" | "edit" | "create";
   buildingActions?: (id: string) => ReactNode;
   disabledBuildings?: string[];
 };
 export function ProjectStructureEditor({
   buildings,
-  onChange,
+  onChange: onBuildingsChange,
   projectName,
   typesOnly = false,
-  managed = false,
+  mode = "create",
   buildingActions,
   disabledBuildings = [],
 }: ProjectStructureEditorProps) {
   const { t } = useI18n();
+  const readOnly = mode === "view";
+  const managed = mode !== "create";
+  const onChange = (next: DraftBuilding[]) => {
+    if (!readOnly) onBuildingsChange(next);
+  };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<UnitType | "all">("all");
   const [comparison, setComparison] = useState(false);
@@ -185,7 +206,7 @@ export function ProjectStructureEditor({
   const validation = useMemo(() => validateDraft(buildings), [buildings]);
   const valid = validation.success;
   useEffect(() => {
-    if (process.env.NODE_ENV !== "development" || validation.success) return;
+    if (readOnly || process.env.NODE_ENV !== "development" || validation.success) return;
     logger.warn("structure.validation.failed", {
       indexBase: 0,
       issues: validation.error.issues.map((issue) => ({
@@ -194,7 +215,7 @@ export function ProjectStructureEditor({
         message: issue.message,
       })),
     });
-  }, [validation]);
+  }, [validation, readOnly]);
   const bulkBuilding = buildings.find((b) => b.id === bulk?.building);
   const bulkFloor = bulkBuilding?.floors.find((f) => f.id === bulk?.floor);
   const normalized = search.trim().normalize("NFKC").toLocaleLowerCase();
@@ -212,7 +233,7 @@ export function ProjectStructureEditor({
   );
   return (
     <div className="min-w-0 space-y-4">
-      <p className="text-sm text-muted-foreground">{t("editorHint")}</p>
+      {!readOnly && <p className="text-sm text-muted-foreground">{t("editorHint")}</p>}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-muted/50 p-3">
         <Input
           aria-label={t("editorSearch")}
@@ -247,25 +268,27 @@ export function ProjectStructureEditor({
         >
           {t(collapsed.length ? "editorExpand" : "editorCollapse")}
         </Button>
-        <div className="flex gap-1" role="group" aria-label={t("editorCompare")}>
-          <Button
-            variant={!comparison ? "default" : "outline"}
-            size="sm"
-            aria-pressed={!comparison}
-            onClick={() => setComparison(false)}
-          >
-            {t("editorTree")}
-          </Button>
-          <Button
-            variant={comparison ? "default" : "outline"}
-            size="sm"
-            aria-pressed={comparison}
-            onClick={() => setComparison(true)}
-          >
-            {t("editorCompare")}
-          </Button>
-        </div>
-        {!typesOnly && !managed && (
+        {!readOnly && (
+          <div className="flex gap-1" role="group" aria-label={t("editorCompare")}>
+            <Button
+              variant={!comparison ? "default" : "outline"}
+              size="sm"
+              aria-pressed={!comparison}
+              onClick={() => setComparison(false)}
+            >
+              {t("editorTree")}
+            </Button>
+            <Button
+              variant={comparison ? "default" : "outline"}
+              size="sm"
+              aria-pressed={comparison}
+              onClick={() => setComparison(true)}
+            >
+              {t("editorCompare")}
+            </Button>
+          </div>
+        )}
+        {!readOnly && !typesOnly && !managed && (
           <Button
             size="sm"
             disabled={managed || buildings.length >= 100}
@@ -276,7 +299,9 @@ export function ProjectStructureEditor({
           </Button>
         )}
       </div>
-      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
+      <div
+        className={`grid min-w-0 items-start gap-5 ${readOnly ? "" : "xl:grid-cols-[minmax(0,1fr)_19rem]"}`}
+      >
         <div className="min-w-0 space-y-4">
           {comparison ? (
             <div className="max-w-full overflow-x-auto rounded-2xl border bg-card">
@@ -288,7 +313,7 @@ export function ProjectStructureEditor({
                     {visible.map((b) => (
                       <th key={b.id} className="min-w-40 border p-3">
                         <bdi>{b.name}</bdi>
-                        {buildingActions?.(b.id)}
+                        {!readOnly && buildingActions?.(b.id)}
                       </th>
                     ))}
                   </tr>
@@ -350,6 +375,7 @@ export function ProjectStructureEditor({
                       <Building2 className="size-5 text-primary" />
                     </button>
                     <InlineName
+                      readOnly={readOnly}
                       label={t("building")}
                       value={b.name}
                       onChange={(name) => update(b.id, (b) => ({ ...b, name }))}
@@ -360,7 +386,7 @@ export function ProjectStructureEditor({
                         n: b.floors.reduce((n, f) => n + f.apartments.length, 0),
                       })}
                     </span>
-                    {!typesOnly && (
+                    {!readOnly && !typesOnly && (
                       <div className="ms-auto flex max-w-full flex-wrap items-center gap-1">
                         <Button
                           variant="outline"
@@ -438,7 +464,12 @@ export function ProjectStructureEditor({
                   </header>
                   {!collapsed.includes(b.id) && (
                     <div className="space-y-2 p-3">
-                      {!typesOnly && (
+                      {readOnly && b.address && (
+                        <p className="text-sm text-muted-foreground">
+                          <bdi>{b.address}</bdi>
+                        </p>
+                      )}
+                      {!readOnly && !typesOnly && (
                         <label className="flex flex-wrap items-center gap-2 text-sm">
                           <span>{t("buildingAddress")}</span>
                           <Input
@@ -494,22 +525,29 @@ export function ProjectStructureEditor({
                                   className={`size-4 ${collapsed.includes(f.id) ? "-rotate-90" : ""}`}
                                 />
                               </button>
-                              <Input
-                                type="number"
-                                aria-label={`${t("editorLevel")} ${b.name} ${f.number}`}
-                                className="h-8 w-20"
-                                min={-1000}
-                                max={1000}
-                                value={f.number}
-                                disabled={typesOnly}
-                                onChange={(e) =>
-                                  floorUpdate(b.id, f.id, (f) => ({
-                                    ...f,
-                                    number: Number(e.target.value),
-                                  }))
-                                }
-                              />
+                              {readOnly ? (
+                                <span className="w-20 text-sm" dir="ltr">
+                                  {f.number}
+                                </span>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  aria-label={`${t("editorLevel")} ${b.name} ${f.number}`}
+                                  className="h-8 w-20"
+                                  min={-1000}
+                                  max={1000}
+                                  value={f.number}
+                                  disabled={typesOnly}
+                                  onChange={(e) =>
+                                    floorUpdate(b.id, f.id, (f) => ({
+                                      ...f,
+                                      number: Number(e.target.value),
+                                    }))
+                                  }
+                                />
+                              )}
                               <InlineName
+                                readOnly={readOnly}
                                 label={`${t("editorFloorName")} ${b.name} ${f.number}`}
                                 placeholder={`${t("floor")} ${f.number}`}
                                 value={f.name}
@@ -518,6 +556,7 @@ export function ProjectStructureEditor({
                                 }
                               />
                               <TypeSelect
+                                readOnly={readOnly}
                                 label={`${t("editorType")} ${b.name} ${f.number}`}
                                 value={f.type}
                                 onChange={(type) =>
@@ -527,7 +566,7 @@ export function ProjectStructureEditor({
                               <span className="text-xs text-muted-foreground">
                                 {t("editorCount", { n: f.apartments.length })}
                               </span>
-                              {!typesOnly && (
+                              {!readOnly && !typesOnly && (
                                 <div className="ms-auto flex gap-1">
                                   <Button
                                     variant="ghost"
@@ -599,7 +638,7 @@ export function ProjectStructureEditor({
                                           }}
                                         >
                                           <div className="flex items-center gap-1">
-                                            {!typesOnly && (
+                                            {!readOnly && !typesOnly && (
                                               <button
                                                 type="button"
                                                 draggable
@@ -627,6 +666,7 @@ export function ProjectStructureEditor({
                                               #{index + 1}
                                             </span>
                                             <InlineName
+                                              readOnly={readOnly}
                                               label={`${t("editorUnitName")} ${b.name} ${u.number}`}
                                               value={u.number}
                                               onChange={(number) =>
@@ -645,9 +685,10 @@ export function ProjectStructureEditor({
                                               />
                                             )}
                                           </div>
-                                          {(typesOnly || move === u.id) && (
+                                          {(readOnly || typesOnly || move === u.id) && (
                                             <div className="mt-2 flex flex-wrap items-center gap-1">
                                               <TypeSelect
+                                                readOnly={readOnly}
                                                 value={u.type}
                                                 label={`${t("editorType")} ${u.number}`}
                                                 onChange={(type) =>
@@ -659,7 +700,7 @@ export function ProjectStructureEditor({
                                                   }))
                                                 }
                                               />
-                                              {!typesOnly && (
+                                              {!readOnly && !typesOnly && (
                                                 <>
                                                   <Button
                                                     variant="ghost"
@@ -737,7 +778,7 @@ export function ProjectStructureEditor({
                                         </div>
                                       );
                                     })}
-                                  {!typesOnly && (
+                                  {!readOnly && !typesOnly && (
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -763,101 +804,107 @@ export function ProjectStructureEditor({
                     </div>
                   )}
                 </fieldset>
-                {buildingActions?.(b.id)}
+                {!readOnly && buildingActions?.(b.id)}
               </article>
             ))
           )}
           {!visible.length && <p role="status">{t("editorNoMatches")}</p>}
         </div>
-        <aside className="min-w-0 space-y-4 xl:sticky xl:top-20">
-          <section className="space-y-4 rounded-3xl bg-card p-5 shadow-warm">
-            <h3 className="text-sm text-muted-foreground">{t("editorSummary")}</h3>
-            <p className="font-semibold">
-              <bdi>{projectName}</bdi>
-            </p>
-            <dl className="grid grid-cols-3 gap-2">
-              {[
-                [buildings.length, t("buildings")],
-                [buildings.reduce((n, b) => n + b.floors.length, 0), t("floors")],
-                [count, t("units")],
-              ].map(([n, label]) => (
-                <div key={label} className="rounded-xl bg-muted p-2">
-                  <dd className="text-2xl font-semibold">{n}</dd>
-                  <dt className="text-xs">{label}</dt>
-                </div>
-              ))}
-            </dl>
-            {unitTypes.map((type) => {
-              const n = buildings.reduce(
-                (n, b) =>
-                  n +
-                  b.floors.reduce(
-                    (n, f) => n + f.apartments.filter((u) => u.type === type).length,
-                    0,
-                  ),
-                0,
-              );
-              return (
-                <div key={type} className="space-y-1 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span>
-                      {t(type)} · {n}
-                    </span>
-                    <span>{count ? Math.round((n / count) * 100) : 0}%</span>
+        {!readOnly && (
+          <aside
+            className={`min-w-0 space-y-4 xl:sticky xl:top-20 ${valid ? "hidden xl:block" : ""}`}
+          >
+            <section className="hidden space-y-4 rounded-3xl bg-card p-5 shadow-warm xl:block">
+              <h3 className="text-sm text-muted-foreground">{t("editorSummary")}</h3>
+              <p className="font-semibold">
+                <bdi>{projectName}</bdi>
+              </p>
+              <dl className="grid grid-cols-3 gap-2">
+                {[
+                  [buildings.length, t("buildings")],
+                  [buildings.reduce((n, b) => n + b.floors.length, 0), t("floors")],
+                  [count, t("units")],
+                ].map(([n, label]) => (
+                  <div key={label} className="rounded-xl bg-muted p-2">
+                    <dd className="text-2xl font-semibold">{n}</dd>
+                    <dt className="text-xs">{label}</dt>
                   </div>
-                  <div className="h-2 overflow-hidden rounded bg-muted">
-                    <div
-                      className={`h-full ${type === "residential" ? "bg-primary" : type === "commercial" ? "bg-amber-400" : "bg-stone-400"}`}
-                      style={{ width: `${count ? (n / count) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-          <details open className="rounded-3xl bg-card p-5 shadow-warm">
-            <summary className="cursor-pointer font-semibold">{t("editorSection")}</summary>
-            <select
-              aria-label={t("editorSection")}
-              className="my-3 w-full rounded border bg-background p-2"
-              value={section?.id ?? ""}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name || t("building")}
-                </option>
-              ))}
-            </select>
-            <div className="space-y-2">
-              {section &&
-                [...section.floors]
-                  .sort((a, b) => b.number - a.number)
-                  .map((f) => (
-                    <div key={f.id} className="flex items-center gap-2 text-xs">
-                      <span className="w-8 shrink-0" dir="ltr">
-                        {f.number}
+                ))}
+              </dl>
+              {unitTypes.map((type) => {
+                const n = buildings.reduce(
+                  (n, b) =>
+                    n +
+                    b.floors.reduce(
+                      (n, f) => n + f.apartments.filter((u) => u.type === type).length,
+                      0,
+                    ),
+                  0,
+                );
+                return (
+                  <div key={type} className="space-y-1 text-sm">
+                    <div className="flex justify-between gap-2">
+                      <span>
+                        {t(type)} · {n}
                       </span>
-                      <span className="min-w-0 flex-1 truncate">
-                        <bdi>{f.name || t(f.type)}</bdi>
-                      </span>
-                      <span className={`rounded px-2 py-1 ${typeStyle[f.type]}`}>
-                        {f.apartments.length}
-                      </span>
+                      <span>{count ? Math.round((n / count) * 100) : 0}%</span>
                     </div>
-                  ))}
-            </div>
-          </details>
-          <section className="space-y-2 rounded-3xl bg-card p-5 shadow-warm">
-            <h3 className="font-semibold">{t("editorChecks")}</h3>
-            <p
-              className={`rounded-xl p-3 text-sm ${valid ? "bg-primary/10" : "bg-destructive/10 text-destructive"}`}
-              role={valid ? undefined : "alert"}
-            >
-              {t(valid ? "editorValid" : "editorInvalid")}
-            </p>
-          </section>
-        </aside>
+                    <div className="h-2 overflow-hidden rounded bg-muted">
+                      <div
+                        className={`h-full ${type === "residential" ? "bg-primary" : type === "commercial" ? "bg-amber-400" : "bg-stone-400"}`}
+                        style={{ width: `${count ? (n / count) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+            <details open className="hidden rounded-3xl bg-card p-5 shadow-warm xl:block">
+              <summary className="cursor-pointer font-semibold">{t("editorSection")}</summary>
+              <select
+                aria-label={t("editorSection")}
+                className="my-3 w-full rounded border bg-background p-2"
+                value={section?.id ?? ""}
+                onChange={(e) => setSelected(e.target.value)}
+              >
+                {buildings.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name || t("building")}
+                  </option>
+                ))}
+              </select>
+              <div className="space-y-2">
+                {section &&
+                  [...section.floors]
+                    .sort((a, b) => b.number - a.number)
+                    .map((f) => (
+                      <div key={f.id} className="flex items-center gap-2 text-xs">
+                        <span className="w-8 shrink-0" dir="ltr">
+                          {f.number}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          <bdi>{f.name || t(f.type)}</bdi>
+                        </span>
+                        <span className={`rounded px-2 py-1 ${typeStyle[f.type]}`}>
+                          {f.apartments.length}
+                        </span>
+                      </div>
+                    ))}
+              </div>
+            </details>
+            {!readOnly && (
+              <section className="space-y-2 rounded-3xl bg-card p-5 shadow-warm">
+                <h3 className="font-semibold">{t("editorChecks")}</h3>
+                <p
+                  className={`rounded-xl p-3 text-sm ${valid ? "bg-primary/10" : "bg-destructive/10 text-destructive"}`}
+                  role={valid ? undefined : "alert"}
+                >
+                  {t(valid ? "editorValid" : "editorInvalid")}
+                </p>
+              </section>
+            )}
+          </aside>
+        )}
       </div>
       <Dialog
         open={!!copySource}

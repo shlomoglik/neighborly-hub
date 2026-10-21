@@ -350,6 +350,7 @@ export function ProjectSetupWizard({
                 <p className="text-sm text-muted-foreground">{t("editorSpecsHint")}</p>
               )}
               <ProjectStructureEditor
+                mode="create"
                 key={step}
                 buildings={buildings}
                 onChange={setBuildings}

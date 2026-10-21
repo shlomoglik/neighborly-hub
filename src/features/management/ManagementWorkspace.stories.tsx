@@ -18,6 +18,7 @@ function Example({
   list?: boolean;
 }) {
   const { t } = useI18n();
+  const [mode, setMode] = useState<"view" | "edit">("view");
   const [buildingIds, setBuilding] = useState<string[]>([]);
   const [draft, setDraft] = useState<DraftBuilding[]>(() => [
     {
@@ -45,6 +46,8 @@ function Example({
   return (
     <ManagementWorkspace
       onEdit={() => {}}
+      mode={mode}
+      onModeChange={setMode}
       status={status}
       selectedProjectId={list ? "" : project.id}
       buildingIds={buildingIds}
@@ -82,7 +85,7 @@ function Example({
       structure={
         !list && buildings.length > 0 ? (
           <ProjectStructureEditor
-            managed
+            mode={mode}
             buildings={buildings.filter((b) => !buildingIds.length || buildingIds.includes(b.id))}
             projectName={project.name}
             onChange={(updated) =>

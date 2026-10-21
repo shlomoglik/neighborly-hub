@@ -14,6 +14,7 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const workspace = useManagement(projectId);
   const [layout, setLayout] = useState<{ data: ManagementHierarchy } | null>(null);
+  const [mode, setMode] = useState<"view" | "edit">("view");
   const [dirty, setDirty] = useState(false);
   const [structureBusy, setStructureBusy] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -44,6 +45,7 @@ export function LiveManagement({ projectId }: { projectId: string }) {
       setLayout({ data: workspace.data });
     } else if (workspace.status !== "loading") {
       setLayout(null);
+      setMode("view");
       setDirty(false);
       setStructureBusy(false);
     }
@@ -63,6 +65,19 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           selectedProjectId={workspace.selectedProjectId}
           buildingIds={workspace.buildingIds}
           onPageChange={workspace.onPageChange}
+          mode={mode}
+          onModeChange={(next) => {
+            if (
+              workspace.status === "ready" &&
+              !structureBusy &&
+              !editor.busy &&
+              !target &&
+              discard()
+            ) {
+              reset();
+              setMode(next);
+            }
+          }}
           onBuildingChange={(id) => {
             if (!structureBusy && discard()) {
               setDirty(false);
@@ -75,17 +90,18 @@ export function LiveManagement({ projectId }: { projectId: string }) {
             if (!structureBusy && discard()) refresh();
           }}
           onEdit={(target) => {
-            if (!structureBusy && discard()) {
+            if (mode === "edit" && !structureBusy && discard()) {
               reset();
               editor.onOpen(target);
             }
           }}
-          editingBusy={editor.busy || structureBusy}
+          editingBusy={editor.busy || structureBusy || !!target}
           structure={
             structureData && layoutAllowed ? (
               <ManagedStructureEditor
-                key={`${projectId}:${revision}`}
+                key={`${projectId}:${mode}:${revision}`}
                 data={structureData}
+                mode={mode}
                 buildingIds={workspace.buildingIds}
                 refreshing={workspace.status === "loading" || !!target}
                 onDirtyChange={setDirty}
