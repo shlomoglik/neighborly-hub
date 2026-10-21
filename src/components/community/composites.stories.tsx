@@ -10,6 +10,7 @@ import { BuildingSelector } from "./BuildingSelector";
 import { BirthdayBanner } from "./BirthdayBanner";
 import { FamilyAvatar } from "../FamilyAvatar";
 import { Button } from "../ui/button";
+import { ManageProjectHeader } from "@/features/management/ManageProjectHeader";
 function EditorDemo({
   child = false,
   restricted = false,
@@ -140,7 +141,21 @@ export const BuildingOnlyPolicy: Story = { args: { restricted: true } };
 export const Validation: Story = { args: { invalid: true } };
 export const Members: Story = { render: () => <MembersDemo /> };
 export const ResidentNavigation: Story = { render: () => <NavigationDemo /> };
-export const ManagerNavigation: Story = { render: () => <NavigationDemo manager /> };
+export const ManagerNavigation: Story = {
+  render: () => (
+    <ManageProjectHeader
+      project={{
+        id: "project",
+        name: "המושבה העירונית",
+        city: "שדרות",
+        counts: { buildings: 4, floors: 36, apartments: 116 },
+      }}
+      active="structure"
+      canManageStaff
+      pendingCount={2}
+    />
+  ),
+};
 export const Progress: Story = { render: () => <StepsDemo /> };
 export const ResponsiveDetails: Story = { render: () => <PanelDemo /> };
 export const Avatars: Story = { render: () => <AvatarsDemo /> };
@@ -152,7 +167,6 @@ function BuildingsDemo({
   overflow?: boolean;
   multiple?: boolean;
 }) {
-  const { t } = useI18n();
   const [building, setBuilding] = useState("");
   const [buildingIds, setBuildingIds] = useState<string[]>([]);
   return (
@@ -162,9 +176,7 @@ function BuildingsDemo({
         : { value: building, onChange: setBuilding })}
       buildings={Array.from({ length: overflow ? 12 : 3 }, (_, index) => ({
         id: String(index + 1),
-        name: overflow
-          ? `${t("demoProject")} - ${t("building")} ${index + 1}`
-          : `${t("building")} ${index + 1}`,
+        name: ["אלון", "תאנה", "ארז"][index % 3] + (index > 2 ? ` ${index + 1}` : ""),
       }))}
     />
   );
@@ -186,5 +198,4 @@ export const BuildingMultiple: Story = { render: () => <BuildingsDemo multiple /
 export const BuildingMultipleOverflow: Story = {
   render: () => <BuildingsDemo multiple overflow />,
 };
-export const BuildingTabsOverflow: Story = { render: () => <BuildingsDemo overflow /> };
 export const BirthdaySummary: Story = { render: () => <BannerDemo /> };

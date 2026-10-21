@@ -1,9 +1,7 @@
 "use client";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useI18n, type TKey } from "@/lib/i18n";
-import { managementHref } from "@/lib/access/management-contracts";
 import {
   staffInput,
   type StaffAssignment,
@@ -64,13 +62,10 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
     role === "project_manager" || p.data?.buildings.some((b) => b.id === buildingId);
   return (
     <section className="space-y-5 break-words">
-      <Link href={managementHref(p.projectId)} className="text-primary underline">
-        {t("backToProject")}
-      </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
+        <h2 ref={heading} tabIndex={-1} className="font-heading text-2xl font-normal">
           {t("staffManagement")}
-        </h1>
+        </h2>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             disabled={p.busy || p.status === "loading"}
@@ -106,9 +101,6 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
       )}
       {p.status === "ready" && p.data && (
         <div className="community-enter space-y-5">
-          <h2 className="text-xl font-bold">
-            <bdi>{p.data.project.name}</bdi>
-          </h2>
           <form
             className="space-y-4 rounded-2xl border bg-card p-4"
             onSubmit={async (e) => {

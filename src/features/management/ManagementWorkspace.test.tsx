@@ -61,30 +61,28 @@ it.each(["he", "en", "ru"] as const)(
     const link = screen.getByRole("link", { name: /Saved project/ });
     expect(link.getAttribute("href")).toBe("/manage/project/p");
     expect(
-      screen.queryByRole("navigation", { name: translate(lang, "managementBreadcrumb") }),
+      screen.queryByRole("navigation", { name: translate(lang, "managementSections") }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: translate(lang, "directoryNext") })).toBeNull();
   },
 );
 it.each(["he", "en", "ru"] as const)(
-  "uses breadcrumbs and the shared editor on project pages in %s",
+  "uses section tabs and the shared editor on project pages in %s",
   (lang) => {
     const p = mount(lang);
-    const breadcrumb = screen.getByRole("navigation", {
-      name: translate(lang, "managementBreadcrumb"),
+    const tabs = screen.getByRole("navigation", {
+      name: translate(lang, "managementSections"),
     });
     expect(
-      within(breadcrumb)
-        .getByRole("link", { name: translate(lang, "manage") })
-        .getAttribute("href"),
-    ).toBe("/manage");
-    expect(
-      within(breadcrumb).getByText("Saved project").getAttribute("aria-current") ??
-        within(breadcrumb).getByText("Saved project").parentElement?.getAttribute("aria-current"),
+      within(tabs)
+        .getByRole("link", { name: translate(lang, "editorTitle") })
+        .getAttribute("aria-current"),
     ).toBe("page");
     expect(screen.queryByRole("navigation", { name: translate(lang, "chooseProject") })).toBeNull();
     expect(screen.getByTestId("shared-editor")).toBeTruthy();
-    expect(screen.getByText(translate(lang, "managementCounts", p.data!.counts))).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(
+      translate(lang, "managementCountsCompact", p.data!.counts),
+    );
     fireEvent.click(screen.getByRole("checkbox", { name: "Building B" }));
     expect(p.onBuildingChange).toHaveBeenCalledWith(["b"]);
     expect(
@@ -166,12 +164,9 @@ it("uses server capabilities for staff links and disables building switches whil
       ?.hasAttribute("disabled"),
   ).toBe(true);
 });
-it("restores heading focus after an explicit refresh", () => {
-  const p = mount();
-  fireEvent.click(screen.getByRole("button", { name: translate("en", "refreshManagement") }));
-  p.update({ status: "loading", data: null });
-  p.update({ status: "ready" });
-  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Saved project" }));
+it("keeps refresh out of the project action row", () => {
+  mount();
+  expect(screen.queryByRole("button", { name: translate("en", "refreshManagement") })).toBeNull();
 });
 it("supports multiple building chips and an explicit all-buildings reset", () => {
   const p = mount("en", { buildingIds: ["a"] });

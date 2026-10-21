@@ -9,11 +9,6 @@ export const dict = {
   editorTitle: { he: "מבנה ויחידות", en: "Structure and units", ru: "Структура и помещения" },
   editorTypes: { he: "סוגי יחידות ומפרט", en: "Unit types and details", ru: "Типы и сведения" },
   editorReview: { he: "סקירה ויצירה", en: "Review and create", ru: "Проверка и создание" },
-  editorSearch: {
-    he: "חיפוש יחידה, קומה או בניין",
-    en: "Search unit, floor or building",
-    ru: "Поиск помещения, этажа или здания",
-  },
   editorAll: { he: "הכול", en: "All", ru: "Все" },
   residential: { he: "מגורים", en: "Residential", ru: "Жильё" },
   commercial: { he: "מסחר", en: "Commercial", ru: "Коммерция" },
@@ -106,6 +101,7 @@ export const dict = {
   },
   editorNoMatches: { he: "לא נמצאו תוצאות", en: "No matches", ru: "Совпадений нет" },
   editorCount: { he: "{n} יחידות", en: "{n} units", ru: "Помещений: {n}" },
+  editorCountShort: { he: "{n} יח׳", en: "{n} units", ru: "{n} пом." },
   editorNext: { he: "המשך לשלב הבא", en: "Continue to next step", ru: "Перейти к следующему шагу" },
   editorSpecsHint: {
     he: "סוגי היחידות נשמרים במבנה הפרויקט. ניתן לשנות כל יחידה בנפרד.",
@@ -129,17 +125,6 @@ export const dict = {
   languageEnglish: { he: "English", en: "English", ru: "English" },
   languageRussian: { he: "Русский", en: "Русский", ru: "Русский" },
   buildingAddress: { he: "כתובת הבניין", en: "Building address", ru: "Адрес здания" },
-  layoutEdit: { he: "עריכת פריסת דירות", en: "Edit apartment layout", ru: "Изменить план квартир" },
-  layoutPerFloor: {
-    he: "מספר דירות שונה לפי קומה",
-    en: "Customize apartments per floor",
-    ru: "Число квартир по этажам",
-  },
-  layoutZeroHint: {
-    he: "אפשר להגדיר 0 לקומה ללא דירות. מספור הדירות רציף בכל בניין.",
-    en: "Use 0 for a floor without apartments. Apartment numbering is continuous within each building.",
-    ru: "Укажите 0 для этажа без квартир. Нумерация квартир сквозная в каждом здании.",
-  },
   layoutCopyBuildings: {
     he: "העתקת פריסה לבניינים נבחרים",
     en: "Copy layout to selected buildings",
@@ -154,38 +139,6 @@ export const dict = {
     he: "הקומות והיחידות בבניינים שתבחרו יוחלפו בפריסת בניין המקור. שמות הבניינים והכתובות יישמרו. בניינים עם יחידות מקושרות אינם זמינים להעתקה.",
     en: "Floors and units in selected buildings will be replaced with the source layout. Building names and addresses are retained. Buildings with linked units cannot be selected.",
     ru: "Этажи и помещения выбранных зданий будут заменены исходным планом. Названия и адреса сохранятся. Здания со связанными помещениями выбрать нельзя.",
-  },
-  layoutFloorCount: {
-    he: "מספר דירות בקומה {floor} בבניין {building}",
-    en: "Apartments on floor {floor} in building {building}",
-    ru: "Квартир на этаже {floor} в здании {building}",
-  },
-  layoutFloor: {
-    he: "מספר דירות בקומה {floor}",
-    en: "Apartments on floor {floor}",
-    ru: "Квартир на этаже {floor}",
-  },
-  layoutHint: {
-    he: "בחרו בניין אחד או כמה בניינים, הגדירו מספר דירות לכל קומה ובדקו את השינויים לפני השמירה.",
-    en: "Select one or more buildings, set apartment counts per floor and review changes before saving.",
-    ru: "Выберите одно или несколько зданий, задайте число квартир на этажах и проверьте изменения перед сохранением.",
-  },
-  layoutApplyFloors: {
-    he: "החלה על כל הקומות שנבחרו",
-    en: "Apply to all selected floors",
-    ru: "Применить ко всем выбранным этажам",
-  },
-  layoutExistingHint: {
-    he: "שדה שלא שונה משאיר את הקומה כפי שהיא. ההגדרות חלות רק על קומות קיימות בבניינים שנבחרו. לשינוי חריג, בחרו בניין אחד בלבד.",
-    en: "Unchanged fields preserve existing counts. Changes apply only to existing floors in the selected buildings. Select one building to customize it separately.",
-    ru: "Неизменённые поля сохраняют текущие значения. Изменения относятся только к существующим этажам выбранных зданий. Для отдельной настройки выберите одно здание.",
-  },
-  layoutMixed: { he: "ערכים שונים", en: "Mixed values", ru: "Разные значения" },
-  layoutBuildingsCount: { he: "{n} בניינים", en: "{n} buildings", ru: "Зданий: {n}" },
-  layoutRemovalHint: {
-    he: "בהקטנה יוסרו הדירות האחרונות לפי המספור, ורק אם אינן מקושרות לנתונים. דירות שנשארות שומרות על המספר והשיוכים שלהן.",
-    en: "Reducing counts removes the last numbered apartments only when they have no linked records. Remaining apartments keep their numbers and relationships.",
-    ru: "При уменьшении удаляются последние по номеру квартиры без связанных данных. Остальные квартиры сохраняют номера и связи.",
   },
   layoutLinked: {
     he: "לא ניתן להסיר דירה עם משק בית, בעלות, הזמנה או בקשת הצטרפות. לא נשמר אף שינוי. רעננו והתאימו את הפריסה.",
@@ -658,7 +611,6 @@ export const dict = {
   saving: { he: "שומר…", en: "Saving…", ru: "Сохранение…" },
   staffRole: { he: "תפקיד", en: "Role", ru: "Роль" },
   staffManagement: { he: "ניהול מנהלים", en: "Manage staff", ru: "Управление назначениями" },
-  backToProject: { he: "חזרה לפרויקט", en: "Back to project", ru: "Вернуться к проекту" },
   staffAdd: { he: "הוספת מינוי", en: "Add assignment", ru: "Добавить назначение" },
   staffAssignments: { he: "מינויים קיימים", en: "Current assignments", ru: "Текущие назначения" },
   staffRegisteredHint: {
@@ -748,27 +700,33 @@ export const dict = {
     en: "In your scope: {buildings} buildings · {floors} floors · {apartments} apartments",
     ru: "В вашем доступе: {buildings} домов · {floors} этажей · {apartments} квартир",
   },
+  managementCountsCompact: {
+    he: "{buildings} בניינים · {floors} קומות · {apartments} דירות",
+    en: "{buildings} buildings · {floors} floors · {apartments} apartments",
+    ru: "{buildings} домов · {floors} этажей · {apartments} квартир",
+  },
   managementEditStructure: {
     he: "עריכת מבנה",
     en: "Edit structure",
     ru: "Редактировать структуру",
   },
   managementViewStructure: { he: "חזרה לתצוגה", en: "Back to view", ru: "Вернуться к просмотру" },
-  managementViewHint: {
-    he: "תצוגת מבנה הפרויקט. לביצוע שינויים לחצו על עריכת מבנה.",
-    en: "Project structure overview. Choose Edit structure to make changes.",
-    ru: "Обзор структуры проекта. Для внесения изменений выберите редактирование структуры.",
-  },
   managementStructureHint: {
     he: "ערכו את מבנה הבניינים ושמרו את השינויים בכל בניין בנפרד.",
     en: "Edit the building structures and save each building separately.",
     ru: "Измените структуру зданий и сохраните изменения для каждого здания отдельно.",
   },
-  managementBreadcrumb: {
-    he: "ניווט בניהול",
-    en: "Management navigation",
-    ru: "Навигация управления",
+  managementSections: {
+    he: "אזורים בניהול הפרויקט",
+    en: "Project management sections",
+    ru: "Разделы управления проектом",
   },
+  managementInvitationsTab: {
+    he: "הזמנות ובקשות",
+    en: "Invitations and requests",
+    ru: "Приглашения и заявки",
+  },
+  projectsBreadcrumb: { he: "פרויקטים", en: "Projects", ru: "Проекты" },
   managementOpenProject: { he: "פתיחת הפרויקט", en: "Open project", ru: "Открыть проект" },
   managementDiscardChanges: {
     he: "יש שינויים שלא נשמרו. להשליך אותם ולהמשיך?",

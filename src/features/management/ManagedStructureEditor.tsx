@@ -70,6 +70,7 @@ export function ManagedStructureEditor({
   onAccessLost,
   onDirtyChange,
   onBusyChange,
+  onBuildingChange,
 }: {
   data: ManagementHierarchy;
   mode: "view" | "edit";
@@ -79,6 +80,7 @@ export function ManagedStructureEditor({
   onAccessLost: (status: number) => void;
   onDirtyChange: (dirty: boolean) => void;
   onBusyChange: (busy: boolean) => void;
+  onBuildingChange: (ids: string[]) => void;
 }) {
   const { t, dir } = useI18n();
   const [entries, setEntries] = useState<Entry[]>(() =>
@@ -189,9 +191,9 @@ export function ManagedStructureEditor({
   }
   return (
     <section dir={dir} className="min-w-0 space-y-4" aria-label={t("editorTitle")}>
-      <p className="text-sm text-muted-foreground">
-        {t(mode === "edit" ? "managementStructureHint" : "managementViewHint")}
-      </p>
+      {mode === "edit" && (
+        <p className="text-sm text-muted-foreground">{t("managementStructureHint")}</p>
+      )}
       <fieldset disabled={blocked} className="min-w-0">
         <ProjectStructureEditor
           mode={mode}
@@ -209,6 +211,9 @@ export function ManagedStructureEditor({
             );
           }}
           projectName={data.name}
+          buildingOptions={data.buildings}
+          selectedBuildingIds={buildingIds}
+          onBuildingSelectionChange={onBuildingChange}
           disabledBuildings={selected
             .filter((entry) => entry.error)
             .map((entry) => entry.original.id)}

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { FamilyWorkspace } from "./FamilyWorkspace";
 const meta = {
-  title: "Community/Family management",
+  title: "Features/Households/FamilyWorkspace",
   component: FamilyWorkspace,
   args: {
     id: "fictional-home",

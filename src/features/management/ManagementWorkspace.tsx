@@ -1,29 +1,18 @@
 "use client";
 import Link from "next/link";
-import { useRef, useEffect, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   managementHref,
   type ManagementHierarchy,
   type ManagementProjects,
 } from "@/lib/access/management-contracts";
-import { invitationAdminHref } from "@/lib/access/invitation-contracts";
-import { staffHref } from "@/lib/access/staff-contracts";
 import type { StructureEditTarget } from "@/lib/access/structure-management-contracts";
 import { Button } from "@/components/ui/button";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { BuildingSelector } from "@/components/community/BuildingSelector";
-import { RefreshButton } from "@/components/community/RefreshButton";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
 import type { ManagementStatus } from "./use-management";
+import { ManageProjectHeader } from "./ManageProjectHeader";
 
 export type ManagementWorkspaceProps = {
   status: ManagementStatus;
@@ -39,6 +28,7 @@ export type ManagementWorkspaceProps = {
   mode?: "view" | "edit";
   onModeChange?: (mode: "view" | "edit") => void;
   structure?: ReactNode;
+  pendingCount?: number;
 };
 
 /** Pure navigation and page presentation; the shared editor owns structure rendering. */
@@ -47,77 +37,51 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
   const { data, discovery, status } = p;
   const detail = !!p.selectedProjectId;
   const heading = useRef<HTMLHeadingElement>(null);
-  const restoreFocus = useRef(false);
-  useEffect(() => {
-    if (status !== "loading" && restoreFocus.current) {
-      heading.current?.focus();
-      restoreFocus.current = false;
-    }
-  }, [status]);
-  const refresh = () => {
-    restoreFocus.current = true;
-    p.onRefresh();
-  };
+  const refresh = p.onRefresh;
   return (
-    <section className="min-w-0 space-y-5" aria-label={t("manage")}>
-      {detail && (
-        <Breadcrumb aria-label={t("managementBreadcrumb")}>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/manage">{t("manage")}</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="rtl:rotate-180" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>
-                <bdi>{data?.name ?? t("project")}</bdi>
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
-            <bdi>{data?.name ?? t("manage")}</bdi>
-          </h1>
-          {data && (
-            <>
-              <p className="text-muted-foreground">
-                <bdi>{data.city}</bdi>
-              </p>
+    <section className="min-w-0 space-y-6" aria-label={t("manage")}>
+      {detail && data ? (
+        <ManageProjectHeader
+          project={data}
+          active="structure"
+          canManageStaff={!!discovery?.canCreateProject}
+          pendingCount={p.pendingCount}
+          showProjectsBack={(discovery?.projects.length ?? 0) > 1}
+          editing={p.mode === "edit"}
+          editingBusy={p.editingBusy}
+          onEdit={
+            p.onModeChange ? () => p.onModeChange?.(p.mode === "edit" ? "view" : "edit") : undefined
+          }
+        />
+      ) : (
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h1 ref={heading} tabIndex={-1} className="font-heading text-2xl font-normal">
+              <bdi>{data?.name ?? t("manage")}</bdi>
+            </h1>
+            {data && (
               <p role="status" className="text-sm text-muted-foreground">
-                {t("managementCounts", data.counts)}
+                {data.city && (
+                  <>
+                    <bdi>{data.city}</bdi> ·{" "}
+                  </>
+                )}
+                {t(
+                  discovery?.canCreateProject ? "managementCountsCompact" : "managementCounts",
+                  data.counts,
+                )}
               </p>
-            </>
-          )}
-        </div>
-        <div className="flex max-w-full flex-wrap items-center gap-2">
-          <RefreshButton
-            onClick={refresh}
-            disabled={status === "loading" || p.editingBusy}
-            label={t("refreshManagement")}
-          />
-          {!detail && discovery?.canCreateProject && (
-            <Button asChild>
-              <Link href="/manage/setup">{t("newProject")}</Link>
-            </Button>
-          )}
-          {data && (
-            <>
-              <Button variant="outline" asChild>
-                <Link href={invitationAdminHref(data.id)}>{t("inviteManagement")}</Link>
+            )}
+          </div>
+          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+            {!detail && discovery?.canCreateProject && (
+              <Button asChild>
+                <Link href="/manage/setup">{t("newProject")}</Link>
               </Button>
-              {discovery?.canCreateProject && (
-                <Button variant="outline" asChild>
-                  <Link href={staffHref(data.id)}>{t("staffManagement")}</Link>
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </header>
+            )}
+          </div>
+        </header>
+      )}
       {!detail && discovery && (
         <nav aria-label={t("chooseProject")} className="space-y-4">
           <h2 className="font-semibold">{t("chooseProject")}</h2>
@@ -190,38 +154,22 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
         </div>
       )}
       {status === "ready" && data && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{t("editorTitle")}</h2>
-            <div className="flex flex-wrap justify-end gap-2">
-              {p.onModeChange && (
-                <Button
-                  variant={p.mode === "edit" ? "outline" : "default"}
-                  disabled={p.editingBusy}
-                  onClick={() => p.onModeChange?.(p.mode === "edit" ? "view" : "edit")}
-                >
-                  {t(p.mode === "edit" ? "managementViewStructure" : "managementEditStructure")}
-                </Button>
-              )}
-              {p.mode === "edit" && p.onEdit && data.canAddBuilding && (
-                <Button
-                  variant="outline"
-                  disabled={p.editingBusy}
-                  onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
-                >
-                  {t("addBuilding")}
-                </Button>
-              )}
+        <div className="space-y-6">
+          {p.mode === "edit" && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-heading text-lg font-normal">{t("editorTitle")}</h2>
+              <div className="flex flex-wrap justify-end gap-2">
+                {p.mode === "edit" && p.onEdit && data.canAddBuilding && (
+                  <Button
+                    variant="outline"
+                    disabled={p.editingBusy}
+                    onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
+                  >
+                    {t("addBuilding")}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          {data.buildings.length > 1 && (
-            <BuildingSelector
-              buildings={data.buildings}
-              multiple
-              value={p.buildingIds}
-              onChange={p.onBuildingChange}
-              disabled={p.editingBusy}
-            />
           )}
           {!data.buildings.length && (
             <SystemFeedback kind="empty" message={t("managementNoBuildings")} />

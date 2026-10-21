@@ -8,6 +8,7 @@ import { invitationApi } from "./invitation-api";
 import { useInvitationResource } from "./use-invitation-resource";
 import { useInvitationAction } from "./use-invitation-action";
 import { InvitationWorkspace } from "./InvitationWorkspace";
+import { ManageProjectHeader } from "@/features/management/ManageProjectHeader";
 export function LiveInvitations({ projectId }: { projectId: string }) {
   const [ipage, setIpage] = useState(1);
   const [rpage, setRpage] = useState(1);
@@ -46,71 +47,84 @@ export function LiveInvitations({ projectId }: { projectId: string }) {
     },
   );
   return (
-    <AppShell>
-      <InvitationWorkspace
-        projectId={projectId}
-        status={resource.status}
-        data={resource.data}
-        busy={action.busy}
-        error={action.error}
-        created={created}
-        contacts={contacts.data ?? []}
-        contactSearch={{
-          value: search,
-          onChange: setSearch,
-          loading: contacts.status === "loading",
-          error: ["error", "expired", "unavailable"].includes(contacts.status),
-        }}
-        onRefresh={() => {
-          resource.refresh();
-          action.clear();
-        }}
-        onInvitationPage={setIpage}
-        onRequestPage={setRpage}
-        onCreate={async (input) => {
-          const result = await action.run(
-            (signal) => invitationApi.create(projectId, input, signal),
-            (code) => {
-              setCreated(null);
-              resource.invalidate(code);
-            },
-          );
-          if (!result) return false;
-          setCreated({
-            ...result.value,
-            email: input.recipientEmail ?? "",
-            kind: input.kind,
-            buildingId: input.kind === "project_manager" ? null : input.buildingId,
-          });
-          resource.refresh();
-          return true;
-        }}
-        onRevoke={async (id) => {
-          if (
-            await action.run(
-              (signal) => invitationApi.revoke(projectId, id, signal),
+    <AppShell wide>
+      <div className="space-y-6">
+        {resource.status === "ready" && resource.data && (
+          <ManageProjectHeader
+            project={resource.data.hierarchy}
+            active="invitations"
+            canManageStaff={resource.data.invitations.canInviteStaff}
+            pendingCount={
+              resource.data.requests.requests.filter((request) => request.status === "pending")
+                .length
+            }
+          />
+        )}
+        <InvitationWorkspace
+          projectId={projectId}
+          status={resource.status}
+          data={resource.data}
+          busy={action.busy}
+          error={action.error}
+          created={created}
+          contacts={contacts.data ?? []}
+          contactSearch={{
+            value: search,
+            onChange: setSearch,
+            loading: contacts.status === "loading",
+            error: ["error", "expired", "unavailable"].includes(contacts.status),
+          }}
+          onRefresh={() => {
+            resource.refresh();
+            action.clear();
+          }}
+          onInvitationPage={setIpage}
+          onRequestPage={setRpage}
+          onCreate={async (input) => {
+            const result = await action.run(
+              (signal) => invitationApi.create(projectId, input, signal),
               (code) => {
                 setCreated(null);
                 resource.invalidate(code);
               },
-            )
-          ) {
-            if (created?.id === id) setCreated(null);
+            );
+            if (!result) return false;
+            setCreated({
+              ...result.value,
+              email: input.recipientEmail ?? "",
+              kind: input.kind,
+              buildingId: input.kind === "project_manager" ? null : input.buildingId,
+            });
             resource.refresh();
-          }
-        }}
-        onReview={async (id, decision) => {
-          const result = await action.run(
-            (signal) => invitationApi.review(projectId, id, decision, signal),
-            (code) => {
-              setCreated(null);
-              resource.invalidate(code);
-            },
-          );
-          if (result) resource.refresh();
-          return !!result;
-        }}
-      />
+            return true;
+          }}
+          onRevoke={async (id) => {
+            if (
+              await action.run(
+                (signal) => invitationApi.revoke(projectId, id, signal),
+                (code) => {
+                  setCreated(null);
+                  resource.invalidate(code);
+                },
+              )
+            ) {
+              if (created?.id === id) setCreated(null);
+              resource.refresh();
+            }
+          }}
+          onReview={async (id, decision) => {
+            const result = await action.run(
+              (signal) => invitationApi.review(projectId, id, decision, signal),
+              (code) => {
+                setCreated(null);
+                resource.invalidate(code);
+              },
+            );
+            if (result) resource.refresh();
+            return !!result;
+          }}
+        />
+      </div>
     </AppShell>
   );
 }

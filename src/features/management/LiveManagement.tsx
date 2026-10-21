@@ -106,6 +106,9 @@ export function LiveManagement({ projectId }: { projectId: string }) {
                 refreshing={workspace.status === "loading" || !!target}
                 onDirtyChange={setDirty}
                 onBusyChange={setStructureBusy}
+                onBuildingChange={(ids) => {
+                  if (!structureBusy && discard()) workspace.onBuildingChange(ids);
+                }}
                 onSaved={workspace.onRefresh}
                 onAccessLost={workspace.onAccessLost}
               />

@@ -11,11 +11,13 @@ function Example({
   admin = true,
   empty = false,
   list = false,
+  pendingCount,
 }: {
   status?: ManagementStatus;
   admin?: boolean;
   empty?: boolean;
   list?: boolean;
+  pendingCount?: number;
 }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -23,8 +25,8 @@ function Example({
   const [draft, setDraft] = useState<DraftBuilding[]>(() => [
     {
       id: "a",
-      name: t("demoBuilding"),
-      address: "",
+      name: "בניין אלון - B1",
+      address: "אלי כהן 5",
       floors: [
         { id: "f0", number: 0, name: "", type: "commercial", apartments: [] },
         {
@@ -39,7 +41,7 @@ function Example({
         },
       ],
     },
-    ...(admin ? [{ id: "b", name: t("demoBuilding") + " 2", address: "", floors: [] }] : []),
+    ...(admin ? [{ id: "b", name: "בניין תאנה - B1", address: "אלי כהן 7", floors: [] }] : []),
   ]);
   const project = { id: "synthetic-project", name: t("demoProject"), city: t("demoCity") };
   const buildings = empty ? [] : draft;
@@ -96,6 +98,7 @@ function Example({
           />
         ) : null
       }
+      pendingCount={pendingCount}
     />
   );
 }
@@ -116,3 +119,5 @@ export const NoManagementAccess: Story = { args: { admin: false, status: "forbid
 export const Unavailable: Story = { args: { admin: false, status: "unavailable" } };
 export const Expired: Story = { args: { status: "expired" } };
 export const Error: Story = { args: { status: "error" } };
+export const TabsWithPendingBadge: Story = { args: { pendingCount: 2 } };
+export const TabsRussian: Story = { globals: { locale: "ru" } };

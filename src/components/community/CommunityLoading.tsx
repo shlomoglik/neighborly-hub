@@ -27,15 +27,23 @@ function RowPlaceholder({ round = false }: { round?: boolean }) {
 function Placeholder({ variant }: { variant: SkeletonVariant }) {
   if (variant === "map")
     return (
-      <div className="space-y-4">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="grid grid-cols-[5rem_1fr] gap-3">
-            <Skeleton className="mt-3 h-5 w-16" />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="overflow-hidden rounded-3xl border bg-card">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-36" />
+        </div>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="grid grid-cols-[7rem_minmax(0,1fr)_2rem] items-center gap-2 border-t border-border/50 px-3 py-1"
+          >
+            <Skeleton className="h-5 w-20" />
+            <div className="flex gap-1.5">
               {[0, 1, 2, 3].map((j) => (
-                <Skeleton key={j} className="min-h-20 rounded-xl" />
+                <Skeleton key={j} className="h-12 w-14 rounded-xl" />
               ))}
             </div>
+            <Skeleton className="h-4 w-7" />
           </div>
         ))}
       </div>
