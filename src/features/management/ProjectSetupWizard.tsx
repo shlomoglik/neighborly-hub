@@ -51,12 +51,15 @@ export function ProjectSetupWizard({
   const [result, setResult] = useState<ProjectSetupResult | null>(null);
   const [error, setError] = useState<TKey | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [available, setAvailable] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [ready, setReady] = useState(false);
   const revision = useRef<string | null>(null);
   const pending = useRef(false);
+  const saveFeedbackTimer = useRef<number | undefined>(undefined);
+  const autosaveTimer = useRef<number | undefined>(undefined);
   const steps = [t("project"), t("editorTitle"), t("editorTypes"), t("editorReview")];
   const payload = draftPayload(projectName, city, buildings);
   const valid = (step === 0 ? projectSetupDetailsInput : projectSetupInput).safeParse(
@@ -88,6 +91,11 @@ export function ProjectSetupWizard({
   }, []);
   const save = () => {
     if (!ready || conflict || available || result || pending.current) return;
+    window.clearTimeout(autosaveTimer.current);
+    window.clearTimeout(saveFeedbackTimer.current);
+    setSaved(false);
+    setSaving(true);
+    setSaveFailed(false);
     try {
       const raw = localStorage.getItem(SETUP_DRAFT_KEY);
       if (raw) {
@@ -95,10 +103,12 @@ export function ProjectSetupWizard({
         if (!parsed.success || parsed.data.revision !== revision.current) {
           setConflict(true);
           setAvailable(parsed.success);
+          setSaving(false);
           return;
         }
       } else if (revision.current) {
         setConflict(true);
+        setSaving(false);
         return;
       }
       const next = crypto.randomUUID();
@@ -107,18 +117,30 @@ export function ProjectSetupWizard({
         JSON.stringify({ version: 2, revision: next, name: projectName, city, buildings, step }),
       );
       revision.current = next;
-      setSaved(true);
-      setSaveFailed(false);
+      saveFeedbackTimer.current = window.setTimeout(() => {
+        setSaving(false);
+        setSaved(true);
+      }, 400);
     } catch {
       setSaveFailed(true);
       setSaved(false);
+      setSaving(false);
     }
   };
   useEffect(() => {
-    if (!ready || available || conflict || result || submitting || (!projectName && !city)) return;
+    window.clearTimeout(saveFeedbackTimer.current);
+    if (!ready || available || conflict || result || submitting || (!projectName && !city)) {
+      setSaving(false);
+      return () => window.clearTimeout(saveFeedbackTimer.current);
+    }
     setSaved(false);
-    const timer = window.setTimeout(save, 500);
-    return () => window.clearTimeout(timer);
+    setSaving(false);
+    setSaveFailed(false);
+    autosaveTimer.current = window.setTimeout(save, 500);
+    return () => {
+      window.clearTimeout(autosaveTimer.current);
+      window.clearTimeout(saveFeedbackTimer.current);
+    };
     // Save the complete committed draft, never transient text inside inline fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectName, city, buildings, step, ready, available, conflict, result, submitting]);
@@ -230,12 +252,31 @@ export function ProjectSetupWizard({
             </p>
             <h1 className="text-2xl font-bold">{t("newProject")}</h1>
           </div>
-          <Button variant="outline" disabled={submitting || conflict || available} onClick={save}>
-            {t("editorSaveDraft")}
-          </Button>
-          <span className="text-xs text-muted-foreground" aria-live="polite">
-            {saveFailed ? t("editorSaveFailed") : saved ? t("editorSaved") : ""}
-          </span>
+          <div className="flex max-w-full flex-col items-start gap-2">
+            <Button
+              variant="outline"
+              disabled={!ready || submitting || conflict || available}
+              loading={saving}
+              className={
+                saved ? "border-primary bg-primary/10 text-primary hover:bg-primary/15" : undefined
+              }
+              onClick={save}
+            >
+              {t("editorSaveDraft")}
+            </Button>
+            <span
+              className={`min-h-4 text-xs ${saveFailed ? "text-destructive" : saved ? "text-primary" : "text-muted-foreground"}`}
+              aria-live="polite"
+            >
+              {saveFailed
+                ? t("editorSaveFailed")
+                : saving
+                  ? t("editorSaving")
+                  : saved
+                    ? t("editorSaved")
+                    : ""}
+            </span>
+          </div>
         </header>
         <p className="text-xs text-muted-foreground">{t("editorLocalHint")}</p>
         {(available || conflict) && (

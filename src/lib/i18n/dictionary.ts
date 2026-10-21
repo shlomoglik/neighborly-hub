@@ -85,6 +85,7 @@ export const dict = {
     en: "Draft saved on this device",
     ru: "Черновик сохранён на этом устройстве",
   },
+  editorSaving: { he: "שומר טיוטה…", en: "Saving draft…", ru: "Сохранение черновика…" },
   editorSaveFailed: {
     he: "לא ניתן לשמור טיוטה במכשיר. השאירו את הדף פתוח.",
     en: "Cannot save draft on this device. Keep this page open.",

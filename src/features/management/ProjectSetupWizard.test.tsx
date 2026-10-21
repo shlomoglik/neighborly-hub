@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("@/components/AppShell", () => ({
   AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main>,
@@ -12,6 +12,7 @@ import { directionFor, translate, type Lang } from "@/lib/i18n/dictionary";
 import type { ProjectSetupResult } from "@/lib/db/project-setup-input";
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   localStorage.clear();
   vi.restoreAllMocks();
 });
@@ -241,4 +242,48 @@ it("reports storage failure without claiming the draft is saved", () => {
   mount(vi.fn());
   fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
   expect(screen.getByText("Cannot save draft on this device. Keep this page open.")).toBeTruthy();
+});
+
+it("shows saving feedback below the button and confirms manual and debounced saves in green", () => {
+  vi.useFakeTimers();
+  mount(vi.fn());
+  const button = screen.getByRole("button", { name: "Save draft" });
+  fireEvent.click(button);
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  const feedback = screen.getByText("Saving draft…");
+  expect(button.nextElementSibling).toBe(feedback);
+  expect(screen.queryByText("Draft saved on this device")).toBeNull();
+  act(() => vi.advanceTimersByTime(400));
+  expect(button.getAttribute("aria-busy")).not.toBe("true");
+  expect(screen.getByText("Draft saved on this device").className).toContain("text-primary");
+  expect(button.className).toContain("bg-primary/10");
+
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "First" } });
+  expect(screen.queryByText("Draft saved on this device")).toBeNull();
+  expect(button.className).not.toContain("bg-primary/10");
+  act(() => vi.advanceTimersByTime(499));
+  expect(JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!).name).toBe("");
+  act(() => vi.advanceTimersByTime(1));
+  expect(JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!).name).toBe("First");
+  expect(button.getAttribute("aria-busy")).toBe("true");
+
+  // A new edit must cancel the previous save's pending success feedback.
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Latest" } });
+  act(() => vi.advanceTimersByTime(400));
+  expect(screen.queryByText("Draft saved on this device")).toBeNull();
+  act(() => vi.advanceTimersByTime(100));
+  expect(JSON.parse(localStorage.getItem(SETUP_DRAFT_KEY)!).name).toBe("Latest");
+  act(() => vi.advanceTimersByTime(400));
+  expect(screen.getByText("Draft saved on this device").className).toContain("text-primary");
+});
+
+it("cancels a pending autosave when saving manually", () => {
+  vi.useFakeTimers();
+  mount(vi.fn());
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Community" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+  const stored = localStorage.getItem(SETUP_DRAFT_KEY);
+  act(() => vi.advanceTimersByTime(1000));
+  expect(localStorage.getItem(SETUP_DRAFT_KEY)).toBe(stored);
+  expect(screen.getByText("Draft saved on this device")).toBeTruthy();
 });
