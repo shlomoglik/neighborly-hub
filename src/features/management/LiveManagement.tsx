@@ -27,7 +27,6 @@ export function LiveManagement({ projectId }: { projectId: string }) {
   }, []);
   const container = useRef<HTMLDivElement>(null);
   const reset = () => {
-    setLayout(null);
     setStates({});
     setRevision((n) => n + 1);
   };

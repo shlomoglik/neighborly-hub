@@ -302,3 +302,16 @@ it("immediately removes a revoked building while all buildings are displayed", (
   expect(screen.queryByRole("button", { name: "Add floor Other building" })).toBeNull();
   expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
 });
+it("keeps building editors visible after canceling the add-building dialog", async () => {
+  const initial = state();
+  vi.mocked(useManagement).mockReturnValue({
+    ...initial,
+    data: { ...initial.data!, canAddBuilding: true },
+  });
+  render(view());
+  fireEvent.click(screen.getByRole("button", { name: "Add building" }));
+  const dialog = screen.getByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(screen.getByRole("button", { name: "Add floor Building" })).toBeTruthy();
+});
