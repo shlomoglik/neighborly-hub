@@ -31,10 +31,20 @@ export function AppShell({
             href="/directory"
             className="flex min-w-0 flex-1 items-center gap-2 lg:flex-initial"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-lg text-primary-foreground">
-              🏡
+            <span className="grid h-9 w-9 shrink-0 place-items-center" aria-hidden="true">
+              <svg viewBox="0 0 32 32" className="h-9 w-9">
+                <rect width="32" height="32" rx="9" className="fill-primary" />
+                <path
+                  d="M16 6.2 25.5 14q.5.5.5 1.2V24q0 2-2 2H8q-2 0-2-2v-8.8q0-.7.5-1.2Z"
+                  className="fill-primary-foreground"
+                />
+                <path
+                  d="M13.2 26v-5.6q0-1.4 1.4-1.4h2.8q1.4 0 1.4 1.4V26Z"
+                  className="fill-primary"
+                />
+              </svg>
             </span>
-            <span className="min-w-0 break-words text-xl font-bold leading-tight">
+            <span className="min-w-0 wrap-break-word text-xl font-bold leading-tight">
               {title ?? t("appName")}
             </span>
           </Link>
