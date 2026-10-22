@@ -122,8 +122,18 @@ it("preserves the draft during revalidation and removes it when authorization is
   vi.mocked(useManagement).mockReturnValue(initial);
   const rendered = renderEditor();
   editUnit();
-  vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
+  const header = screen.getByRole("heading", { name: "Project", level: 1 });
+  const tabs = screen.getByRole("navigation", { name: translate("en", "managementSections") });
+  const toggle = screen.getByRole("button", { name: "Back to view" });
+  vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading" });
   rendered.rerender(view());
+  expect(screen.getByRole("heading", { name: "Project", level: 1 })).toBe(header);
+  expect(screen.getByRole("navigation", { name: translate("en", "managementSections") })).toBe(
+    tabs,
+  );
+  expect(screen.getByRole("button", { name: "Back to view" })).toBe(toggle);
+  expect(toggle.hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByText(translate("en", "loading"))).toBeNull();
   expect(
     screen.getByRole("button", { name: "Unit name Building Suite-A" }).matches(":disabled"),
   ).toBe(true);

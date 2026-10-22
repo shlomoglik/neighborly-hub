@@ -84,14 +84,16 @@ it("ignores late responses even when transport ignores cancellation", async () =
   expect(result.current.data?.id).toBe("new");
 });
 it.each([401, 403, 404, 500, 0])(
-  "clears hierarchy on refresh and handles %i with explicit states",
+  "retains hierarchy while refreshing and clears it after %i",
   async (code) => {
     const api = service();
     const { result } = renderHook(() => useManagement("p", api));
     await tick();
     vi.mocked(api.hierarchy).mockRejectedValue(new ManagementRequestError(code));
     act(() => window.dispatchEvent(new Event("focus")));
-    expect(result.current.data).toBeNull();
+    expect(result.current.status).toBe("loading");
+    expect(result.current.data).toEqual(data);
+    expect(result.current.discovery).toEqual(discovery);
     await tick();
     expect(result.current.status).toBe(
       code === 401 ? "expired" : code === 403 || code === 404 ? "unavailable" : "error",
@@ -111,7 +113,7 @@ it("does not silently switch a revoked project or building to another", async ()
   await tick();
   vi.mocked(api.hierarchy).mockResolvedValue({ ...data, buildings: [] });
   act(() => result.current.onRefresh());
-  expect(result.current.data).toBeNull();
+  expect(result.current.data).toEqual(data);
   await tick();
   expect(result.current.status).toBe("unavailable");
   expect(result.current.buildingIds).toEqual(["b"]);
@@ -200,6 +202,8 @@ it("keeps the visible workspace stable until an explicit refresh or lifecycle ev
   expect(result.current.data).toEqual(data);
   act(() => result.current.onRefresh());
   expect(result.current.status).toBe("loading");
+  expect(result.current.data).toEqual(data);
+  expect(result.current.discovery).toEqual(discovery);
   await tick();
   expect(api.projects).toHaveBeenCalledTimes(calls + 1);
   expect(result.current.status).toBe("ready");
@@ -247,4 +251,20 @@ it("keeps multiple building filters local and rejects a revoked selection", asyn
   act(() => result.current.onBuildingChange([]));
   expect(result.current.status).toBe("ready");
   expect(result.current.data).toEqual(data);
+});
+
+it("clears retained project metadata when refreshed discovery revokes management access", async () => {
+  const api = service();
+  const { result } = renderHook(() => useManagement("p", api));
+  await tick();
+  vi.mocked(api.projects).mockResolvedValue({
+    ...discovery,
+    projects: [],
+    hasManagementAccess: false,
+  });
+  act(() => result.current.onRefresh());
+  expect(result.current.data).toEqual(data);
+  await tick();
+  expect(result.current.status).toBe("forbidden");
+  expect(result.current.data).toBeNull();
 });

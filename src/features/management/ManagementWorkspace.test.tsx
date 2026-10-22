@@ -245,15 +245,62 @@ it.each(["he", "en", "ru"] as const)(
       },
     });
     expect(screen.queryByRole("button", { name: translate(lang, "addBuilding") })).toBeNull();
-    fireEvent.click(
-      screen.getByRole("button", { name: translate(lang, "managementEditStructure") }),
-    );
+    const editButton = screen.getByRole("button", {
+      name: translate(lang, "managementEditStructure"),
+    });
+    expect(editButton.querySelector(".lucide-pencil")).toBeTruthy();
+    fireEvent.click(editButton);
     expect(onModeChange).toHaveBeenLastCalledWith("edit");
     p.update({ mode: "edit" });
     expect(screen.getByRole("button", { name: translate(lang, "addBuilding") })).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("button", { name: translate(lang, "managementViewStructure") }),
-    );
+    const viewButton = screen.getByRole("button", {
+      name: translate(lang, "managementViewStructure"),
+    });
+    expect(viewButton.querySelector(".lucide-eye")).toBeTruthy();
+    fireEvent.click(viewButton);
     expect(onModeChange).toHaveBeenLastCalledWith("view");
   },
 );
+
+it("keeps the project header, tabs and content toolbar mounted during refresh without a skeleton", () => {
+  const onModeChange = vi.fn();
+  const onEdit = vi.fn();
+  const p = mount("en", {
+    onModeChange,
+    onEdit,
+    data: {
+      id: "p",
+      name: "Project",
+      city: null,
+      buildings: [],
+      canAddBuilding: true,
+      counts: { buildings: 0, floors: 0, apartments: 0 },
+    },
+  });
+  const header = screen.getByRole("heading", { name: "Project", level: 1 });
+  const tabs = screen.getByRole("navigation", { name: translate("en", "managementSections") });
+  const toggle = screen.getByRole("button", { name: "Back to view" });
+  expect(header.closest("header")?.contains(toggle)).toBe(false);
+  expect(screen.getAllByRole("heading", { name: translate("en", "editorTitle") })).toHaveLength(1);
+  p.update({ status: "loading", structure: <div data-testid="retained-structure" /> });
+  expect(screen.getByRole("heading", { name: "Project", level: 1 })).toBe(header);
+  expect(screen.getByRole("navigation", { name: translate("en", "managementSections") })).toBe(
+    tabs,
+  );
+  expect(screen.getByRole("button", { name: "Back to view" })).toBe(toggle);
+  expect(toggle.hasAttribute("disabled")).toBe(true);
+  const add = screen.getByRole("button", { name: "Add building" });
+  expect(add.hasAttribute("disabled")).toBe(true);
+  fireEvent.click(toggle);
+  fireEvent.click(add);
+  expect(onModeChange).not.toHaveBeenCalled();
+  expect(onEdit).not.toHaveBeenCalled();
+  expect(screen.getByTestId("retained-structure")).toBeTruthy();
+  expect(screen.queryByText(translate("en", "loading"))).toBeNull();
+  p.update({ status: "unavailable", data: null, discovery: null });
+  expect(
+    screen.queryByRole("navigation", { name: translate("en", "managementSections") }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Back to view" })).toBeNull();
+  expect(screen.queryByTestId("retained-structure")).toBeNull();
+});
