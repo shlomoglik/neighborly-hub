@@ -1,7 +1,5 @@
 "use client";
 import Link from "next/link";
-import { Eye, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { managementHref, type ManagementHierarchy } from "@/lib/access/management-contracts";
 import { invitationAdminHref } from "@/lib/access/invitation-contracts";
@@ -15,18 +13,12 @@ export function ManageProjectHeader({
   canManageStaff,
   pendingCount,
   showProjectsBack = false,
-  editing,
-  editingBusy,
-  onEdit,
 }: {
   project: Pick<ManagementHierarchy, "id" | "name" | "city" | "counts">;
   active: ManageProjectTab;
   canManageStaff: boolean;
   pendingCount?: number;
   showProjectsBack?: boolean;
-  editing?: boolean;
-  editingBusy?: boolean;
-  onEdit?: () => void;
 }) {
   const { t } = useI18n();
   const tabs = [
@@ -64,20 +56,6 @@ export function ManageProjectHeader({
             {t("managementCountsCompact", project.counts)}
           </p>
         </div>
-        {active === "structure" && onEdit && (
-          <Button
-            className="h-10 shrink-0 rounded-[14px] px-3 sm:h-11 sm:px-4"
-            disabled={editingBusy}
-            onClick={onEdit}
-          >
-            {editing ? (
-              <Eye className="size-4" aria-hidden />
-            ) : (
-              <Pencil className="size-4" aria-hidden />
-            )}
-            {t(editing ? "managementViewStructure" : "managementEditStructure")}
-          </Button>
-        )}
       </header>
       <nav
         aria-label={t("managementSections")}
