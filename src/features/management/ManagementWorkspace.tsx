@@ -149,29 +149,30 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
           </Button>
         </div>
       )}
-      {status === "ready" && data && (
+      {(status === "ready" || status === "loading") && data && (
         <div className="space-y-6">
-          {detail && p.onModeChange && (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-heading text-lg font-normal">{t("editorTitle")}</h2>
-              <Button
-                className="h-10 rounded-[14px] px-3 sm:h-11 sm:px-4"
-                disabled={p.editingBusy}
-                onClick={() => p.onModeChange?.(p.mode === "edit" ? "view" : "edit")}
-              >
-                {p.mode === "edit" ? <Eye className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />}
-                {t(p.mode === "edit" ? "managementViewStructure" : "managementEditStructure")}
-              </Button>
-            </div>
-          )}
-          {p.mode === "edit" && (
+          {(p.onModeChange || p.mode === "edit") && (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-heading text-lg font-normal">{t("editorTitle")}</h2>
               <div className="flex flex-wrap justify-end gap-2">
+                {detail && p.onModeChange && (
+                  <Button
+                    className="h-10 rounded-[14px] px-3 sm:h-11 sm:px-4"
+                    disabled={status === "loading" || p.editingBusy}
+                    onClick={() => p.onModeChange?.(p.mode === "edit" ? "view" : "edit")}
+                  >
+                    {p.mode === "edit" ? (
+                      <Eye className="size-4" aria-hidden />
+                    ) : (
+                      <Pencil className="size-4" aria-hidden />
+                    )}
+                    {t(p.mode === "edit" ? "managementViewStructure" : "managementEditStructure")}
+                  </Button>
+                )}
                 {p.mode === "edit" && p.onEdit && data.canAddBuilding && (
                   <Button
                     variant="outline"
-                    disabled={p.editingBusy}
+                    disabled={status === "loading" || p.editingBusy}
                     onClick={() => p.onEdit?.({ mode: "create", entity: "building" })}
                   >
                     {t("addBuilding")}

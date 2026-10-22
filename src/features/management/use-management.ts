@@ -51,13 +51,13 @@ export function useManagement(projectId: string, api: ManagementApi = management
   useEffect(() => {
     const controller = new AbortController();
     activeRead.current = controller;
-    // Preserve the current project header while a background refresh is in flight.
-    // Authorization failures still clear the snapshot in the catch branch.
+    // Preserve same-project metadata during visible refreshes so the header stays mounted.
+    // Hidden pages and authorization failures still clear the snapshot.
     setSnapshot((previous) => ({
       key,
       status: "loading",
-      discovery: previous.data?.id === projectId ? previous.discovery : null,
-      data: previous.data?.id === projectId ? previous.data : null,
+      discovery: !paused && previous.data?.id === projectId ? previous.discovery : null,
+      data: !paused && previous.data?.id === projectId ? previous.data : null,
     }));
     if (!paused)
       void (async () => {
@@ -96,8 +96,8 @@ export function useManagement(projectId: string, api: ManagementApi = management
       : {
           key,
           status: "loading",
-          discovery: snapshot.data?.id === projectId ? snapshot.discovery : null,
-          data: snapshot.data?.id === projectId ? snapshot.data : null,
+          discovery: !paused && snapshot.data?.id === projectId ? snapshot.discovery : null,
+          data: !paused && snapshot.data?.id === projectId ? snapshot.data : null,
         };
   // The authorized hierarchy already includes every accessible building. Filtering
   // it is local and must not restart project discovery or unmount the workspace.
