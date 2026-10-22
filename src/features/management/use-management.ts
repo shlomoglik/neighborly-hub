@@ -51,7 +51,14 @@ export function useManagement(projectId: string, api: ManagementApi = management
   useEffect(() => {
     const controller = new AbortController();
     activeRead.current = controller;
-    setSnapshot({ key, status: "loading", discovery: null, data: null });
+    // Preserve the current project header while a background refresh is in flight.
+    // Authorization failures still clear the snapshot in the catch branch.
+    setSnapshot((previous) => ({
+      key,
+      status: "loading",
+      discovery: previous.data?.id === projectId ? previous.discovery : null,
+      data: previous.data?.id === projectId ? previous.data : null,
+    }));
     if (!paused)
       void (async () => {
         let discovery: ManagementProjects | null = null;
@@ -84,7 +91,14 @@ export function useManagement(projectId: string, api: ManagementApi = management
     return () => controller.abort();
   }, [api, projectId, page, key, paused]);
   const view: Snapshot =
-    snapshot.key === key ? snapshot : { key, status: "loading", discovery: null, data: null };
+    snapshot.key === key
+      ? snapshot
+      : {
+          key,
+          status: "loading",
+          discovery: snapshot.data?.id === projectId ? snapshot.discovery : null,
+          data: snapshot.data?.id === projectId ? snapshot.data : null,
+        };
   // The authorized hierarchy already includes every accessible building. Filtering
   // it is local and must not restart project discovery or unmount the workspace.
   const unavailableBuilding =
