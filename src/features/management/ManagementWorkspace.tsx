@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { Eye, Pencil } from "lucide-react";
 import { useRef, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -47,11 +48,6 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
           canManageStaff={!!discovery?.canCreateProject}
           pendingCount={p.pendingCount}
           showProjectsBack={(discovery?.projects.length ?? 0) > 1}
-          editing={p.mode === "edit"}
-          editingBusy={p.editingBusy}
-          onEdit={
-            p.onModeChange ? () => p.onModeChange?.(p.mode === "edit" ? "view" : "edit") : undefined
-          }
         />
       ) : (
         <header className="flex flex-wrap items-start justify-between gap-4">
@@ -126,7 +122,7 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
           )}
         </nav>
       )}
-      {status === "loading" && <CommunitySkeleton variant="map" />}
+      {status === "loading" && !p.structure && <CommunitySkeleton variant="map" />}
       {status === "error" && <SystemFeedback kind="error" onRetry={refresh} />}
       {status === "empty" && <SystemFeedback kind="empty" message={t("managementEmpty")} />}
       {status === "forbidden" && (
@@ -155,6 +151,19 @@ export function ManagementWorkspace(p: ManagementWorkspaceProps) {
       )}
       {status === "ready" && data && (
         <div className="space-y-6">
+          {detail && p.onModeChange && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-heading text-lg font-normal">{t("editorTitle")}</h2>
+              <Button
+                className="h-10 rounded-[14px] px-3 sm:h-11 sm:px-4"
+                disabled={p.editingBusy}
+                onClick={() => p.onModeChange?.(p.mode === "edit" ? "view" : "edit")}
+              >
+                {p.mode === "edit" ? <Eye className="size-4" aria-hidden /> : <Pencil className="size-4" aria-hidden />}
+                {t(p.mode === "edit" ? "managementViewStructure" : "managementEditStructure")}
+              </Button>
+            </div>
+          )}
           {p.mode === "edit" && (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-heading text-lg font-normal">{t("editorTitle")}</h2>
