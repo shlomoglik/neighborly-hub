@@ -7,9 +7,12 @@ export default async function AuthPage({
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   const params = await searchParams;
+  const config = readAuthConfig(process.env);
   return (
     <SignIn
-      enabled={readAuthConfig(process.env) !== null}
+      enabled={config !== null}
+      googleEnabled={Boolean(config?.googleClientId)}
+      emailDeliveryEnabled={Boolean(config?.mail)}
       initialError={Boolean(params.error)}
       returnTo={params.next}
     />

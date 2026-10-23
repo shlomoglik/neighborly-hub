@@ -1,16 +1,16 @@
 # Authentication foundation
 
-Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzle adapter uses the existing PostgreSQL database; Drizzle ORM is pinned to 0.45.4 to meet the adapter's peer requirement. No hosted auth service, password login, email delivery or SMS provider is introduced.
+Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzle adapter uses the existing PostgreSQL database; Drizzle ORM is pinned to 0.45.4 to meet the adapter's peer requirement. Email/password authentication shares the same identity and sessions; optional Resend delivery supports verification and password recovery. No additional runtime dependency or database migration is required.
 
 ## Configure
 
 1. Apply SQL migrations `0001_initial.sql`, `0002_party_subtype_integrity.sql` and `0003_auth_sessions.sql` in order. SQL migrations remain authoritative; do not run the legacy Supabase migrations, `drizzle-kit push` or the Better Auth migration CLI against this database.
-2. Set the five server-only variables in `.env.example`: `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+2. Set the three required server-only variables in `.env.example`: `DATABASE_URL`, `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET`. Set both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to also enable Google.
 3. Generate a strong auth secret with `openssl rand -base64 32`; retain it in the deployment secret manager. It signs sessions and encrypts OAuth tokens. Never commit it or give it a `NEXT_PUBLIC_` prefix.
 4. Create a Google OAuth **Web application** client. Register the exact authorized callback `<BETTER_AUTH_URL>/api/auth/callback/google`, for example `http://localhost:3000/api/auth/callback/google` for `pnpm dev`. Configure production callbacks separately and use HTTPS.
 5. Visit `/auth`, sign in with Google and confirm that `/account` shows your own profile. Sign out and verify that `/account` redirects to `/auth` and `/api/me` returns HTTP 401.
 
-`BETTER_AUTH_URL` is one exact origin, with no path, credentials, query or fragment. HTTP is accepted only on loopback hosts outside production. Origins are not inferred from request headers and no wildcard origin is trusted. A missing variable disables sign-in: the UI explains that setup is incomplete, auth endpoints return 503 and protected account reads remain anonymous. A complete but invalid configuration throws a sanitized error. Builds and synthetic previews do not need a database or Google secrets because auth/database initialization is lazy.
+`BETTER_AUTH_URL` is one exact origin, with no path, credentials, query or fragment. HTTP is accepted only on loopback hosts outside production. Origins are not inferred from request headers and no wildcard origin is trusted. A missing required variable disables sign-in: the UI explains that setup is incomplete, auth endpoints return 503 and protected account reads remain anonymous. A complete but invalid configuration throws a sanitized error. Builds and synthetic previews do not need a database or Google secrets because auth/database initialization is lazy.
 
 ## Identity and schema
 
@@ -23,7 +23,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 
 ## Server boundaries
 
-- `/api/auth/[...all]` delegates GET/POST directly to the auth library, preserving its cookie/security headers. Email/password login and self-service account deletion are disabled. `/reset-password` redirects to the Google sign-in page.
+- `/api/auth/[...all]` delegates GET/POST directly to the auth library, preserving its cookie/security headers. Verified email/password login is enabled; self-service account deletion remains disabled. `/reset-password` accepts recovery tokens issued by Better Auth.
 - `getCurrentUser(headers)` verifies the session through Better Auth and returns only `{ id, email, name }`. It does not trust a user ID from headers, query strings or local storage. Database failures propagate; they do not grant access.
 - `requireCurrentUser()` protects server pages with a redirect for anonymous users. `/account` uses this guard; `/api/me` returns the current identity or an uncached 401. It accepts no target-user ID and sends `Cache-Control: private, no-store` with `Vary: Cookie`.
 - Session cookies use the library's HttpOnly/SameSite defaults and Secure cookies on HTTPS. Database sessions last seven days with the library's one-day refresh interval. Cookie session caching is disabled, so deleted/revoked sessions cannot continue authenticating through a cached cookie payload.
@@ -53,3 +53,15 @@ Explicit resident links and directory read authorization are now described in [r
 Successful Google sign-in now returns to `/directory`; `/account` remains available from the header for profile and sign-out. The directory explains missing resident access without offering an unimplemented self-claim flow.
 
 A public pilot requires its own HTTPS origin, database and OAuth client. See [pilot environment](pilot-environment.md) for the physical-device acceptance flow and the distinct synthetic browser CI boundary.
+
+## Email and password
+
+- `/auth` offers email/password sign-in alongside Google when configured. Failed credentials show a generic localized error. Invitation return paths retain the existing allowlist.
+- Existing Google users: sign in with Google, open `/account`, and **Set a password**. This invokes Better Auth's server-only `setPassword` through a session-protected Server Action. A verified email and fresh authenticated session are required. It adds a credential account to the same user ID, without changing memberships or roles, and cannot overwrite an existing password. Signing out and back in with Google refreshes an old session.
+- Existing password users can change their password on `/account` by supplying their current password. Other sessions are revoked. Passwords must have 12–128 characters and are hashed by Better Auth's built-in scrypt implementation; plaintext passwords are never stored.
+- New registrations require **both** server-only `RESEND_API_KEY` and `AUTH_EMAIL_FROM` (bare email on a verified Resend sending domain). Registration remains disabled on the server and hidden in the UI without delivery configuration. Existing verified users can still set/use passwords without a mail provider. Google configuration is optional; partial Google/mail configuration is rejected.
+- With delivery configured, registration sends a verification link. Unverified accounts cannot sign in. A verification link returns to `/auth`, retaining the invitation destination; the user then signs in with their password. A repeated unverified sign-in resends verification. Duplicate registration receives Better Auth's generic response and does not attach credentials to an existing identity.
+- **Forgot password** sends a generic response regardless of whether an account exists. `/reset-password` consumes a single-use expiring token. Reset revokes existing sessions; it does not grant roles or bypass email verification. Provider errors, tokens and recovery links are never logged by the delivery helper. Mail text includes Hebrew and English.
+- After deployment, verify a real delivered registration email, verification, login, recovery and token reuse rejection with a disposable account. Real email delivery requires the operator's sending-domain/API-key setup; automated tests capture email callbacks without sending mail.
+
+References: [email/password](https://better-auth.com/docs/authentication/email-password), [email verification](https://better-auth.com/docs/concepts/email), [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
