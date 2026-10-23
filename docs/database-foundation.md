@@ -8,7 +8,7 @@ The existing `drizzle.config.ts` uses `LOVABLE_DB_MIGRATION_URL`; it is not an a
 
 ## Proposed schema (application-owned tables)
 
-- `users`: id (UUID), email (unique), display_name, created_at. Better Auth now uses `app_users` directly, with separate session/account/verification tables; see [authentication.md](authentication.md). Password login is disabled.
+- `users`: id (UUID), email (unique), display_name, created_at. Better Auth now uses `app_users` directly, with separate session/account/verification tables; see [authentication.md](authentication.md). Verified email/password login and Google OAuth share the same identity.
 - `projects`: id, name, city, directory_visibility (`community` / `building`), created_at.
 - `buildings`: id, project_id (FK), name; unique (project_id, name). Do not store `units_per_floor` as a structural assumption.
 - `floors`: id, building_id (FK), number (integer, supporting basement/ground floors), optional name, type (`residential` / `commercial` / `parking`); unique (building_id, number). A floor may have zero apartments.

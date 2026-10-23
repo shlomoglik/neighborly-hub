@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../../../drizzle/schema";
+import { sendAuthEmail } from "./email";
 import type { AuthConfig } from "./config";
 
 /** No role or resident access is inferred from a provider profile or matching email. */
@@ -27,9 +28,39 @@ export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthCo
       deleteUser: { enabled: false },
     },
     socialProviders: {
-      google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret },
+      ...(config.googleClientId && config.googleClientSecret
+        ? { google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret } }
+        : {}),
     },
-    emailAndPassword: { enabled: false },
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: !config.mail,
+      requireEmailVerification: true,
+      minPasswordLength: 12,
+      maxPasswordLength: 128,
+      revokeSessionsOnPasswordReset: true,
+      ...(config.mail
+        ? {
+            sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) =>
+              sendAuthEmail(config.mail!, user.email, url, "reset"),
+          }
+        : {}),
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      ...(config.mail
+        ? {
+            sendVerificationEmail: async ({
+              user,
+              url,
+            }: {
+              user: { email: string };
+              url: string;
+            }) => sendAuthEmail(config.mail!, user.email, url, "verify"),
+          }
+        : {}),
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
