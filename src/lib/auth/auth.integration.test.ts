@@ -26,6 +26,8 @@ function setup(databaseURL: string) {
   const messages: { kind: "verify" | "reset"; url: string }[] = [];
   const auth = betterAuth({
     ...options,
+    // Exercise authentication behavior without exhausting the shared fixture IP quota.
+    rateLimit: { enabled: false },
     emailVerification: {
       ...options.emailVerification,
       sendVerificationEmail: async ({ url }) => {
@@ -267,14 +269,12 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
   it("adds a password to the same authenticated Google identity without replacing credentials", async () => {
     const signed = await login();
     const password = "existing-google-password-123";
-    await fixture.db
-      .insert(schema.authAccounts)
-      .values({
-        id: crypto.randomUUID(),
-        userId: signed.user.id,
-        providerId: "google",
-        accountId: crypto.randomUUID(),
-      });
+    await fixture.db.insert(schema.authAccounts).values({
+      id: crypto.randomUUID(),
+      userId: signed.user.id,
+      providerId: "google",
+      accountId: crypto.randomUUID(),
+    });
     await expect(
       fixture.auth.api.setPassword({ body: { newPassword: password }, headers: new Headers() }),
     ).rejects.toThrow();
