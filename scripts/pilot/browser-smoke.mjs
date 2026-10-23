@@ -155,10 +155,12 @@ try {
       await page.waitForURL(`${origin}/directory`);
       const after = await (await passwordContext.request.get(`${origin}/api/me`)).json();
       assert.equal(after.user.id, before.user.id);
-      assert.equal(
-        (await passwordContext.request.get(`${origin}/api/management/projects`)).status(),
-        403,
-      );
+      const scope = await (
+        await passwordContext.request.get(`${origin}/api/management/projects`)
+      ).json();
+      assert.equal(scope.canCreateProject, false);
+      assert.equal(scope.hasManagementAccess, false);
+      assert.deepEqual(scope.projects, []);
       await page.goto(`${origin}/reset-password`);
       await page.getByRole("alert").filter({ hasText: t.authResetFailed }).waitFor();
       await page.close();
