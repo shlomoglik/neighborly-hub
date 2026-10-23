@@ -8,12 +8,21 @@ import * as schema from "../../../drizzle/schema";
 import { createAuth } from "./create-auth";
 
 // Only an explicitly provided disposable test database may run these fixtures.
+const { messages } = vi.hoisted(() => ({
+  messages: [] as { recipient: string; url: string; kind: string }[],
+}));
+vi.mock("./email", () => ({
+  sendAuthEmail: async (_delivery: unknown, recipient: string, url: string, kind: string) => {
+    messages.push({ recipient, url, kind });
+  },
+}));
 const url = process.env.AUTH_TEST_DATABASE_URL;
 const config = {
   baseURL: "https://neighborly.test",
   secret: "auth-integration-only-secret-2dc860874b8f4b62a852",
   googleClientId: "test-google-client",
   googleClientSecret: "test-google-secret",
+  emailDelivery: { apiKey: "test-key", from: "auth@example.test" },
 };
 function setup(databaseURL: string) {
   const client = postgres(databaseURL, { max: 1 });
@@ -188,5 +197,137 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
     expect(
       await fixture.db.select({ count: query<number>`count(*)::int` }).from(schema.appUsers),
     ).toEqual(before);
+  });
+  it("verifies email before password login, preserves identity and revokes sessions after reset", async () => {
+    const email = `password-${crypto.randomUUID()}@example.test`;
+    const password = "initial-long-password";
+    const signup = await request("/sign-up/email", {
+      name: "Password resident",
+      email,
+      password,
+      callbackURL: "/directory",
+    });
+    expect(signup.status).toBe(200);
+    expect(signup.headers.get("set-cookie") ?? "").not.toContain("session_token=");
+    const [user] = await fixture.db
+      .select()
+      .from(schema.appUsers)
+      .where(eq(schema.appUsers.email, email));
+    userIds.push(user.id);
+    expect(user.emailVerified).toBe(false);
+    const [account] = await fixture.db
+      .select()
+      .from(schema.authAccounts)
+      .where(eq(schema.authAccounts.userId, user.id));
+    expect(account.providerId).toBe("credential");
+    expect(account.password).toBeTruthy();
+    expect(account.password).not.toBe(password);
+    expect((await request("/sign-in/email", { email, password })).status).toBe(403);
+    const verification = messages.findLast(
+      (message) => message.recipient === email && message.kind === "verify",
+    )!;
+    expect(verification).toBeTruthy();
+    const verified = await fixture.auth.handler(new Request(verification.url));
+    expect(verified.status).toBeLessThan(400);
+    expect(
+      (await request("/sign-in/email", { email, password: "wrong-long-password" })).status,
+    ).toBe(401);
+    const signed = await request("/sign-in/email", { email, password });
+    expect(signed.status).toBe(200);
+    const sessionCookie = signed.headers
+      .getSetCookie()
+      .map((value) => value.split(";")[0])
+      .join("; ");
+    const sessionHeaders = new Headers({ cookie: sessionCookie });
+    expect((await fixture.auth.api.getSession({ headers: sessionHeaders }))?.user.id).toBe(user.id);
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.globalRoles)
+        .where(eq(schema.globalRoles.userId, user.id)),
+    ).toEqual([]);
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.staffAssignments)
+        .where(eq(schema.staffAssignments.userId, user.id)),
+    ).toEqual([]);
+    const duplicate = await request("/sign-up/email", {
+      name: "Attacker",
+      email,
+      password: "different-long-password",
+    });
+    expect(duplicate.status).toBe(200);
+    const reset = await request("/request-password-reset", {
+      email,
+      redirectTo: "/reset-password",
+    });
+    const unknown = await request("/request-password-reset", {
+      email: `absent-${crypto.randomUUID()}@example.test`,
+      redirectTo: "/reset-password",
+    });
+    expect(reset.status).toBe(unknown.status);
+    expect(await reset.json()).toEqual(await unknown.json());
+    const recovery = messages.findLast(
+      (message) => message.recipient === email && message.kind === "reset",
+    )!;
+    const token = new URL(recovery.url).pathname.split("/").at(-1)!;
+    const resetResult = await request("/reset-password", {
+      token,
+      newPassword: "replacement-long-password",
+    });
+    expect(resetResult.status).toBe(200);
+    expect(await fixture.auth.api.getSession({ headers: sessionHeaders })).toBeNull();
+    expect(
+      (await request("/reset-password", { token, newPassword: "reused-token-password" })).status,
+    ).toBeGreaterThanOrEqual(400);
+    expect((await request("/sign-in/email", { email, password })).status).toBe(401);
+    expect(
+      (await request("/sign-in/email", { email, password: "replacement-long-password" })).status,
+    ).toBe(200);
+  });
+  it("lets a fresh Google identity add a password without linking by email or replacing a password", async () => {
+    const signed = await login();
+    await fixture.db
+      .insert(schema.authAccounts)
+      .values({ userId: signed.user.id, providerId: "google", accountId: crypto.randomUUID() });
+    await expect(
+      fixture.auth.api.setPassword({
+        headers: signed.headers,
+        body: { newPassword: "new-google-password" },
+      }),
+    ).resolves.toMatchObject({ status: true });
+    await expect(
+      fixture.auth.api.setPassword({
+        headers: signed.headers,
+        body: { newPassword: "replacement-password" },
+      }),
+    ).rejects.toThrow();
+    expect(
+      (
+        await request("/sign-in/email", {
+          email: signed.user.email,
+          password: "new-google-password",
+        })
+      ).status,
+    ).toBe(200);
+  });
+  it("rejects weak passwords and foreign-origin signup without creating accounts", async () => {
+    const email = `blocked-${crypto.randomUUID()}@example.test`;
+    expect(
+      (await request("/sign-up/email", { name: "Blocked", email, password: "short" })).status,
+    ).toBeGreaterThanOrEqual(400);
+    expect(
+      (
+        await request(
+          "/sign-up/email",
+          { name: "Blocked", email, password: "valid-long-password" },
+          { origin: "https://attacker.test" },
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      await fixture.db.select().from(schema.appUsers).where(eq(schema.appUsers.email, email)),
+    ).toEqual([]);
   });
 });

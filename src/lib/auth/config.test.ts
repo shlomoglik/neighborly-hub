@@ -11,13 +11,7 @@ const valid = {
 describe("authentication configuration", () => {
   it("disables auth without complete setup and never supplies fallback secrets", () => {
     expect(readAuthConfig({})).toBeNull();
-    for (const key of [
-      "DATABASE_URL",
-      "BETTER_AUTH_URL",
-      "BETTER_AUTH_SECRET",
-      "GOOGLE_CLIENT_ID",
-      "GOOGLE_CLIENT_SECRET",
-    ])
+    for (const key of ["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"])
       expect(readAuthConfig({ ...valid, [key]: "" })).toBeNull();
   });
   it("normalizes a single trusted origin", () =>
@@ -52,4 +46,19 @@ describe("authentication configuration", () => {
       readAuthConfig({ ...valid, DATABASE_URL: "mysql://test:test@localhost/test" }),
     ).toThrow("Authentication configuration is invalid");
   });
+});
+
+it("supports password login without Google and validates optional provider pairs", () => {
+  expect(
+    readAuthConfig({ ...valid, GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" })?.googleClientId,
+  ).toBeUndefined();
+  expect(() => readAuthConfig({ ...valid, GOOGLE_CLIENT_ID: "" })).toThrow();
+  expect(() => readAuthConfig({ ...valid, RESEND_API_KEY: "key" })).toThrow();
+  expect(() =>
+    readAuthConfig({ ...valid, RESEND_API_KEY: "key", AUTH_EMAIL_FROM: "not-an-email" }),
+  ).toThrow();
+  expect(
+    readAuthConfig({ ...valid, RESEND_API_KEY: "key", AUTH_EMAIL_FROM: "auth@example.test" })
+      ?.emailDelivery,
+  ).toEqual({ apiKey: "key", from: "auth@example.test" });
 });

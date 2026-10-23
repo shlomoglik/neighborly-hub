@@ -2,10 +2,15 @@ import { requireCurrentUser } from "@/lib/auth/session";
 import { translate, DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n/dictionary";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth/server";
+import { AccountPassword } from "@/features/auth/AccountPassword";
 import { SignOut } from "@/features/auth/SignOut";
 export const dynamic = "force-dynamic";
 export default async function AccountPage() {
   const user = await requireCurrentUser();
+  const auth = await getAuth();
+  const accounts = auth ? await auth.api.listUserAccounts({ headers: await headers() }) : [];
   const cookie = (await cookies()).get(LANG_COOKIE)?.value;
   const lang = isLang(cookie) ? cookie : DEFAULT_LANG;
   return (
@@ -33,6 +38,9 @@ export default async function AccountPage() {
         </Link>
         <SignOut />
       </div>
+      <AccountPassword
+        hasPassword={accounts.some((account) => account.providerId === "credential")}
+      />
     </main>
   );
 }

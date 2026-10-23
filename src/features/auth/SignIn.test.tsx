@@ -3,17 +3,29 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { I18nContext } from "../../lib/i18n/context";
 import { translate, directionFor, type Lang } from "../../lib/i18n/dictionary";
-const { social, signOut, replace, refresh } = vi.hoisted(() => ({
-  social: vi.fn(),
-  signOut: vi.fn(),
-  replace: vi.fn(),
-  refresh: vi.fn(),
+const { social, email, signUp, requestPasswordReset, signOut, replace, refresh } = vi.hoisted(
+  () => ({
+    social: vi.fn(),
+    email: vi.fn(),
+    signUp: vi.fn(),
+    requestPasswordReset: vi.fn(),
+    signOut: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+  }),
+);
+vi.mock("./client", () => ({
+  authClient: {
+    signIn: { social, email },
+    signUp: { email: signUp },
+    requestPasswordReset,
+    signOut,
+  },
 }));
-vi.mock("./client", () => ({ authClient: { signIn: { social }, signOut } }));
 import { SignIn } from "./SignIn";
 import { SignOut } from "./SignOut";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
-function localized(enabled: boolean, lang: Lang = "en") {
+function localized(enabled: boolean, lang: Lang = "en", returnTo?: string) {
   return (
     <I18nContext.Provider
       value={{
@@ -23,7 +35,7 @@ function localized(enabled: boolean, lang: Lang = "en") {
         t: (key, vars) => translate(lang, key, vars),
       }}
     >
-      <SignIn enabled={enabled} />
+      <SignIn enabled={enabled} emailDeliveryEnabled returnTo={returnTo} />
     </I18nContext.Provider>
   );
 }
@@ -106,4 +118,76 @@ it("keeps the current account visible when sign-out fails", async () => {
     expect(screen.getByRole("alert").textContent).toBe(translate("en", "authSignOutFailed")),
   );
   expect(replace).not.toHaveBeenCalled();
+});
+
+it("signs in with normalized email and preserves invitation destinations", async () => {
+  email.mockResolvedValue({ data: { user: {} } });
+  const destination = `/join/${"a".repeat(64)}`;
+  render(localized(true, "en", destination));
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "Resident@Example.test" } });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "password-long-enough" },
+  });
+  fireEvent.submit(screen.getByRole("button", { name: "Sign in" }).closest("form")!);
+  await waitFor(() => expect(replace).toHaveBeenCalledWith(destination));
+  expect(email).toHaveBeenCalledWith({
+    email: "resident@example.test",
+    password: "password-long-enough",
+  });
+  expect(refresh).toHaveBeenCalled();
+});
+it("registers without navigating before verification and hides backend details", async () => {
+  signUp.mockResolvedValue({ data: { user: {} } });
+  render(localized(true));
+  fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
+  fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Resident" } });
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "resident@example.test" } });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "password-long-enough" },
+  });
+  fireEvent.submit(screen.getByRole("button", { name: "Sign up" }).closest("form")!);
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe(translate("en", "authVerifyNotice")),
+  );
+  expect(replace).not.toHaveBeenCalled();
+  expect(signUp).toHaveBeenCalledWith({
+    name: "Resident",
+    email: "resident@example.test",
+    password: "password-long-enough",
+    callbackURL: "/directory",
+  });
+});
+it("uses a generic recovery confirmation without revealing account existence", async () => {
+  requestPasswordReset.mockResolvedValue({ data: { status: true } });
+  render(localized(true));
+  fireEvent.click(screen.getByRole("button", { name: "Forgot password" }));
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "resident@example.test" } });
+  fireEvent.submit(screen.getByRole("button", { name: "Send reset link" }).closest("form")!);
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe(translate("en", "authResetNotice")),
+  );
+  expect(requestPasswordReset).toHaveBeenCalledWith({
+    email: "resident@example.test",
+    redirectTo: "/reset-password",
+  });
+});
+it("does not navigate on invalid credentials and prevents duplicate email submissions", async () => {
+  let resolve!: (value: unknown) => void;
+  email.mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  render(localized(true));
+  const form = screen.getByRole("button", { name: "Sign in" }).closest("form")!;
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  expect(email).toHaveBeenCalledTimes(1);
+  resolve({ error: { message: "private-database-detail" } });
+  await waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toBe(translate("en", "authFailed")),
+  );
+  expect(replace).not.toHaveBeenCalled();
+  expect(screen.queryByText("private-database-detail")).toBeNull();
 });

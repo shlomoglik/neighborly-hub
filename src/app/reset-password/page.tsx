@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
-// Only Google sign-in is enabled. Password management belongs to the identity provider.
-export default function ResetPasswordPage() {
-  redirect("/auth");
+import { ResetPassword } from "@/features/auth/ResetPassword";
+export const dynamic = "force-dynamic";
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+  return <ResetPassword token={params.error ? undefined : params.token} />;
 }
