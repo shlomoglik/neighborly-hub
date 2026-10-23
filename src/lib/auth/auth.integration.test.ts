@@ -28,7 +28,12 @@ function setup(databaseURL: string) {
   const client = postgres(databaseURL, { max: 1 });
   const db = drizzle(client, { schema });
   // Privileged fixture helpers are only added to this test instance, never production.
-  const auth = betterAuth({ ...createAuth(db, config).options, plugins: [testUtils()] });
+  // Lifecycle tests deliberately exceed login throttles; exercise throttling separately below.
+  const auth = betterAuth({
+    ...createAuth(db, config).options,
+    rateLimit: { enabled: false },
+    plugins: [testUtils()],
+  });
   return { client, db, auth };
 }
 describe.skipIf(!url)("PostgreSQL auth sessions", () => {
@@ -329,5 +334,27 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
     expect(
       await fixture.db.select().from(schema.appUsers).where(eq(schema.appUsers.email, email)),
     ).toEqual([]);
+  });
+  it("throttles repeated login attempts with the production limiter", async () => {
+    const limited = createAuth(fixture.db, config);
+    const statuses: number[] = [];
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const response = await limited.handler(
+        new Request(`${config.baseURL}/api/auth/sign-in/email`, {
+          method: "POST",
+          headers: {
+            origin: config.baseURL,
+            "content-type": "application/json",
+            "x-forwarded-for": "192.0.2.56",
+          },
+          body: JSON.stringify({
+            email: "missing-rate-limit-user@example.test",
+            password: "invalid-long-password",
+          }),
+        }),
+      );
+      statuses.push(response.status);
+    }
+    expect(statuses).toEqual([401, 401, 401, 429]);
   });
 });
