@@ -37,6 +37,7 @@ it("enables verified credential login while gating public registration on email 
     revokeSessionsOnPasswordReset: true,
   });
   expect(auth.options.socialProviders).toEqual({});
+  expect(auth.options.rateLimit?.enabled).toBe(true);
   expect(auth.options.account?.accountLinking).toMatchObject({
     enabled: false,
     disableImplicitLinking: true,
