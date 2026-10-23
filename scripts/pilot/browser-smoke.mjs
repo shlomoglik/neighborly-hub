@@ -132,6 +132,38 @@ try {
       assert.equal(url.searchParams.get("redirect_uri"), `${origin}/api/auth/callback/google`);
     },
   );
+  await check(
+    "mobile: set an account password, sign out and sign in with the same identity",
+    async () => {
+      const passwordContext = await context("outsider", true);
+      const page = await passwordContext.newPage();
+      const before = await (await passwordContext.request.get(`${origin}/api/me`)).json();
+      await page.goto(`${origin}/account`);
+      await page.getByLabel(t.newPassword, { exact: true }).fill("pilot-password-only-for-ci");
+      await button(page, "save").click();
+      await page.getByRole("status").filter({ hasText: t.authPasswordSaved }).waitFor();
+      await button(page, "signOut").click();
+      await page.waitForURL(`${origin}/auth`);
+      assert.equal(await button(page, "signUp").count(), 0);
+      await page.getByLabel(t.email, { exact: true }).fill(identities.outsider.email);
+      await page.getByLabel(t.password, { exact: true }).fill("pilot-password-only-for-ci");
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+        false,
+      );
+      await button(page, "signIn").click();
+      await page.waitForURL(`${origin}/directory`);
+      const after = await (await passwordContext.request.get(`${origin}/api/me`)).json();
+      assert.equal(after.user.id, before.user.id);
+      assert.equal(
+        (await passwordContext.request.get(`${origin}/api/management/projects`)).status(),
+        403,
+      );
+      await page.goto(`${origin}/reset-password`);
+      await page.getByRole("alert").filter({ hasText: t.authResetFailed }).waitFor();
+      await page.close();
+    },
+  );
   const admin = await context("admin");
   const adminPage = await admin.newPage();
   let projectId, householdId, residentLink;
