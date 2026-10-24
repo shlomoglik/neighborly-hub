@@ -33,7 +33,7 @@ export function LoginMethods({
       const result = await authClient.linkSocial({
         provider: "google",
         callbackURL: "/account",
-        errorCallbackURL: "/account?error=link",
+        errorCallbackURL: "/account",
         loginHint: email,
       });
       if (result.error) {

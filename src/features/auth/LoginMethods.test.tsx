@@ -50,7 +50,7 @@ it("starts explicit linking with fixed account callbacks and no sign-in call", a
     expect(linkSocial).toHaveBeenCalledWith({
       provider: "google",
       callbackURL: "/account",
-      errorCallbackURL: "/account?error=link",
+      errorCallbackURL: "/account",
       loginHint: "user@example.test",
     }),
   );

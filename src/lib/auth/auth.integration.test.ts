@@ -396,7 +396,7 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
         {
           provider: "google",
           callbackURL: "/account",
-          errorCallbackURL: "/account?error=link",
+          errorCallbackURL: "/account",
         },
         headers,
       );
