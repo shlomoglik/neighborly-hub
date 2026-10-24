@@ -118,6 +118,9 @@ export function SignIn({
               {t("authFailed")}
             </p>
           )}
+          {(failed || mode === "signup") && (
+            <p className="text-sm text-muted-foreground">{t("authExistingAccountHelp")}</p>
+          )}
           {enabled && (
             <>
               <form onSubmit={submit} className="space-y-3">

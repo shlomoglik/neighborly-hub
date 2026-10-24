@@ -167,6 +167,7 @@ it("registers without navigating before email verification", async () => {
   );
   expect(screen.getByRole("status").textContent).toBe(translate("en", "authVerifySent"));
   expect(replace).not.toHaveBeenCalled();
+  expect(screen.getByText(translate("en", "authExistingAccountHelp"))).toBeTruthy();
 });
 it("requests a reset with a fixed destination and an enumeration-safe message", async () => {
   reset.mockResolvedValue({ data: { status: true } });

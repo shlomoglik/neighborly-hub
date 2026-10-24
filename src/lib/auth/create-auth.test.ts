@@ -39,8 +39,10 @@ it("enables verified credential login while gating public registration on email 
   expect(auth.options.socialProviders).toEqual({});
   expect(auth.options.rateLimit?.enabled).toBe(true);
   expect(auth.options.account?.accountLinking).toMatchObject({
-    enabled: false,
+    enabled: true,
     disableImplicitLinking: true,
+    allowDifferentEmails: false,
+    trustedProviders: [],
   });
   const withMail = createAuth(drizzle.mock({ schema }), {
     ...config,
