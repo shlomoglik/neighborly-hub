@@ -135,9 +135,9 @@ try {
   const passwordContexts = {};
   for (const role of ["admin", "outsider"]) {
     await check(
-      `mobile: ${role} sets a password and signs in with the same identity and permissions`,
+      `${role === "admin" ? "desktop" : "mobile"}: ${role} sets a password and signs in with the same identity and permissions`,
       async () => {
-        const c = await context(role, true);
+        const c = await context(role, role === "outsider");
         passwordContexts[role] = c;
         const page = await c.newPage();
         const before = await (await c.request.get(`${origin}/api/me`)).json();
