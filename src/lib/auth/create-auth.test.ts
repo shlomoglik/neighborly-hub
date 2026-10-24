@@ -21,3 +21,32 @@ it("initializes the existing app_users adapter and secure cookie settings withou
   expect(context.skipOriginCheck).toBe(false);
   expect(context.skipCSRFCheck).toBe(false);
 });
+
+it("enables verified credential login while gating public registration on email delivery", () => {
+  const config = {
+    baseURL: "https://neighborly.test",
+    secret: "only-for-tests-32-characters-long-secret",
+  };
+  const auth = createAuth(drizzle.mock({ schema }), config);
+  expect(auth.options.emailAndPassword).toMatchObject({
+    enabled: true,
+    disableSignUp: true,
+    requireEmailVerification: true,
+    minPasswordLength: 12,
+    maxPasswordLength: 128,
+    revokeSessionsOnPasswordReset: true,
+  });
+  expect(auth.options.socialProviders).toEqual({});
+  expect(auth.options.rateLimit?.enabled).toBe(true);
+  expect(auth.options.account?.accountLinking).toMatchObject({
+    enabled: false,
+    disableImplicitLinking: true,
+  });
+  const withMail = createAuth(drizzle.mock({ schema }), {
+    ...config,
+    mail: { apiKey: "test", from: "auth@example.test" },
+  });
+  expect(withMail.options.emailAndPassword?.disableSignUp).toBe(false);
+  expect(withMail.options.emailVerification?.sendVerificationEmail).toBeTypeOf("function");
+  expect(withMail.options.emailAndPassword?.sendResetPassword).toBeTypeOf("function");
+});

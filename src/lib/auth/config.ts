@@ -8,17 +8,13 @@ const schema = z.object({
     .refine((value) => ["postgres:", "postgresql:"].includes(new URL(value).protocol)),
   BETTER_AUTH_URL: z.string().url(),
   BETTER_AUTH_SECRET: z.string().min(32),
-  GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
-  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
-  RESEND_API_KEY: z.string().min(1).optional(),
-  AUTH_EMAIL_FROM: z.string().email().optional(),
 });
 export type AuthConfig = {
   baseURL: string;
   secret: string;
   googleClientId?: string;
   googleClientSecret?: string;
-  emailDelivery?: { apiKey: string; from: string };
+  mail?: { apiKey: string; from: string };
 };
 /** Missing configuration disables auth. Invalid complete configuration fails closed. */
 export function readAuthConfig(env: Record<string, string | undefined>): AuthConfig | null {
@@ -28,11 +24,6 @@ export function readAuthConfig(env: Record<string, string | undefined>): AuthCon
   );
   if (!parsed.success) throw new Error("Authentication configuration is invalid");
   const data = parsed.data;
-  if (
-    Boolean(data.GOOGLE_CLIENT_ID) !== Boolean(data.GOOGLE_CLIENT_SECRET) ||
-    Boolean(data.RESEND_API_KEY) !== Boolean(data.AUTH_EMAIL_FROM)
-  )
-    throw new Error("Authentication configuration is invalid");
   const url = new URL(data.BETTER_AUTH_URL);
   const localHTTP =
     env.NODE_ENV !== "production" &&
@@ -49,14 +40,19 @@ export function readAuthConfig(env: Record<string, string | undefined>): AuthCon
     throw new Error(
       "Authentication requires a trusted HTTPS origin (HTTP localhost is allowed in development)",
     );
+  const googleClientId = env.GOOGLE_CLIENT_ID?.trim() || undefined;
+  const googleClientSecret = env.GOOGLE_CLIENT_SECRET || undefined;
+  const apiKey = env.RESEND_API_KEY?.trim() || undefined;
+  const from = env.AUTH_EMAIL_FROM?.trim() || undefined;
+  if (Boolean(googleClientId) !== Boolean(googleClientSecret) || Boolean(apiKey) !== Boolean(from))
+    throw new Error("Authentication configuration is invalid");
+  if (from && !z.string().email().safeParse(from).success)
+    throw new Error("Authentication email sender must be an email address");
   return {
     baseURL: url.origin,
     secret: data.BETTER_AUTH_SECRET,
-    googleClientId: data.GOOGLE_CLIENT_ID,
-    googleClientSecret: data.GOOGLE_CLIENT_SECRET,
-    emailDelivery:
-      data.RESEND_API_KEY && data.AUTH_EMAIL_FROM
-        ? { apiKey: data.RESEND_API_KEY, from: data.AUTH_EMAIL_FROM }
-        : undefined,
+    googleClientId,
+    googleClientSecret,
+    mail: apiKey && from ? { apiKey, from } : undefined,
   };
 }

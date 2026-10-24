@@ -1,36 +1,45 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { sendAuthEmail } from "./email";
 afterEach(() => vi.unstubAllGlobals());
-it("delivers verification and recovery links through the configured sender", async () => {
-  const fetcher = vi.fn().mockResolvedValue(new Response("{}"));
-  vi.stubGlobal("fetch", fetcher);
-  for (const kind of ["verify", "reset"] as const) {
-    await sendAuthEmail(
-      { apiKey: "secret", from: "auth@example.test" },
-      "user@example.test",
-      "https://neighborly.test/token",
-      kind,
-    );
-    const [url, init] = fetcher.mock.lastCall!;
-    expect(url).toBe("https://api.resend.com/emails");
-    expect(JSON.parse(init.body)).toMatchObject({
-      from: "auth@example.test",
-      to: ["user@example.test"],
-      text: expect.stringContaining("https://neighborly.test/token"),
-    });
-    expect(init.headers.Authorization).toBe("Bearer secret");
-  }
+it("sends verification and recovery links through the configured server-only provider", async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response("{}"));
+  vi.stubGlobal("fetch", fetch);
+  await sendAuthEmail(
+    { apiKey: "private-key", from: "auth@example.test" },
+    "user@example.test",
+    "https://neighborly.test/verify?token=private",
+    "verify",
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "https://api.resend.com/emails",
+    expect.objectContaining({
+      method: "POST",
+      headers: expect.objectContaining({ Authorization: "Bearer private-key" }),
+    }),
+  );
+  const body = JSON.parse(fetch.mock.calls[0][1].body);
+  expect(body.to).toEqual(["user@example.test"]);
+  expect(body.text).toContain("https://neighborly.test/verify?token=private");
 });
-it("does not expose a failed provider response", async () => {
+it("does not expose delivery provider or network errors", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(new Response("private-provider-details", { status: 400 })),
+    vi.fn().mockResolvedValue(new Response("private provider details", { status: 500 })),
   );
   await expect(
     sendAuthEmail(
-      { apiKey: "secret", from: "auth@example.test" },
+      { apiKey: "private", from: "auth@example.test" },
       "user@example.test",
-      "https://neighborly.test/token",
+      "private-link",
+      "reset",
+    ),
+  ).rejects.toThrow("Authentication email delivery failed");
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("private-key and link")));
+  await expect(
+    sendAuthEmail(
+      { apiKey: "private", from: "auth@example.test" },
+      "user@example.test",
+      "private-link",
       "reset",
     ),
   ).rejects.toThrow("Authentication email delivery failed");

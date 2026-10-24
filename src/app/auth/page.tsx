@@ -12,7 +12,7 @@ export default async function AuthPage({
     <SignIn
       enabled={config !== null}
       googleEnabled={Boolean(config?.googleClientId)}
-      emailDeliveryEnabled={Boolean(config?.emailDelivery)}
+      emailDeliveryEnabled={Boolean(config?.mail)}
       initialError={Boolean(params.error)}
       returnTo={params.next}
     />

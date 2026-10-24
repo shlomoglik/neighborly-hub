@@ -23,42 +23,43 @@ export function SignIn({
 }) {
   const { t } = useI18n();
   const router = useRouter();
-  const [mode, setMode] = useState<"signIn" | "signUp" | "forgot">("signIn");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(initialError);
-  async function submitEmail(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy || !enabled) return;
-    const form = event.currentTarget;
-    const values = new FormData(form);
-    const email = String(values.get("email")).trim().toLowerCase();
-    const password = String(values.get("password") ?? "");
     setBusy(true);
     setFailed(false);
     setSent(false);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const destination = authReturnPath(returnTo);
       const result =
-        mode === "forgot"
-          ? await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" })
-          : mode === "signUp"
-            ? await authClient.signUp.email({
-                email,
-                password,
-                name: String(values.get("name")).trim(),
-                callbackURL: authReturnPath(returnTo),
+        mode === "signup"
+          ? await authClient.signUp.email({
+              email: normalizedEmail,
+              password,
+              name: name.trim(),
+              callbackURL: `/auth?next=${encodeURIComponent(destination)}`,
+            })
+          : mode === "forgot"
+            ? await authClient.requestPasswordReset({
+                email: normalizedEmail,
+                redirectTo: "/reset-password",
               })
-            : await authClient.signIn.email({ email, password });
-      if (result.error) {
-        setFailed(true);
-        return;
-      }
-      form.reset();
-      if (mode === "signIn") {
-        router.replace(authReturnPath(returnTo));
+            : await authClient.signIn.email({ email: normalizedEmail, password });
+      if (result.error) setFailed(true);
+      else if (mode === "login") {
+        router.replace(destination);
         router.refresh();
       } else {
         setSent(true);
+        setPassword("");
       }
     } catch {
       setFailed(true);
@@ -66,10 +67,11 @@ export function SignIn({
       setBusy(false);
     }
   }
-  function switchMode(next: typeof mode) {
+  function changeMode(next: typeof mode) {
     setMode(next);
     setFailed(false);
     setSent(false);
+    setPassword("");
   }
   async function signIn() {
     if (busy) return;
@@ -107,7 +109,7 @@ export function SignIn({
           className="community-enter mt-10 space-y-4 rounded-2xl border bg-card p-6"
         >
           <h1 id="sign-in-title" className="text-2xl">
-            {t(mode)}
+            {t("signIn")}
           </h1>
           <p className="text-sm text-muted-foreground">{t("authIntro")}</p>
           {!enabled && <p role="status">{t("authUnavailable")}</p>}
@@ -118,84 +120,81 @@ export function SignIn({
           )}
           {enabled && (
             <>
-              <form key={mode} onSubmit={submitEmail} className="space-y-3">
+              <form onSubmit={submit} className="space-y-3">
                 <fieldset disabled={busy} className="space-y-3">
-                  {mode === "signUp" && (
+                  {mode === "signup" && (
                     <label className="block space-y-1">
                       <span>{t("fullName")}</span>
-                      <Input name="name" autoComplete="name" required maxLength={100} />
+                      <Input
+                        autoComplete="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        maxLength={200}
+                      />
                     </label>
                   )}
                   <label className="block space-y-1">
                     <span>{t("email")}</span>
                     <Input
-                      name="email"
                       type="email"
-                      autoComplete="email"
+                      autoComplete="username"
+                      dir="ltr"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       maxLength={254}
-                      dir="ltr"
                     />
                   </label>
                   {mode !== "forgot" && (
                     <label className="block space-y-1">
                       <span>{t("password")}</span>
                       <Input
-                        name="password"
                         type="password"
-                        autoComplete={mode === "signUp" ? "new-password" : "current-password"}
+                        autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
-                        minLength={mode === "signUp" ? 12 : undefined}
+                        minLength={mode === "signup" ? 12 : undefined}
                         maxLength={128}
-                        dir="ltr"
+                        aria-describedby={mode === "signup" ? "signup-password-hint" : undefined}
                       />
                     </label>
                   )}
-                  {mode === "signUp" && (
-                    <p className="text-sm text-muted-foreground">{t("authPasswordHelp")}</p>
+                  {mode === "signup" && (
+                    <p id="signup-password-hint" className="text-sm text-muted-foreground">
+                      {t("authPasswordHint")}
+                    </p>
                   )}
-                  <Button type="submit" loading={busy} className="w-full">
-                    {t(mode === "forgot" ? "authSendReset" : mode)}
+                  <Button type="submit" className="w-full" loading={busy}>
+                    {t(mode === "login" ? "signIn" : mode === "signup" ? "signUp" : "forgot")}
                   </Button>
                 </fieldset>
               </form>
               {sent && (
-                <p role="status">{t(mode === "forgot" ? "authResetNotice" : "authVerifyNotice")}</p>
+                <p role="status">{t(mode === "signup" ? "authVerifySent" : "authResetSent")}</p>
               )}
-              <div className="flex flex-wrap gap-2">
-                {mode !== "signIn" && (
+              {emailDeliveryEnabled && (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="link"
                     disabled={busy}
-                    onClick={() => switchMode("signIn")}
+                    onClick={() => changeMode(mode === "login" ? "signup" : "login")}
                   >
-                    {t("signIn")}
+                    {t(mode === "login" ? "signUp" : "signIn")}
                   </Button>
-                )}
-                {emailDeliveryEnabled && mode !== "signUp" && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    disabled={busy}
-                    onClick={() => switchMode("signUp")}
-                  >
-                    {t("signUp")}
-                  </Button>
-                )}
-                {emailDeliveryEnabled && mode !== "forgot" && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    disabled={busy}
-                    onClick={() => switchMode("forgot")}
-                  >
-                    {t("forgot")}
-                  </Button>
-                )}
-              </div>
-              {!emailDeliveryEnabled && (
-                <p className="text-sm text-muted-foreground">{t("authEmailSetupNotice")}</p>
+                  {mode === "login" && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      disabled={busy}
+                      onClick={() => changeMode("forgot")}
+                    >
+                      {t("forgot")}
+                    </Button>
+                  )}
+                </div>
               )}
             </>
           )}
@@ -203,6 +202,7 @@ export function SignIn({
             <Button
               type="button"
               className="w-full"
+              variant="outline"
               disabled={!enabled || busy}
               loading={busy}
               onClick={signIn}

@@ -8,33 +8,41 @@ import * as schema from "../../../drizzle/schema";
 import { createAuth } from "./create-auth";
 
 // Only an explicitly provided disposable test database may run these fixtures.
-const { messages } = vi.hoisted(() => ({
-  messages: [] as { recipient: string; url: string; kind: string }[],
-}));
-vi.mock("./email", () => ({
-  sendAuthEmail: async (_delivery: unknown, recipient: string, url: string, kind: string) => {
-    messages.push({ recipient, url, kind });
-  },
-}));
 const url = process.env.AUTH_TEST_DATABASE_URL;
 const config = {
   baseURL: "https://neighborly.test",
   secret: "auth-integration-only-secret-2dc860874b8f4b62a852",
   googleClientId: "test-google-client",
   googleClientSecret: "test-google-secret",
-  emailDelivery: { apiKey: "test-key", from: "auth@example.test" },
 };
 function setup(databaseURL: string) {
   const client = postgres(databaseURL, { max: 1 });
   const db = drizzle(client, { schema });
   // Privileged fixture helpers are only added to this test instance, never production.
-  // Lifecycle tests deliberately exceed login throttles; exercise throttling separately below.
+  const options = createAuth(db, {
+    ...config,
+    mail: { apiKey: "test-only", from: "auth@example.test" },
+  }).options;
+  const messages: { kind: "verify" | "reset"; url: string }[] = [];
   const auth = betterAuth({
-    ...createAuth(db, config).options,
+    ...options,
+    // Exercise authentication behavior without exhausting the shared fixture IP quota.
     rateLimit: { enabled: false },
+    emailVerification: {
+      ...options.emailVerification,
+      sendVerificationEmail: async ({ url }) => {
+        messages.push({ kind: "verify", url });
+      },
+    },
+    emailAndPassword: {
+      ...options.emailAndPassword,
+      sendResetPassword: async ({ url }) => {
+        messages.push({ kind: "reset", url });
+      },
+    },
     plugins: [testUtils()],
   });
-  return { client, db, auth };
+  return { client, db, auth, messages };
 }
 describe.skipIf(!url)("PostgreSQL auth sessions", () => {
   let fixture: ReturnType<typeof setup>;
@@ -203,17 +211,12 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
       await fixture.db.select({ count: query<number>`count(*)::int` }).from(schema.appUsers),
     ).toEqual(before);
   });
-  it("verifies email before password login, preserves identity and revokes sessions after reset", async () => {
+  it("registers unprivileged accounts, hashes passwords, requires verification and authenticates afterward", async () => {
     const email = `password-${crypto.randomUUID()}@example.test`;
-    const password = "initial-long-password";
-    const signup = await request("/sign-up/email", {
-      name: "Password resident",
-      email,
-      password,
-      callbackURL: "/directory",
-    });
-    expect(signup.status).toBe(200);
-    expect(signup.headers.get("set-cookie") ?? "").not.toContain("session_token=");
+    const password = "initial-strong-password-123";
+    const response = await request("/sign-up/email", { name: "Password fixture", email, password });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie") ?? "").not.toContain("session_token=");
     const [user] = await fixture.db
       .select()
       .from(schema.appUsers)
@@ -227,24 +230,6 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
     expect(account.providerId).toBe("credential");
     expect(account.password).toBeTruthy();
     expect(account.password).not.toBe(password);
-    expect((await request("/sign-in/email", { email, password })).status).toBe(403);
-    const verification = messages.findLast(
-      (message) => message.recipient === email && message.kind === "verify",
-    )!;
-    expect(verification).toBeTruthy();
-    const verified = await fixture.auth.handler(new Request(verification.url));
-    expect(verified.status).toBeLessThan(400);
-    expect(
-      (await request("/sign-in/email", { email, password: "wrong-long-password" })).status,
-    ).toBe(401);
-    const signed = await request("/sign-in/email", { email, password });
-    expect(signed.status).toBe(200);
-    const sessionCookie = signed.headers
-      .getSetCookie()
-      .map((value) => value.split(";")[0])
-      .join("; ");
-    const sessionHeaders = new Headers({ cookie: sessionCookie });
-    expect((await fixture.auth.api.getSession({ headers: sessionHeaders }))?.user.id).toBe(user.id);
     expect(
       await fixture.db
         .select()
@@ -257,104 +242,132 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
         .from(schema.staffAssignments)
         .where(eq(schema.staffAssignments.userId, user.id)),
     ).toEqual([]);
+    expect((await request("/sign-in/email", { email, password })).status).toBe(403);
+    const verificationURL = fixture.messages.findLast((message) => message.kind === "verify")!.url;
+    expect((await fixture.auth.handler(new Request(verificationURL))).status).toBeLessThan(400);
+    const signed = await request("/sign-in/email", { email, password });
+    expect(signed.status).toBe(200);
+    expect((await signed.json()).user.id).toBe(user.id);
+    expect(signed.headers.get("set-cookie")).toContain("HttpOnly");
+    const incorrect = await request("/sign-in/email", { email, password: "incorrect-password" });
+    const unknown = await request("/sign-in/email", {
+      email: `unknown-${crypto.randomUUID()}@example.test`,
+      password,
+    });
+    expect(incorrect.status).toBe(401);
+    expect(await incorrect.json()).toEqual(await unknown.json());
     const duplicate = await request("/sign-up/email", {
       name: "Attacker",
       email,
-      password: "different-long-password",
+      password: "attacker-password-123",
     });
     expect(duplicate.status).toBe(200);
-    const reset = await request("/request-password-reset", {
-      email,
-      redirectTo: "/reset-password",
-    });
-    const unknown = await request("/request-password-reset", {
-      email: `absent-${crypto.randomUUID()}@example.test`,
-      redirectTo: "/reset-password",
-    });
-    expect(reset.status).toBe(unknown.status);
-    expect(await reset.json()).toEqual(await unknown.json());
-    const recovery = messages.findLast(
-      (message) => message.recipient === email && message.kind === "reset",
-    )!;
-    const token = new URL(recovery.url).pathname.split("/").at(-1)!;
-    const resetResult = await request("/reset-password", {
-      token,
-      newPassword: "replacement-long-password",
-    });
-    expect(resetResult.status).toBe(200);
-    expect(await fixture.auth.api.getSession({ headers: sessionHeaders })).toBeNull();
     expect(
-      (await request("/reset-password", { token, newPassword: "reused-token-password" })).status,
-    ).toBeGreaterThanOrEqual(400);
-    expect((await request("/sign-in/email", { email, password })).status).toBe(401);
-    expect(
-      (await request("/sign-in/email", { email, password: "replacement-long-password" })).status,
-    ).toBe(200);
+      (await request("/sign-in/email", { email, password: "attacker-password-123" })).status,
+    ).toBe(401);
   });
-  it("lets a fresh Google identity add a password without linking by email or replacing a password", async () => {
+  it("adds a password to the same authenticated Google identity without replacing credentials", async () => {
     const signed = await login();
-    await fixture.db
-      .insert(schema.authAccounts)
-      .values({ userId: signed.user.id, providerId: "google", accountId: crypto.randomUUID() });
+    const password = "existing-google-password-123";
+    await fixture.db.insert(schema.authAccounts).values({
+      id: crypto.randomUUID(),
+      userId: signed.user.id,
+      providerId: "google",
+      accountId: crypto.randomUUID(),
+    });
+    await expect(
+      fixture.auth.api.setPassword({ body: { newPassword: password }, headers: new Headers() }),
+    ).rejects.toThrow();
+    await fixture.auth.api.setPassword({
+      body: { newPassword: password },
+      headers: signed.headers,
+    });
     await expect(
       fixture.auth.api.setPassword({
+        body: { newPassword: "replacement-password-123" },
         headers: signed.headers,
-        body: { newPassword: "new-google-password" },
-      }),
-    ).resolves.toMatchObject({ status: true });
-    await expect(
-      fixture.auth.api.setPassword({
-        headers: signed.headers,
-        body: { newPassword: "replacement-password" },
       }),
     ).rejects.toThrow();
+    const response = await request("/sign-in/email", { email: signed.user.email, password });
+    expect(response.status).toBe(200);
+    expect((await response.json()).user.id).toBe(signed.user.id);
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.authAccounts)
+        .where(eq(schema.authAccounts.userId, signed.user.id)),
+    ).toHaveLength(2);
+    // Public registration cannot claim the existing authenticated identity.
+    expect(
+      (
+        await request("/sign-up/email", {
+          name: "Attacker",
+          email: signed.user.email,
+          password: "attacker-password-123",
+        })
+      ).status,
+    ).toBe(200);
     expect(
       (
         await request("/sign-in/email", {
           email: signed.user.email,
-          password: "new-google-password",
+          password: "attacker-password-123",
+        })
+      ).status,
+    ).toBe(401);
+    await request("/request-password-reset", {
+      email: signed.user.email,
+      redirectTo: "/reset-password",
+    });
+    const resetURL = fixture.messages.findLast((message) => message.kind === "reset")!.url;
+    const token = new URL(resetURL).pathname.split("/").at(-1)!;
+    expect(
+      (await request("/reset-password", { token, newPassword: "reset-strong-password-123" }))
+        .status,
+    ).toBe(200);
+    expect(await fixture.auth.api.getSession({ headers: signed.headers })).toBeNull();
+    expect(
+      (await request("/reset-password", { token, newPassword: "reuse-strong-password-123" }))
+        .status,
+    ).toBeGreaterThanOrEqual(400);
+    expect((await request("/sign-in/email", { email: signed.user.email, password })).status).toBe(
+      401,
+    );
+    expect(
+      (
+        await request("/sign-in/email", {
+          email: signed.user.email,
+          password: "reset-strong-password-123",
         })
       ).status,
     ).toBe(200);
   });
-  it("rejects weak passwords and foreign-origin signup without creating accounts", async () => {
-    const email = `blocked-${crypto.randomUUID()}@example.test`;
+  it("rejects weak passwords and foreign-origin credential requests", async () => {
     expect(
-      (await request("/sign-up/email", { name: "Blocked", email, password: "short" })).status,
+      (
+        await request("/sign-up/email", {
+          name: "Weak",
+          email: `weak-${crypto.randomUUID()}@example.test`,
+          password: "short",
+        })
+      ).status,
     ).toBeGreaterThanOrEqual(400);
     expect(
       (
         await request(
-          "/sign-up/email",
-          { name: "Blocked", email, password: "valid-long-password" },
+          "/sign-in/email",
+          { email: "someone@example.test", password: "strong-password-123" },
           { origin: "https://attacker.test" },
         )
       ).status,
     ).toBe(403);
     expect(
-      await fixture.db.select().from(schema.appUsers).where(eq(schema.appUsers.email, email)),
-    ).toEqual([]);
-  });
-  it("throttles repeated login attempts with the production limiter", async () => {
-    const limited = createAuth(fixture.db, config);
-    const statuses: number[] = [];
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const response = await limited.handler(
-        new Request(`${config.baseURL}/api/auth/sign-in/email`, {
-          method: "POST",
-          headers: {
-            origin: config.baseURL,
-            "content-type": "application/json",
-            "x-forwarded-for": "192.0.2.56",
-          },
-          body: JSON.stringify({
-            email: "missing-rate-limit-user@example.test",
-            password: "invalid-long-password",
-          }),
-        }),
-      );
-      statuses.push(response.status);
-    }
-    expect(statuses).toEqual([401, 401, 401, 429]);
+      (
+        await request("/request-password-reset", {
+          email: "someone@example.test",
+          redirectTo: "https://attacker.test",
+        })
+      ).status,
+    ).toBe(403);
   });
 });

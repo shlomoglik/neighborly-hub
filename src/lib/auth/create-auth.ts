@@ -7,7 +7,6 @@ import type { AuthConfig } from "./config";
 
 /** No role or resident access is inferred from a provider profile or matching email. */
 export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthConfig) {
-  const delivery = config.emailDelivery;
   return betterAuth({
     appName: "Neighborly Hub",
     baseURL: config.baseURL,
@@ -28,31 +27,29 @@ export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthCo
       changeEmail: { enabled: false },
       deleteUser: { enabled: false },
     },
-    socialProviders:
-      config.googleClientId && config.googleClientSecret
-        ? {
-            google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret },
-          }
-        : {},
+    socialProviders: {
+      ...(config.googleClientId && config.googleClientSecret
+        ? { google: { clientId: config.googleClientId, clientSecret: config.googleClientSecret } }
+        : {}),
+    },
     emailAndPassword: {
       enabled: true,
-      disableSignUp: !delivery,
+      disableSignUp: !config.mail,
       requireEmailVerification: true,
       minPasswordLength: 12,
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
-      ...(delivery
+      ...(config.mail
         ? {
-            sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
-              await sendAuthEmail(delivery, user.email, url, "reset");
-            },
+            sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) =>
+              sendAuthEmail(config.mail!, user.email, url, "reset"),
           }
         : {}),
     },
     emailVerification: {
-      sendOnSignUp: Boolean(delivery),
-      sendOnSignIn: Boolean(delivery),
-      ...(delivery
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      ...(config.mail
         ? {
             sendVerificationEmail: async ({
               user,
@@ -60,9 +57,7 @@ export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthCo
             }: {
               user: { email: string };
               url: string;
-            }) => {
-              await sendAuthEmail(delivery, user.email, url, "verify");
-            },
+            }) => sendAuthEmail(config.mail!, user.email, url, "verify"),
           }
         : {}),
     },

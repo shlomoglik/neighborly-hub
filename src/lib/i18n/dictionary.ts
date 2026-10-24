@@ -1121,7 +1121,7 @@ export const dict = {
     ru: "משפחת לוי · Smith · Семья Козлов",
   },
   authIntro: {
-    he: "כניסה לחשבון באמצעות אימייל וסיסמה או Google",
+    he: "כניסה באמצעות אימייל וסיסמה או Google",
     en: "Sign in with email and password or Google",
     ru: "Войдите с почтой и паролем или через Google",
   },
@@ -1145,47 +1145,48 @@ export const dict = {
     en: "Could not sign out. Please try again.",
     ru: "Не удалось выйти. Попробуйте ещё раз.",
   },
-  authPasswordHelp: {
-    he: "הסיסמה צריכה להכיל 12–128 תווים.",
-    en: "Use a password with 12–128 characters.",
+  authSetPassword: { he: "הגדרת סיסמה", en: "Set a password", ru: "Установить пароль" },
+  authSetPasswordIntro: {
+    he: "הגדירו סיסמה כדי להיכנס גם עם האימייל של החשבון.",
+    en: "Set a password to sign in with your account email too.",
+    ru: "Установите пароль для входа с почтой аккаунта.",
+  },
+  authCurrentPassword: { he: "סיסמה נוכחית", en: "Current password", ru: "Текущий пароль" },
+  authConfirmPassword: { he: "אימות סיסמה", en: "Confirm password", ru: "Подтвердите пароль" },
+  authPasswordHint: {
+    he: "יש לבחור סיסמה באורך 12–128 תווים.",
+    en: "Use a password of 12\u2013128 characters.",
     ru: "Используйте пароль длиной 12–128 символов.",
   },
-  authEmailSetupNotice: {
-    he: "יש לך חשבון Google? אפשר להיכנס ולהגדיר סיסמה במסך החשבון. הרשמה ושחזור סיסמה באימייל יופעלו לאחר הגדרת שירות המייל.",
-    en: "Google users can sign in and set a password in My account. Email registration and recovery require email service setup.",
-    ru: "Пользователи Google могут задать пароль в своём аккаунте. Регистрация и восстановление требуют настройки почты.",
-  },
-  authSendReset: { he: "שליחת קישור לאיפוס", en: "Send reset link", ru: "Отправить ссылку" },
-  authVerifyNotice: {
-    he: "אם ניתן להירשם בכתובת הזו, נשלח קישור לאימות האימייל. יש לאמת לפני הכניסה. לחשבון קיים, נסו להתחבר או לאפס סיסמה.",
-    en: "If registration is available for this address, a verification link has been sent. Verify before signing in. For an existing account, sign in or reset your password.",
-    ru: "Если регистрация доступна, ссылка для подтверждения отправлена. Подтвердите почту перед входом. Для существующего аккаунта войдите или сбросьте пароль.",
-  },
-  authResetNotice: {
-    he: "אם קיים חשבון מתאים, נשלח קישור לאיפוס הסיסמה.",
-    en: "If an eligible account exists, a password reset link has been sent.",
-    ru: "Если подходящий аккаунт существует, ссылка для сброса отправлена.",
-  },
-  authChangePassword: { he: "שינוי סיסמה", en: "Change password", ru: "Изменить пароль" },
-  authSetPassword: {
-    he: "הגדרת סיסמה לכניסה באימייל",
-    en: "Set a password for email sign-in",
-    ru: "Задать пароль для входа по почте",
+  authPasswordMismatch: {
+    he: "הסיסמאות אינן תואמות.",
+    en: "Passwords do not match.",
+    ru: "Пароли не совпадают.",
   },
   authPasswordSaved: {
-    he: "הסיסמה נשמרה. אפשר להתחבר באמצעות האימייל והסיסמה.",
-    en: "Password saved. You can sign in with your email and password.",
-    ru: "Пароль сохранён. Теперь можно войти с почтой и паролем.",
+    he: "הסיסמה נשמרה. אפשר להתחבר עם אימייל וסיסמה.",
+    en: "Password saved. You can sign in with email and password.",
+    ru: "Пароль сохранён. Можно войти с почтой и паролем.",
   },
   authPasswordFailed: {
-    he: "הסיסמה לא נשמרה. בדקו את הסיסמה הנוכחית או התחברו מחדש ונסו שוב.",
-    en: "Password was not saved. Check your current password or sign in again and retry.",
-    ru: "Пароль не сохранён. Проверьте текущий пароль или войдите заново.",
+    he: "לא ניתן לשמור את הסיסמה. בדקו את הפרטים או התחברו מחדש ונסו שוב.",
+    en: "Could not save the password. Check your details or sign in again and retry.",
+    ru: "Не удалось сохранить пароль. Проверьте данные или войдите заново.",
   },
-  authResetFailed: {
-    he: "קישור האיפוס חסר, פג תוקף או אינו תקין. בקשו קישור חדש ממסך הכניסה.",
-    en: "The reset link is missing, expired or invalid. Request a new link from sign-in.",
-    ru: "Ссылка отсутствует, истекла или недействительна. Запросите новую на странице входа.",
+  authVerifySent: {
+    he: "אם ניתן להשלים את ההרשמה, יישלח אליכם מייל לאימות. אם כבר נרשמתם, היכנסו או אפסו סיסמה.",
+    en: "If registration can proceed, you will receive a verification email. Already registered? Sign in or reset your password.",
+    ru: "Если регистрация возможна, вы получите письмо для подтверждения. Уже зарегистрированы? Войдите или сбросьте пароль.",
+  },
+  authResetSent: {
+    he: "אם קיים חשבון מתאים, יישלח מייל עם קישור לאיפוס סיסמה.",
+    en: "If an eligible account exists, a password reset email will be sent.",
+    ru: "Если подходящий аккаунт существует, будет отправлено письмо для сброса пароля.",
+  },
+  authResetInvalid: {
+    he: "קישור האיפוס חסר, פג תוקף או אינו זמין. בקשו קישור חדש ממסך הכניסה.",
+    en: "The reset link is missing, expired or unavailable. Request a new link from sign-in.",
+    ru: "Ссылка отсутствует, истекла или недоступна. Запросите новую на странице входа.",
   },
   authAccount: { he: "החשבון שלי", en: "My account", ru: "Мой аккаунт" },
 } satisfies Record<string, Record<Lang, string>>;

@@ -1,12 +1,10 @@
 "use server";
-
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth/server";
+import { z } from "zod";
 
-/** Next server actions enforce same-origin POSTs. Adding a password requires recent authentication. */
-export async function setAccountPassword(newPassword: string): Promise<boolean> {
-  if (typeof newPassword !== "string" || newPassword.length < 12 || newPassword.length > 128)
-    return false;
+export async function setAccountPassword(password: string): Promise<boolean> {
+  if (!z.string().min(12).max(128).safeParse(password).success) return false;
   try {
     const auth = await getAuth();
     if (!auth) return false;
@@ -15,7 +13,8 @@ export async function setAccountPassword(newPassword: string): Promise<boolean> 
     if (!session?.user.emailVerified) return false;
     const age = Date.now() - new Date(session.session.createdAt).getTime();
     if (!Number.isFinite(age) || age < 0 || age > 5 * 60 * 1000) return false;
-    await auth.api.setPassword({ body: { newPassword }, headers: requestHeaders });
+    // Better Auth refuses to replace an existing password.
+    await auth.api.setPassword({ headers: requestHeaders, body: { newPassword: password } });
     return true;
   } catch {
     return false;

@@ -48,17 +48,17 @@ describe("authentication configuration", () => {
   });
 });
 
-it("supports password login without Google and validates optional provider pairs", () => {
+it("supports password auth without Google and rejects partial optional provider setup", () => {
   expect(
-    readAuthConfig({ ...valid, GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" })?.googleClientId,
-  ).toBeUndefined();
+    readAuthConfig({ ...valid, GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" }),
+  ).toMatchObject({ baseURL: valid.BETTER_AUTH_URL });
   expect(() => readAuthConfig({ ...valid, GOOGLE_CLIENT_ID: "" })).toThrow();
-  expect(() => readAuthConfig({ ...valid, RESEND_API_KEY: "key" })).toThrow();
+  expect(() => readAuthConfig({ ...valid, RESEND_API_KEY: "private" })).toThrow();
   expect(() =>
-    readAuthConfig({ ...valid, RESEND_API_KEY: "key", AUTH_EMAIL_FROM: "not-an-email" }),
+    readAuthConfig({ ...valid, RESEND_API_KEY: "private", AUTH_EMAIL_FROM: "bad" }),
   ).toThrow();
   expect(
-    readAuthConfig({ ...valid, RESEND_API_KEY: "key", AUTH_EMAIL_FROM: "auth@example.test" })
-      ?.emailDelivery,
-  ).toEqual({ apiKey: "key", from: "auth@example.test" });
+    readAuthConfig({ ...valid, RESEND_API_KEY: "private", AUTH_EMAIL_FROM: "auth@example.test" })
+      ?.mail,
+  ).toEqual({ apiKey: "private", from: "auth@example.test" });
 });
