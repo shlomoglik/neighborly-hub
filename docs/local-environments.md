@@ -30,4 +30,4 @@ pnpm admin:grant --email you@example.com
 
 This command is idempotent and adds a global `admin` role to an existing verified user. It never creates an account. For remote non-production environments, use `pnpm admin:grant:development --email ...` or `pnpm admin:grant:staging --email ...` and set `ALLOW_REMOTE_ADMIN_BOOTSTRAP=true` in the selected private environment file. There is intentionally no production command. A hostname check is not an authoritative environment identity check: verify that the selected remote database is genuinely non-production before opting in. Do not grant global admin to seed/test identities in production.
 
-For the hosted Staging rollout and isolation prerequisites, see [Staging rollout](staging-rollout.md). The local launcher does not establish hosted database isolation.
+For the hosted Staging rollout and isolation prerequisites, see [Staging rollout](staging-rollout.md). The Staging launcher requires `DATABASE_SCHEMA=staging` and the dedicated runtime role; hosted provisioning remains a separate step.
