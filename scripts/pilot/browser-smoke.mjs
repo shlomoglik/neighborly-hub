@@ -132,7 +132,48 @@ try {
       assert.equal(url.searchParams.get("redirect_uri"), `${origin}/api/auth/callback/google`);
     },
   );
-  const admin = await context("admin");
+  const passwordContexts = {};
+  for (const role of ["admin", "outsider"]) {
+    await check(
+      `${role === "admin" ? "desktop" : "mobile"}: ${role} sets a password and signs in with the same identity and permissions`,
+      async () => {
+        const c = await context(role, role === "outsider");
+        passwordContexts[role] = c;
+        const page = await c.newPage();
+        const before = await (await c.request.get(`${origin}/api/me`)).json();
+        const scopeBefore = await (await c.request.get(`${origin}/api/management/projects`)).json();
+        assert.equal(scopeBefore.canCreateProject, role === "admin");
+        assert.equal(scopeBefore.hasManagementAccess, role === "admin");
+        await page.goto(`${origin}/account`);
+        await page.getByLabel(t.newPassword, { exact: true }).fill("pilot-password-only-for-ci");
+        await page
+          .getByLabel(t.authConfirmPassword, { exact: true })
+          .fill("pilot-password-only-for-ci");
+        await button(page, "save").click();
+        await page.getByRole("status").filter({ hasText: t.authPasswordSaved }).waitFor();
+        await button(page, "signOut").click();
+        await page.waitForURL(`${origin}/auth`);
+        assert.equal((await c.request.get(`${origin}/api/me`)).status(), 401);
+        assert.equal(await button(page, "signUp").count(), 0);
+        await page.getByLabel(t.email, { exact: true }).fill(identities[role].email);
+        await page.getByLabel(t.password, { exact: true }).fill("pilot-password-only-for-ci");
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+          false,
+        );
+        await button(page, "signIn").click();
+        await page.waitForURL(`${origin}/directory`);
+        const after = await (await c.request.get(`${origin}/api/me`)).json();
+        assert.equal(after.user.id, before.user.id);
+        const scopeAfter = await (await c.request.get(`${origin}/api/management/projects`)).json();
+        assert.deepEqual(scopeAfter, scopeBefore);
+        await page.goto(`${origin}/reset-password`);
+        await page.getByRole("alert").filter({ hasText: t.authResetInvalid }).waitFor();
+        await page.close();
+      },
+    );
+  }
+  const admin = passwordContexts.admin;
   const adminPage = await admin.newPage();
   let projectId, householdId, residentLink;
   const projectName = `Pilot ${crypto.randomUUID().slice(0, 8)}`;
@@ -280,8 +321,11 @@ try {
   await check(
     "unlinked account and cross-origin writes cannot read or mutate the pilot household",
     async () => {
-      const outsider = await context("outsider", true);
-      const response = await outsider.request.get(`${origin}/api/households/${householdId}`);
+      // Sign-out revoked the fixture session. Use the session obtained by the password login.
+      assert.equal((await passwordContexts.outsider.request.get(`${origin}/api/me`)).status(), 200);
+      const response = await passwordContexts.outsider.request.get(
+        `${origin}/api/households/${householdId}`,
+      );
       assert.equal(response.status(), 404);
       assert.equal(response.headers()["cache-control"], "private, no-store");
       assert.equal(
