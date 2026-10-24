@@ -42,7 +42,17 @@ export async function assertStagingIsolation(tx, target) {
         where n.nspname !~ '^pg_' and n.nspname <> 'information_schema'
           and n.nspname not in (${target.schema}, ${target.history})
           and ((c.relkind in ('r','p','v','m','f') and
-            has_table_privilege(${role}, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+            has_table_privilege(${role}, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+            -- Supabase exposes these extension-owned monitoring views to PUBLIC.
+            -- PostgreSQL masks other roles' query text unless pg_read_all_stats
+            -- is granted, which the membership check above rejects.
+            and not (n.nspname = 'extensions' and c.relkind = 'v'
+              and c.relname in ('pg_stat_statements', 'pg_stat_statements_info')
+              and not has_table_privilege(${role}, c.oid, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+              and exists (select 1 from pg_depend d join pg_extension e on e.oid = d.refobjid
+                where d.classid = 'pg_class'::regclass and d.objid = c.oid
+                  and d.refclassid = 'pg_extension'::regclass and d.deptype = 'e'
+                  and e.extname = 'pg_stat_statements')))
             or (c.relkind = 'S' and has_sequence_privilege(${role}, c.oid, 'SELECT,UPDATE,USAGE')))
       ) and not exists (
         select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace

@@ -19,6 +19,8 @@ Apply [staging-roles.sql](../database/operations/staging-roles.sql) once as the 
 
 Both roles must have no elevated flags or membership in other roles. Before any Staging DDL, the migration runner checks effective privileges, including `PUBLIC`/inherited grants, database/schema creation, access to tables/sequences outside Staging and executable security-definer functions outside Staging. It also verifies schema ownership and runtime schema restrictions. A failure blocks deployment without changing Production grants. Use a separate database/project if isolation cannot be established without changing Production access.
 
+The only non-system read exception is for the two extension-owned `extensions.pg_stat_statements` monitoring views, which Supabase exposes to `PUBLIC`. The check requires actual `pg_stat_statements` extension membership and rejects mutation privileges. These views expose shared aggregate performance metadata; PostgreSQL masks other roles' SQL text/query IDs unless `pg_read_all_stats` is granted, and the role-membership check rejects that grant. See [PostgreSQL monitoring security](https://www.postgresql.org/docs/17/pgstatstatements.html). Application tables and arbitrary views are never exempt.
+
 Keep the schemas outside Supabase's exposed Data API schemas. Do not grant `anon`, `authenticated`, `service_role` or arbitrary application users access to Staging. Application authorization remains enforced by the server; database login roles separate environments, not individual residents.
 
 ## Vercel configuration

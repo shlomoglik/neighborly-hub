@@ -23,6 +23,8 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
     const connection = new URL(url!);
     connection.pathname = `/${database}`;
     owner = postgres(connection.href, { max: 1, prepare: false, onnotice: () => {} });
+    await owner`create schema extensions`;
+    await owner`create extension pg_stat_statements with schema extensions`;
     migrations = await loadMigrations();
     await runMigrations(owner, migrations);
     await owner`insert into public.projects (name) values ('Production sentinel')`;
@@ -100,6 +102,11 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
     ).rejects.toMatchObject({ code: "42501" });
   });
   it("fails the isolation gate for PUBLIC and inherited grants and privileged functions", async () => {
+    await owner`grant pg_read_all_stats to neighborly_staging_app`;
+    await expect(runMigrations(migration, migrations, { target })).rejects.toThrow(
+      "isolation check failed",
+    );
+    await owner`revoke pg_read_all_stats from neighborly_staging_app`;
     await owner`grant select on public.projects to public`;
     await expect(runMigrations(migration, migrations, { target })).rejects.toThrow(
       "isolation check failed",
