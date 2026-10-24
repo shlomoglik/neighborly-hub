@@ -11,7 +11,9 @@ export async function setAccountPassword(password: string): Promise<boolean> {
     const requestHeaders = await headers();
     const session = await auth.api.getSession({ headers: requestHeaders });
     if (!session?.user.emailVerified) return false;
-    // Better Auth additionally requires a fresh session and refuses to replace an existing password.
+    const age = Date.now() - new Date(session.session.createdAt).getTime();
+    if (!Number.isFinite(age) || age < 0 || age > 5 * 60 * 1000) return false;
+    // Better Auth refuses to replace an existing password.
     await auth.api.setPassword({ headers: requestHeaders, body: { newPassword: password } });
     return true;
   } catch {
