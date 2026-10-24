@@ -44,3 +44,7 @@ Official platform references: [conditional build commands](https://vercel.com/kb
 Production logs report migration checkpoints: configuration, load-files, create-client, connect-and-begin, lock, history, each apply:<filename>, and commit. A checkpoint records an attempted operation, not success; apply messages do not mean a transaction committed. All pending migrations remain atomic. The failure line includes the last checkpoint, an allowlisted connection/filesystem code or validated SQLSTATE (including nested causes and AggregateError), and a fixed error kind. Unknown errors never print arbitrary messages or stacks.
 
 Pending migrations are expected and run automatically after history validation. Do not infer that missing migration history requires a baseline merely from a failed build. Verify the exact failure and existing schema first.
+
+## Staging rollout
+
+The current gate remains Production-only. See [Staging rollout](staging-rollout.md) for the proposed isolation design, required runner/runtime changes and activation evidence. That plan does not enable Preview migrations.
