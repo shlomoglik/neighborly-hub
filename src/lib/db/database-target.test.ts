@@ -58,6 +58,15 @@ describe("database deployment targets", () => {
       }),
     ).toThrow();
     expect(() =>
+      validateStagingConnections({
+        ...staging,
+        MIGRATION_DATABASE_URL: staging.MIGRATION_DATABASE_URL.replace(
+          ".project:",
+          ".otherproject:",
+        ),
+      }),
+    ).toThrow();
+    expect(() =>
       validateStagingConnections({ ...staging, MIGRATION_DATABASE_URL: undefined }),
     ).toThrow();
   });

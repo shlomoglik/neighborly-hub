@@ -9,7 +9,12 @@ export function validateStagingConnections(environment) {
     target,
     "migration",
   );
-  if (runtime.hostname !== migration.hostname || runtime.pathname !== migration.pathname) {
+  const project = (url) => decodeURIComponent(url.username).split(".").slice(1).join(".");
+  if (
+    runtime.hostname !== migration.hostname ||
+    runtime.pathname !== migration.pathname ||
+    project(runtime) !== project(migration)
+  ) {
     throw new Error("Staging runtime and migrations must use the same database endpoint");
   }
   return target;
