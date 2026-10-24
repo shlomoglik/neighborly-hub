@@ -168,7 +168,8 @@ it("reports migration checkpoints and the filename before SQL fails", async () =
   const events: string[] = [];
   const failure = Object.assign(new Error("private SQL"), { code: "42501" });
   const tx = Object.assign(
-    async (strings: TemplateStringsArray) => {
+    (strings: TemplateStringsArray | string) => {
+      if (typeof strings === "string") return strings;
       const query = strings.join("");
       if (query.includes("to_regclass")) return [{ history: null }];
       if (query.includes("as populated")) return [{ populated: false }];
