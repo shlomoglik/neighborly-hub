@@ -1188,6 +1188,46 @@ export const dict = {
     en: "The reset link is missing, expired or unavailable. Request a new link from sign-in.",
     ru: "Ссылка отсутствует, истекла или недоступна. Запросите новую на странице входа.",
   },
+  authVerificationRequested: {
+    he: "נשלח מייל לאימות. לאחר האימות יש להתחבר מחדש לפני קישור דרך התחברות נוספת.",
+    en: "Verification email sent. After verifying, sign in again before connecting another method.",
+    ru: "Письмо для подтверждения отправлено. После подтверждения войдите заново перед подключением другого способа.",
+  },
+  authLoginMethods: { he: "דרכי התחברות", en: "Sign-in methods", ru: "Способы входа" },
+  authGoogleMethod: { he: "חשבון Google", en: "Google account", ru: "Аккаунт Google" },
+  authPasswordMethod: { he: "אימייל וסיסמה", en: "Email and password", ru: "Почта и пароль" },
+  authMethodConnected: { he: "מחובר", en: "Connected", ru: "Подключено" },
+  authMethodNotConnected: { he: "לא מחובר", en: "Not connected", ru: "Не подключено" },
+  authConnectGoogle: {
+    he: "חיבור Google לחשבון הזה",
+    en: "Connect Google to this account",
+    ru: "Подключить Google к этому аккаунту",
+  },
+  authLinkHelp: {
+    he: "אפשר להתחבר בשתי הדרכים לאותו חשבון, עם אותם שיוכים והרשאות. לחיבור Google יש לבחור כתובת מאומתת הזהה לכתובת החשבון, ולהתחבר מחדש אם עברו יותר מחמש דקות.",
+    en: "Both methods use the same account, memberships and permissions. Connect a verified Google email matching this account. Sign in again first if more than five minutes have passed.",
+    ru: "Оба способа используют один аккаунт с теми же правами. Подключите Google с таким же подтверждённым адресом. Если прошло более пяти минут, сначала войдите заново.",
+  },
+  authLinkVerifyRequired: {
+    he: "יש לאמת את כתובת האימייל ולהתחבר מחדש לפני חיבור Google.",
+    en: "Verify your email and sign in again before connecting Google.",
+    ru: "Подтвердите почту и войдите заново перед подключением Google.",
+  },
+  authSendVerification: {
+    he: "שליחת מייל אימות",
+    en: "Send verification email",
+    ru: "Отправить письмо для подтверждения",
+  },
+  authLinkFailed: {
+    he: "לא ניתן לחבר את דרך ההתחברות. התחברו מחדש וודאו שכתובת Google מאומתת וזהה לכתובת החשבון.",
+    en: "Could not connect the sign-in method. Sign in again and make sure the verified Google email matches this account.",
+    ru: "Не удалось подключить способ входа. Войдите заново и проверьте, что подтверждённая почта Google совпадает с почтой аккаунта.",
+  },
+  authExistingAccountHelp: {
+    he: "כבר יש לכם חשבון? התחברו בדרך הקיימת או אפסו סיסמה. לאחר הכניסה אפשר להוסיף דרך התחברות דרך ״החשבון שלי״. הרשמה נוספת לא תקשר חשבונות.",
+    en: "Already have an account? Use your existing sign-in method or reset your password. Then add another method in My account. Registering again does not link accounts.",
+    ru: "Уже есть аккаунт? Войдите привычным способом или сбросьте пароль. Затем добавьте способ входа в Мой аккаунт. Повторная регистрация не связывает аккаунты.",
+  },
   authAccount: { he: "החשבון שלי", en: "My account", ru: "Мой аккаунт" },
 } satisfies Record<string, Record<Lang, string>>;
 

@@ -1,3 +1,5 @@
+import { LoginMethods } from "@/features/auth/LoginMethods";
+import { readAuthConfig } from "@/lib/auth/config";
 import { PasswordForm } from "@/features/auth/PasswordForm";
 import { getAuth } from "@/lib/auth/server";
 import { headers } from "next/headers";
@@ -7,10 +9,20 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { SignOut } from "@/features/auth/SignOut";
 export const dynamic = "force-dynamic";
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
   const user = await requireCurrentUser();
   const auth = await getAuth();
-  const accounts = await auth?.api.listUserAccounts({ headers: await headers() });
+  const requestHeaders = await headers();
+  const [accounts, session] = await Promise.all([
+    auth?.api.listUserAccounts({ headers: requestHeaders }),
+    auth?.api.getSession({ headers: requestHeaders }),
+  ]);
+  const config = readAuthConfig(process.env);
   const hasPassword = accounts?.some((account) => account.providerId === "credential") ?? false;
   const cookie = (await cookies()).get(LANG_COOKIE)?.value;
   const lang = isLang(cookie) ? cookie : DEFAULT_LANG;
@@ -37,8 +49,20 @@ export default async function AccountPage() {
         >
           {translate(lang, "homeMine")}
         </Link>
-        <PasswordForm mode={hasPassword ? "change" : "set"} />
+
         <SignOut />
+      </div>
+      <LoginMethods
+        hasGoogle={accounts?.some((account) => account.providerId === "google") ?? false}
+        hasPassword={hasPassword}
+        googleEnabled={Boolean(config?.googleClientId)}
+        emailDeliveryEnabled={Boolean(config?.mail)}
+        emailVerified={session?.user.emailVerified ?? false}
+        email={user.email}
+        initialError={Boolean(params.error)}
+      />
+      <div className="rounded-2xl border bg-card p-6">
+        <PasswordForm mode={hasPassword ? "change" : "set"} />
       </div>
     </main>
   );

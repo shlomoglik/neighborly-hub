@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../../../drizzle/schema";
@@ -66,9 +67,28 @@ export function createAuth(db: PostgresJsDatabase<typeof schema>, config: AuthCo
       updateAge: 60 * 60 * 24,
       cookieCache: { enabled: false },
     },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/link-social") return;
+        const session = await getSessionFromCtx(ctx);
+        if (!session) throw new APIError("UNAUTHORIZED", { message: "Authentication required" });
+        const age = Date.now() - new Date(session.session.createdAt).getTime();
+        if (!session.user.emailVerified || !Number.isFinite(age) || age < 0 || age > 5 * 60 * 1000)
+          throw new APIError("FORBIDDEN", {
+            message: "Verify your email and sign in again before linking",
+          });
+        if (ctx.body?.provider !== "google")
+          throw new APIError("BAD_REQUEST", { message: "Unsupported provider" });
+      }),
+    },
     account: {
       encryptOAuthTokens: true,
-      accountLinking: { enabled: false, disableImplicitLinking: true },
+      accountLinking: {
+        enabled: true,
+        disableImplicitLinking: true,
+        allowDifferentEmails: false,
+        trustedProviders: [],
+      },
       storeStateStrategy: "database",
     },
     advanced: {
