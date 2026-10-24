@@ -1,53 +1,62 @@
-# Staging environment rollout
+# Isolated Staging environment
 
-## Scope and status
+## Implemented behavior
 
-This is a rollout plan, not an implementation of Staging isolation. Merging this document does not configure a database, change credentials, enable Preview migrations or make Staging operational.
+Staging runs on the exact Vercel Preview branch `staging`, using the same PostgreSQL database as Production with a private `staging` application schema. Production continues to use `public` and `neighborly_migrations.history`. Staging history is separate: `neighborly_staging_migrations.history`.
 
-### Repository evidence
+`DATABASE_SCHEMA` accepts only `public` (the default) or `staging`. Hosted Staging requires both Preview environment and the exact `staging` branch; another hosted branch cannot use the Staging schema. Missing schema configuration on the Staging branch fails closed. Local `pnpm dev:staging` requires the same explicit schema and dedicated runtime role.
 
-Verified against the code in this PR:
+Drizzle qualifies all Staging tables, including the Better Auth adapter's tables. The client disables prepared statements for compatibility with transaction pooling. Trigger functions are pinned to their own schema after migration, so a reused connection's search path cannot redirect deferred constraint checks. Admin bootstrap uses the selected schema too.
 
-| Area          | Current behavior                                                                                                                                                        | Consequence for Staging                                                                          |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Runtime       | `src/lib/db/client.ts` uses `DATABASE_URL` and unqualified `pgTable` declarations from `drizzle/schema.ts`. Better Auth uses this database through its Drizzle adapter. | There is no explicit application-schema selection or environment identity guard.                 |
-| Migrations    | `scripts/db/migrations.mjs` forces `search_path = public, pg_catalog`, checks whether `public` is populated and stores history in `neighborly_migrations.history`.      | Pointing the current runner at a shared database cannot initialize an isolated `staging` schema. |
-| Deployment    | `scripts/vercel-build.mjs` runs migrations after a successful build only when `VERCEL_ENV=production`.                                                                  | Preview builds do not migrate; build success does not prove database connectivity or isolation.  |
-| CI            | `.github/workflows/nextjs.yml` runs on PRs targeting `main` and pushes to `main`.                                                                                       | PRs targeting `staging` and pushes to `staging` do not currently receive these checks.           |
-| Local tooling | `pnpm dev:staging` loads a private environment file and forces the auth origin to localhost.                                                                            | This command does not provision a hosted Staging environment.                                    |
+## Roles and provisioning
 
-### Previously reported hosted configuration
+Apply [staging-roles.sql](../database/operations/staging-roles.sql) once as the database administrator. It creates only Staging roles/schemas/default privileges and does not change existing Production objects or grants. It deliberately fails if those names already exist; inspect an existing installation rather than overwriting it. Set distinct strong passwords through the secret manager, never in committed SQL.
 
-The original investigation on 2026-10-23 reported a `staging` branch deployed as Vercel Preview, branch-scoped `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET`, and Production-only database variables. These are historical observations, not current verification of provider settings. Recheck branch mapping, deployment protection and effective environment scopes before activation; never include secret values in review evidence.
+| Login role                    | Purpose                                                | Grants                                                                                                               |
+| ----------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `neighborly_staging_app`      | Application, auth and explicit Staging admin bootstrap | Schema usage and table CRUD, sequence usage/select, invoker function execution within Staging; no DDL/history access |
+| `neighborly_staging_migrator` | Deployment migrations                                  | Owns only Staging application/history schemas and objects; no Production data or DDL access                          |
 
-**Do not copy Production database credentials to Preview.** Keep arbitrary PR previews without live database credentials. Scope Staging secrets to the exact `staging` branch, including any inherited project/integration variables that could otherwise supply a Production connection.
+Both roles must have no elevated flags or membership in other roles. Before any Staging DDL, the migration runner checks effective privileges, including `PUBLIC`/inherited grants, database/schema creation, access to tables/sequences outside Staging and executable security-definer functions outside Staging. It also verifies schema ownership and runtime schema restrictions. A failure blocks deployment without changing Production grants. Use a separate database/project if isolation cannot be established without changing Production access.
 
-## Isolation design and implementation gates
+Keep the schemas outside Supabase's exposed Data API schemas. Do not grant `anon`, `authenticated`, `service_role` or arbitrary application users access to Staging. Application authorization remains enforced by the server; database login roles separate environments, not individual residents.
 
-The proposed shared-database option requires a dedicated application schema `staging`, a separate migration-history schema and distinct runtime/migration login roles. It is not supported by the current code. Use a separate database/project if the following boundaries cannot be established without changing Production access.
+## Vercel configuration
 
-1. **Prove effective database privileges first.** Both Staging roles must lack Production ownership, elevated privileges and role membership that permits access or `SET ROLE` into Production roles. Check inherited and `PUBLIC` grants, schema access, tables, sequences and callable functions, including `SECURITY DEFINER` functions. A role-specific revoke cannot cancel access received through `PUBLIC`. Do not revoke shared Production grants as part of this rollout; use a separate database/project if necessary. The runtime role gets only required data/function access within Staging, with no DDL or migration-history access; the migration role owns only Staging objects. Verify default grants for newly migrated objects as well as existing ones.
-2. **Make the migration runner schema-aware.** Select the application and history schemas from a fixed allowlist, quote SQL identifiers safely and fail closed on invalid combinations. Update the populated-schema/baseline checks and history references together. Review migration SQL, function bodies, triggers and catalog lookups for schema assumptions. Preserve immutable migration checksums, transaction ownership and rollback/idempotency guarantees. Never baseline Staging from Production history or modify Production history. Initialize an empty Staging schema by replaying all authoritative migrations.
-3. **Route every runtime query to Staging.** Cover Drizzle queries/relations and the Better Auth adapter, not just raw SQL. Validate behavior across fresh/reused connections and the actual hosting pool mode. A URL or role `search_path` alone is not a security boundary. Runtime and migration connections must resolve to the same approved database/environment and distinct least-privilege roles; reject mismatches before writes or DDL. No Production fallback is allowed when Staging configuration is absent.
-4. **Add disposable PostgreSQL integration coverage.** Create synthetic Production and Staging schemas and distinct roles. Exercise runtime CRUD, real auth/session queries and the migration runner using their actual roles. Assert that both Staging roles cannot read/change Production data, alter Production objects, change Production history or access privileged functions. Check unchanged Production sentinel data/history, separate Staging history, repeat migrations, rollback/retry and privileges on newly created objects. Existing database tests do not prove these boundaries.
-5. **Extend the deployment gate and CI explicitly.** Enable Staging migrations only for the approved `staging` Preview branch after the previous gates pass. Missing configuration must block that deployment. Keep Production behavior unchanged and other previews migration-free. Test branch/environment combinations and build-before-migrate ordering. Add CI triggers/check requirements for Staging before using it as a release gate. The migration connection must use direct or session-mode access, as required by the current runner.
+Configure the following on **Preview, Git branch `staging` only**. Check inherited integration variables too; unrelated PR previews must not receive database credentials. Never copy Production database credentials.
 
-Schema isolation still shares database resources, backups and administrative access with Production. It provides no independent recovery or performance boundary.
+| Variable                                   | Value/requirement                                                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_SCHEMA`                          | `staging`                                                                                                     |
+| `DATABASE_URL`                             | Dedicated `neighborly_staging_app` credentials                                                                |
+| `MIGRATION_DATABASE_URL`                   | Dedicated `neighborly_staging_migrator` credentials; direct/session mode, never port 6543 transaction pooling |
+| `BETTER_AUTH_URL`                          | Exact stable HTTPS Staging origin                                                                             |
+| `BETTER_AUTH_SECRET`                       | Independent strong secret                                                                                     |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional pair, with the exact Staging `/api/auth/callback/google` callback registered                         |
+| `RESEND_API_KEY`, `AUTH_EMAIL_FROM`        | Optional pair, authorized sender and test recipients                                                          |
 
-## Hosted activation after implementation
+Runtime and migration URLs must use the same hostname/database path (ports may differ). Use the session-pooler endpoint for both when direct IPv6 is unavailable. Supavisor usernames may append `.<project-ref>` to each role. Only `sslmode` URL options are accepted for Staging. The runner verifies the actual migration login and both database roles' effective permissions; URL labels alone do not establish isolation.
 
-1. Configure encrypted branch-scoped `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `BETTER_AUTH_URL` and a distinct `BETTER_AUTH_SECRET`. Check the effective environment for the branch and for an unrelated PR preview without disclosing values. See [deployment migrations](deployment-migrations.md) for the existing gate and connection requirements.
-2. Use one stable HTTPS Staging origin. Register its exact `/api/auth/callback/google` URL and configure both Google credentials if Google sign-in is enabled. Auth trusts the configured origin, not arbitrary preview URLs. Deployment protection must allow the intended testers and callback journey.
-3. Email signup/recovery is optional: configure both `RESEND_API_KEY` and `AUTH_EMAIL_FROM` only with an authorized sending domain and test recipients. Without mail configuration, new email registration and recovery are unavailable; existing verified users can set/use passwords. See [authentication](authentication.md) for the precise behavior and account-linking restrictions.
-4. Deploy the reviewed commit to `staging`, initialize synthetic data only, sign in and bootstrap the intended test administrator using [local environment instructions](local-environments.md#administrator-bootstrap). Signing in alone grants no management role. Verify the target identity and isolation before running remote bootstrap.
-5. Complete a real login/logout and project-setup journey, verify data after reload and test unauthorized access. If mail is enabled, also verify delivery, verification, recovery and token reuse rejection. Redeploy to check migration idempotency. Record commit/deployment identifiers, check results and sanitized evidence of unchanged Production state. Do not copy resident data or Production accounts/sessions.
+The committed build gate validates Staging configuration, builds the application, then runs migrations before publication. It retains the existing Production gate and leaves unrelated Preview/Development deployments migration-free. Staging replays all authoritative migrations on an empty schema, never baselines from Production history, and retains immutable checksums, atomic rollback, advisory locking and idempotency. Existing migration SQL is unchanged.
+
+CI runs on PRs targeting `main`/`staging` and pushes to both. The database job includes disposable role/schema isolation tests. Branch protection/check requirements are provider settings and must be enabled separately before making Staging a mandatory release gate.
+
+## Local use and activation checks
+
+Copy `.env.staging.example` to a private `.env.staging.local` and populate the runtime credentials/schema. `pnpm dev:staging` uses localhost for the auth origin; deployed and local callbacks must each be registered. `pnpm admin:grant:staging --email ...` requires `ALLOW_REMOTE_ADMIN_BOOTSTRAP=true` and exactly one existing verified user. Signing in does not grant a management role. See [local environments](local-environments.md).
+
+Before declaring the hosted environment operational:
+
+1. Verify role/schema ownership and effective grants, exact branch secret scopes and deployment protection for testers.
+2. Deploy the reviewed release content to `staging`; confirm migration completion and a second idempotent deployment.
+3. Complete real login/logout and an authorized project-setup journey using synthetic data; reload to confirm persistence and check unauthorized access. Confirm Production data and migration history remain unchanged.
+4. If Google is enabled, verify the real callback. If mail is enabled, verify delivery, registration, verification, recovery and rejection of reused tokens. Without mail configuration, signup/recovery are unavailable; verified existing users can set/use passwords. See [authentication](authentication.md).
+5. Record sanitized commit/deployment identifiers and actual results in the PR. Repository/CI success does not itself prove hosted login or configuration.
 
 ## Promotion and recovery
 
-Keep the existing feature-PR-to-`main` workflow for this documentation change. Once Staging activation and its CI checks are implemented, validate a reviewed release commit on `staging` before deploying that same commit/content to Production. A different merge commit or changed release content requires revalidation. A different staging-first branching policy needs its own workflow/check configuration; this document does not introduce one.
+Keep feature PRs targeting `main` unless the project adopts a separate staging-first policy. To validate a release before Production, deploy that exact reviewed commit/content to `staging`; changes to release content require revalidation. Publishing the implementation on `main` alone does not update the `staging` branch.
 
-Do not promote a Preview artifact as a substitute for the Production build: the existing Production migration gate must execute against the Production database. Require backward-compatible migrations while the previous deployment still serves traffic. Application rollback does not roll back database changes; see [deployment migrations](deployment-migrations.md#history-locking-and-failures). If a Staging gate fails, stop activation and remove/disable Staging access as needed; do not repair it with Production credentials.
+Production still requires its own build and migration gate; promoting a Preview artifact does not substitute for it. Use backward-compatible migrations while the previous application version serves traffic. Application rollback does not roll back database changes. See [deployment migrations](deployment-migrations.md#history-locking-and-failures).
 
-## Acceptance evidence
-
-This documentation PR can be reviewed independently. **Staging may be declared operational only when all implementation gates, hosted configuration checks and the live smoke journey above have passed.** Attach sanitized results to the implementation PR; unresolved checks remain blockers, not completed checklist items.
+Schema isolation shares compute, backups and administrative access with Production. It does not provide independent recovery/performance boundaries. If Staging verification fails, stop activation; do not substitute Production credentials or relax the role checks.

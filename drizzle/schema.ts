@@ -1,3 +1,4 @@
+import type { PgTableFn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -6,7 +7,8 @@ import {
   index,
   integer,
   numeric,
-  pgTable,
+  pgTable as publicTable,
+  pgSchema,
   primaryKey,
   text,
   timestamp,
@@ -14,6 +16,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+import { databaseTarget } from "../scripts/db/target.mjs";
+
+const pgTable: PgTableFn<string | undefined> =
+  databaseTarget().schema === "staging" ? pgSchema("staging").table : publicTable;
 
 const id = () => uuid("id").primaryKey().defaultRandom();
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();

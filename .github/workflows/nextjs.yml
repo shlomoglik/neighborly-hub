@@ -1,9 +1,9 @@
 name: Next.js checks
 on:
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   push:
-    branches: [main]
+    branches: [main, staging]
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -95,6 +95,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify Staging isolation with distinct database roles
+        env:
+          MIGRATION_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
+        run: pnpm exec vitest run src/lib/db/staging-isolation.integration.test.ts
       - name: Verify migration lifecycle, rollback and concurrent runners
         env:
           MIGRATION_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test

@@ -1,3 +1,5 @@
+import { databaseTarget } from "./db/target.mjs";
+import { validateStagingConnections } from "./db/staging-isolation.mjs";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { migrate, migrationConnection, MigrationError } from "./db/migrations.mjs";
@@ -9,11 +11,14 @@ export async function deploymentBuild(environment, { build, migrateDatabase, val
   ) {
     throw new Error("Vercel system environment variables are required; use pnpm build locally");
   }
+  const target = databaseTarget(environment);
+  const staging = target.schema === "staging";
+  if (staging) validateStagingConnections(environment);
   const production = environment.VERCEL_ENV === "production";
-  if (production) validateConnection(environment);
+  if (production || staging) validateConnection(environment);
   await build();
   // Failed builds never migrate, and failed migrations fail the deployment before publication.
-  if (production) await migrateDatabase({ environment });
+  if (production || staging) await migrateDatabase({ environment });
 }
 
 // Only emit validated codes and fixed hints; driver messages may contain credentials or SQL.
@@ -91,7 +96,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(deploymentFailureMessage(error, stage));
     if (error instanceof MigrationError) console.error(error.message);
     console.error(
-      "Production build/migration gate failed. Deployment blocked; see docs/deployment-migrations.md.",
+      "Deployment build/migration gate failed. Deployment blocked; see docs/deployment-migrations.md.",
     );
     process.exitCode = 1;
   }

@@ -1,6 +1,6 @@
 # Deployment migrations
 
-Vercel Git deployments use the committed `vercel.json` build command. `scripts/vercel-build.mjs` checks Vercel's system environment, builds the app, then runs pending SQL migrations **only for Production**. A failed build never migrates; a failed migration exits unsuccessfully, so Vercel does not publish that build. Ordinary `pnpm build`, PR CI builds, Preview and Development builds never migrate the live database. No new service or runtime migration hook is involved.
+Vercel Git deployments use the committed `vercel.json` build command. `scripts/vercel-build.mjs` checks Vercel's system environment, builds the app, then runs pending SQL migrations **for Production and the explicitly configured `staging` Preview branch**. A failed build never migrates; a failed migration exits unsuccessfully, so Vercel does not publish that build. Ordinary `pnpm build`, PR CI builds, unrelated Preview and Development builds never migrate the live database. No new service or runtime migration hook is involved.
 
 Enable automatically exposed Vercel system variables (`VERCEL` and `VERCEL_ENV`). Keep the Production Branch set to protected `main`, require PR checks, and verify no external deployment process bypasses this committed build command. Promoting an already built artifact or rolling back without a build does **not** run this gate: promote only an artifact whose migration gate completed for the same database. A rollback must remain compatible with the current schema.
 
@@ -47,4 +47,4 @@ Pending migrations are expected and run automatically after history validation. 
 
 ## Staging rollout
 
-The current gate remains Production-only. See [Staging rollout](staging-rollout.md) for the proposed isolation design, required runner/runtime changes and activation evidence. That plan does not enable Preview migrations.
+The exact `staging` Preview branch now has its own schema/role validation and post-build migration gate. See [Staging rollout](staging-rollout.md) for provisioning, exact branch variable scopes, runtime/migration isolation and live activation checks. Other previews remain migration-free.
