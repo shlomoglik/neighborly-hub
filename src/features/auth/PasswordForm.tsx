@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n/context";
@@ -15,6 +16,7 @@ export function PasswordForm({
   token?: string;
 }) {
   const { t } = useI18n();
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [current, setCurrent] = useState("");
@@ -47,6 +49,7 @@ export function PasswordForm({
         setPassword("");
         setConfirm("");
         setCurrent("");
+        if (mode !== "reset") router.refresh();
       }
     } catch {
       setStatus("failed");

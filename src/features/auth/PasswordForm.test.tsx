@@ -10,6 +10,7 @@ const { setPassword, changePassword, resetPassword } = vi.hoisted(() => ({
 }));
 vi.mock("./set-password", () => ({ setAccountPassword: setPassword }));
 vi.mock("./client", () => ({ authClient: { changePassword, resetPassword } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { PasswordForm } from "./PasswordForm";
 afterEach(() => {
   cleanup();

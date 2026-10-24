@@ -17,7 +17,7 @@ Better Auth 1.7.10 manages Google OAuth and database-backed sessions. The Drizzl
 - Better Auth's user ID **is** `app_users.id`; UUID primary keys and all existing references are preserved. There is no second application-user table or email-based lookup that grants ownership.
 - `display_name` is the mapped auth name. Migration 0003 converts existing null display names to an empty string, preserving “not provided” without copying private email addresses into names. It adds email verification, optional image and update timestamp fields.
 - `auth_accounts` maps the stable `(provider_id, account_id)` pair to one local user, independently of their current email. The provider pair is unique. OAuth tokens are encrypted by Better Auth before storage.
-- Account linking, including implicit same-email linking, is disabled. Pre-existing placeholder `app_users` with a matching email do not automatically become accessible Google identities. A future verified migration/linking procedure must handle those accounts; do not link them by email alone.
+- Implicit same-email linking is disabled. Explicit Google linking from an authenticated account is enabled only for matching verified emails; placeholder identities never become accessible merely by matching an OAuth email.
 - `auth_sessions` contains opaque, signed-cookie session references, expiration and optional client metadata. Sessions and provider accounts are deleted when their user is deleted.
 - `auth_verifications` stores temporary OAuth state/verification data, including expiry. The library verifies OAuth state and handles expiration checks; do not reimplement OAuth/PKCE or cookie signing in application code.
 
@@ -65,3 +65,12 @@ A public pilot requires its own HTTPS origin, database and OAuth client. See [pi
 - After deployment, verify a real delivered registration email, verification, login, recovery and token reuse rejection with a disposable account. Real email delivery requires the operator's sending-domain/API-key setup; automated tests capture email callbacks without sending mail.
 
 References: [email/password](https://better-auth.com/docs/authentication/email-password), [email verification](https://better-auth.com/docs/concepts/email), [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+
+## Link sign-in methods to one identity
+
+- `/account` shows whether Google and email/password credentials are connected. Google users add a password using the existing verified, fresh-session Server Action; password users choose **Connect Google to this account** and complete Google OAuth. The page reloads its methods from server-owned account records.
+- `/link-social` requires a verified local email and a session created within five minutes. This guard applies to direct API requests as well as the UI. Better Auth validates OAuth state, the provider response, and ownership of the Google account. Google must report a verified email matching the local account (case-insensitively). No provider bypasses verification via `trustedProviders`.
+- `disableImplicitLinking` remains enabled. A Google sign-in for an existing email cannot silently attach credentials; the user signs in with the existing method (or recovers access through email) before explicitly linking. A Google account already owned by another user cannot be moved. Linking preserves the user UUID, memberships, roles and profile; there is no user-record merge operation.
+- Unverified authenticated users can request verification from `/account` when mail delivery is configured, then sign in again. A stale-session or failed-link message instructs the user to sign in again and select a matching Google email. Callback error text is never rendered directly.
+- Registration keeps Better Auth's enumeration-safe response for existing addresses and never creates another user or attaches a password to an existing Google account. The UI explains that existing users should sign in or reset their password, then add the other method in My account. The API and unique email constraint remain authoritative; there is no public email-existence endpoint.
+- CI uses a mocked Google provider response to exercise real OAuth state, callback and database behavior. Actual Google consent and inbox delivery require a smoke test with a disposable account in the configured environment.

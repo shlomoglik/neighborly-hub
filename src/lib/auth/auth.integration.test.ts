@@ -370,4 +370,211 @@ describe.skipIf(!url)("PostgreSQL auth sessions", () => {
       ).status,
     ).toBe(403);
   });
+  // Only provider transport is mocked. State, cookies, callback validation and writes are real.
+  async function googleCallback(
+    path: "/link-social" | "/sign-in/social",
+    profile: { id: string; email: string; emailVerified: boolean },
+    headers?: HeadersInit,
+  ) {
+    const provider = (await fixture.auth.$context).socialProviders.find(
+      (item) => item.id === "google",
+    )!;
+    const exchange = vi
+      .spyOn(provider, "validateAuthorizationCode")
+      .mockResolvedValue({ accessToken: "fixture-access-token" });
+    const info = vi.spyOn(provider, "getUserInfo").mockResolvedValue({
+      user: {
+        email: profile.email,
+        emailVerified: profile.emailVerified,
+        name: "Provider name must not replace local profile",
+      },
+      data: { sub: profile.id },
+    });
+    try {
+      const start = await request(
+        path,
+        {
+          provider: "google",
+          callbackURL: "/account",
+          errorCallbackURL: "/account",
+        },
+        headers,
+      );
+      expect(start.status).toBe(200);
+      const authorization = new URL((await start.json()).url);
+      const state = authorization.searchParams.get("state")!;
+      const cookies = [
+        new Headers(headers).get("cookie"),
+        ...start.headers.getSetCookie().map((cookie) => cookie.split(";")[0]),
+      ]
+        .filter(Boolean)
+        .join("; ");
+      const callbackPath = `/callback/google?code=fixture-code&state=${encodeURIComponent(state)}`;
+      const response = await request(callbackPath, undefined, { cookie: cookies });
+      return { response, replay: () => request(callbackPath, undefined, { cookie: cookies }) };
+    } finally {
+      exchange.mockRestore();
+      info.mockRestore();
+    }
+  }
+  it("explicitly links verified matching Google to the existing password identity without changing roles or profile", async () => {
+    const signed = await login();
+    await fixture.auth.api.setPassword({
+      headers: signed.headers,
+      body: { newPassword: "linked-password-123" },
+    });
+    await fixture.db.insert(schema.globalRoles).values({ userId: signed.user.id, role: "admin" });
+    const beforeUsers = await fixture.db
+      .select({ count: query<number>`count(*)::int` })
+      .from(schema.appUsers);
+    const google = {
+      id: crypto.randomUUID(),
+      email: signed.user.email.toUpperCase(),
+      emailVerified: true,
+    };
+    const linked = await googleCallback("/link-social", google, signed.headers);
+    expect(linked.response.status).toBe(302);
+    expect(new URL(linked.response.headers.get("location")!, config.baseURL).pathname).toBe(
+      "/account",
+    );
+    expect(
+      new URL(linked.response.headers.get("location")!, config.baseURL).searchParams.has("error"),
+    ).toBe(false);
+    const accounts = await fixture.db
+      .select()
+      .from(schema.authAccounts)
+      .where(eq(schema.authAccounts.userId, signed.user.id));
+    expect(accounts.map((account) => account.providerId).sort()).toEqual(["credential", "google"]);
+    expect(accounts.find((account) => account.providerId === "google")?.accountId).toBe(google.id);
+    expect(
+      await fixture.db.select({ count: query<number>`count(*)::int` }).from(schema.appUsers),
+    ).toEqual(beforeUsers);
+    expect(await fixture.auth.api.getSession({ headers: signed.headers })).toMatchObject({
+      user: { id: signed.user.id, name: "Auth fixture" },
+    });
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.globalRoles)
+        .where(eq(schema.globalRoles.userId, signed.user.id)),
+    ).toMatchObject([{ role: "admin" }]);
+    const passwordLogin = await request("/sign-in/email", {
+      email: signed.user.email,
+      password: "linked-password-123",
+    });
+    expect((await passwordLogin.json()).user.id).toBe(signed.user.id);
+    const socialLogin = await googleCallback("/sign-in/social", google);
+    expect(
+      new URL(socialLogin.response.headers.get("location")!, config.baseURL).searchParams.has(
+        "error",
+      ),
+    ).toBe(false);
+    const socialCookies = socialLogin.response.headers
+      .getSetCookie()
+      .map((cookie) => cookie.split(";")[0])
+      .join("; ");
+    expect(
+      (await fixture.auth.api.getSession({ headers: new Headers({ cookie: socialCookies }) }))?.user
+        .id,
+    ).toBe(signed.user.id);
+    expect(
+      new URL((await linked.replay()).headers.get("location")!, config.baseURL).searchParams.has(
+        "error",
+      ),
+    ).toBe(true);
+  });
+  it("rejects mismatched or unverified Google emails and Google identities owned by another user", async () => {
+    const signed = await login();
+    const owner = await login();
+    const ownedId = crypto.randomUUID();
+    await fixture.db
+      .insert(schema.authAccounts)
+      .values({ userId: owner.user.id, providerId: "google", accountId: ownedId });
+    for (const profile of [
+      { id: crypto.randomUUID(), email: "other@example.test", emailVerified: true },
+      { id: crypto.randomUUID(), email: signed.user.email, emailVerified: false },
+      { id: ownedId, email: signed.user.email, emailVerified: true },
+    ]) {
+      const { response } = await googleCallback("/link-social", profile, signed.headers);
+      expect(
+        new URL(response.headers.get("location")!, config.baseURL).searchParams.has("error"),
+      ).toBe(true);
+    }
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.authAccounts)
+        .where(eq(schema.authAccounts.userId, signed.user.id)),
+    ).toEqual([]);
+    expect(
+      (
+        await fixture.db
+          .select()
+          .from(schema.authAccounts)
+          .where(eq(schema.authAccounts.accountId, ownedId))
+      )[0].userId,
+    ).toBe(owner.user.id);
+  });
+  it("rejects anonymous, stale, unverified and foreign-origin linking requests at the API boundary", async () => {
+    const body = { provider: "google", callbackURL: "/account" };
+    expect((await request("/link-social", body)).status).toBe(401);
+    const signed = await login();
+    expect(
+      (
+        await request("/link-social", body, {
+          ...Object.fromEntries(signed.headers),
+          origin: "https://attacker.test",
+        })
+      ).status,
+    ).toBe(403);
+    await fixture.db
+      .update(schema.authSessions)
+      .set({ createdAt: new Date(Date.now() - 6 * 60 * 1000) })
+      .where(eq(schema.authSessions.token, signed.token));
+    expect((await request("/link-social", body, signed.headers)).status).toBe(403);
+    await fixture.db
+      .update(schema.authSessions)
+      .set({ createdAt: new Date() })
+      .where(eq(schema.authSessions.token, signed.token));
+    await fixture.db
+      .update(schema.appUsers)
+      .set({ emailVerified: false })
+      .where(eq(schema.appUsers.id, signed.user.id));
+    expect((await request("/link-social", body, signed.headers)).status).toBe(403);
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.authAccounts)
+        .where(eq(schema.authAccounts.userId, signed.user.id)),
+    ).toEqual([]);
+  });
+  it("does not implicitly link Google or create a duplicate user on mixed-case email registration", async () => {
+    const signed = await login();
+    const beforeUsers = await fixture.db
+      .select({ count: query<number>`count(*)::int` })
+      .from(schema.appUsers);
+    const duplicate = await request("/sign-up/email", {
+      name: "Duplicate",
+      email: signed.user.email.toUpperCase(),
+      password: "duplicate-password-123",
+    });
+    expect(duplicate.status).toBe(200);
+    const { response } = await googleCallback("/sign-in/social", {
+      id: crypto.randomUUID(),
+      email: signed.user.email,
+      emailVerified: true,
+    });
+    expect(
+      new URL(response.headers.get("location")!, config.baseURL).searchParams.get("error"),
+    ).toBe("account_not_linked");
+    expect(
+      await fixture.db.select({ count: query<number>`count(*)::int` }).from(schema.appUsers),
+    ).toEqual(beforeUsers);
+    expect(
+      await fixture.db
+        .select()
+        .from(schema.authAccounts)
+        .where(eq(schema.authAccounts.userId, signed.user.id)),
+    ).toEqual([]);
+  });
 });
