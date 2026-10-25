@@ -41,6 +41,8 @@ jobs:
           else
             pnpm exec prettier --check --ignore-unknown "${files[@]}"
           fi
+      - name: Test PR size guard without write credentials
+        run: node --test .github/scripts/pr-size*.test.mjs
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
