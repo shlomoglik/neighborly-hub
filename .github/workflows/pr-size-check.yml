@@ -1,26 +1,38 @@
 name: PR Size Check (Effective LOC)
+
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
 permissions:
   contents: read
-  pull-requests: read
-  issues: write
+  pull-requests: write
+
+concurrency:
+  group: pr-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
-  check-pr-size:
+  effective-loc:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      # pull_request_target supplies a trusted base SHA; NEVER check out the PR head here.
       - name: Checkout trusted base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v7
         with:
-          node-version: '24'
-      - name: Analyze PR and update comment
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Test calculation
+        run: node --test .github/scripts/pr-size*.test.mjs
+      - name: Compute and publish size report
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/scripts/pr-size-check.mjs
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/scripts/pr-size-runner.mjs
