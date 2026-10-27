@@ -1,6 +1,7 @@
 "use client";
+import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { RefreshButton } from "@/components/community/RefreshButton";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ const errors: Record<string, TKey> = {
 const errorKey = (code: string): TKey => errors[code] ?? "homeUncertain";
 export function FamilyWorkspace(p: FamilyWorkspaceProps) {
   const { t, lang } = useI18n();
+  const shared = useContext(HouseholdNavigationContext);
+  const Heading = shared ? "h2" : "h1";
   const [editor, setEditor] = useState<Editor | null>(null);
   const [remove, setRemove] = useState<FamilyMember | null>(null);
   const [revoke, setRevoke] = useState<string | null>(null);
@@ -118,16 +121,18 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
   });
   return (
     <section className="space-y-5">
-      <Link
-        href={`/household/${p.id}`}
-        className="inline-flex min-h-11 items-center text-primary underline"
-      >
-        {t("back")}
-      </Link>
+      {!shared && (
+        <Link
+          href={`/household/${p.id}`}
+          className="inline-flex min-h-11 items-center text-primary underline"
+        >
+          {t("back")}
+        </Link>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
+        <Heading ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("familyManage")}
-        </h1>
+        </Heading>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             disabled={p.busy || p.status === "loading"}
@@ -139,9 +144,11 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
       <HouseholdFeedback status={p.status} onRefresh={p.onRefresh} />
       {p.status === "ready" && p.data && (
         <div className="community-enter space-y-5">
-          <h2 className="text-xl font-semibold">
-            <bdi>{p.data.family.name}</bdi>
-          </h2>
+          {!shared && (
+            <h2 className="text-xl font-semibold">
+              <bdi>{p.data.family.name}</bdi>
+            </h2>
+          )}
           <p>{t("familyPrivateHint")}</p>
           <ul className="space-y-3">
             {p.data.family.members.map((member) => (

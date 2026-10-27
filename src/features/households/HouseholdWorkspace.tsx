@@ -1,6 +1,7 @@
 "use client";
+import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { RefreshButton } from "@/components/community/RefreshButton";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { HouseholdDetailsContent } from "@/components/community/HouseholdPanel";
@@ -76,6 +77,8 @@ export function HouseholdWorkspace({
   onSave,
 }: HouseholdWorkspaceProps) {
   const { t } = useI18n();
+  const shared = useContext(HouseholdNavigationContext);
+  const Heading = shared ? "h2" : "h1";
   const [editor, setEditor] = useState<Editor | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -136,9 +139,9 @@ export function HouseholdWorkspace({
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
-          {t("family")}
-        </h1>
+        <Heading ref={heading} tabIndex={-1} className="text-2xl font-bold">
+          {t(shared ? "details" : "family")}
+        </Heading>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             onClick={onRefresh}
@@ -147,16 +150,24 @@ export function HouseholdWorkspace({
           />
         </div>
       </div>
-      <Link href="/directory" className="inline-flex min-h-11 items-center text-primary underline">
-        {t("back")}
-      </Link>
+      {!shared && (
+        <Link
+          href="/directory"
+          className="inline-flex min-h-11 items-center text-primary underline"
+        >
+          {t("back")}
+        </Link>
+      )}
       <HouseholdFeedback status={status} onRefresh={onRefresh} />
       {status === "ready" && data && (
         <div className="community-enter space-y-5">
-          <p className="text-muted-foreground">
-            <bdi>{data.project}</bdi>
-          </p>
+          {!shared && (
+            <p className="text-muted-foreground">
+              <bdi>{data.project}</bdi>
+            </p>
+          )}
           <HouseholdDetailsContent
+            hideHeading={!!shared}
             name={data.name}
             building={data.building}
             apartment={data.apartment}
@@ -193,7 +204,7 @@ export function HouseholdWorkspace({
               {t("directoryNext")}
             </Button>
           </nav>
-          {data.canRename && (
+          {data.canRename && !shared && (
             <Button variant="outline" asChild>
               <Link href={`/household/${data.id}/members`}>{t("familyManage")}</Link>
             </Button>
