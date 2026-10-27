@@ -6,7 +6,7 @@ import * as s from "../../../drizzle/schema";
 import { createProjectStructure } from "../db/project-structure";
 import { provisionProjectSetup } from "./project-setup";
 import { readManagementHierarchy } from "./management";
-import { saveVisualBuilding } from "./visual-structure";
+import { saveVisualBuilding, saveVisualProject } from "./visual-structure";
 import { visualBuildingInput } from "./visual-structure-contracts";
 vi.mock("server-only", () => ({}));
 const url = process.env.AUTH_TEST_DATABASE_URL;
@@ -146,5 +146,77 @@ describe.skipIf(!url)("visual structure persistence and authorization", () => {
       .from(s.households)
       .where(eq(s.households.apartmentId, linked.id));
     expect(household).toBeTruthy();
+  });
+});
+
+describe.skipIf(!url)("atomic project structure save", () => {
+  const client = postgres(url ?? "postgres://unused", { max: 1 });
+  const db = drizzle(client, { schema: s });
+  const actor = crypto.randomUUID();
+  let projectId: string;
+  beforeAll(async () => {
+    await db.insert(s.appUsers).values({ id: actor, email: `${actor}@example.test` });
+    await db.insert(s.globalRoles).values({ userId: actor, role: "admin" });
+    ({ projectId } = await createProjectStructure(
+      {
+        name: "Atomic project",
+        buildings: ["A", "B"].map((name) => ({
+          name,
+          floors: [{ number: 0, type: "residential", apartments: [] }],
+        })),
+      },
+      db,
+    ));
+  });
+  afterAll(async () => {
+    if (projectId) await db.delete(s.projects).where(eq(s.projects.id, projectId));
+    await db.delete(s.appUsers).where(eq(s.appUsers.id, actor));
+    await client.end();
+  });
+  it("commits both buildings and rolls back earlier writes when a later building is stale", async () => {
+    const snapshot = async () =>
+      (await readManagementHierarchy(db, actor, projectId))!.buildings
+        .map((b) =>
+          visualBuildingInput.parse({
+            id: b.id,
+            name: b.name,
+            address: b.address ?? "",
+            expectedVersion: b.version,
+            floors: b.floors.map((f) => ({
+              id: f.id,
+              number: f.number,
+              name: f.name ?? undefined,
+              type: f.type,
+              apartments: [],
+            })),
+          }),
+        )
+        .sort((a, b) => a.id.localeCompare(b.id));
+    const initial = await snapshot();
+    const desired = initial.map((b) => ({ ...b, address: "Saved together" }));
+    await saveVisualProject(db, actor, projectId, {
+      action: "saveProjectStructure",
+      buildings: desired,
+    });
+    const saved = await snapshot();
+    expect(saved.map((b) => b.address)).toEqual(["Saved together", "Saved together"]);
+    const conflicting = saved.map((b) => ({ ...b, address: "Must roll back" }));
+    conflicting[1].expectedVersion = initial[1].expectedVersion;
+    await expect(
+      saveVisualProject(db, actor, projectId, {
+        action: "saveProjectStructure",
+        buildings: conflicting,
+      }),
+    ).rejects.toMatchObject({ code: "STALE_STRUCTURE" });
+    expect(await snapshot()).toEqual(saved);
+    const denied = saved.map((b) => ({ ...b, address: "Must not save" }));
+    denied[1].id = crypto.randomUUID();
+    await expect(
+      saveVisualProject(db, actor, projectId, {
+        action: "saveProjectStructure",
+        buildings: denied,
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(await snapshot()).toEqual(saved);
   });
 });

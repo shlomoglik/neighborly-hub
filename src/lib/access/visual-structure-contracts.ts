@@ -37,3 +37,28 @@ export const visualBuildingInput = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duplicate identity" });
   });
 export type VisualBuildingInput = z.infer<typeof visualBuildingInput>;
+
+export const visualProjectInput = z
+  .object({
+    action: z.literal("saveProjectStructure"),
+    buildings: z.array(visualBuildingInput).min(1).max(100),
+  })
+  .strict()
+  .superRefine(({ buildings }, ctx) => {
+    const ids = buildings.flatMap((b) => [
+      b.id,
+      ...b.floors.flatMap((f) => [f.id, ...f.apartments.map((u) => u.id)]),
+    ]);
+    if (new Set(ids).size !== ids.length)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duplicate structure identity" });
+    if (
+      buildings.reduce((n, b) => n + b.floors.length, 0) > 1000 ||
+      buildings.reduce((n, b) => n + b.floors.reduce((sum, f) => sum + f.apartments.length, 0), 0) >
+        10000
+    )
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Structure exceeds operation capacity",
+      });
+  });
+export type VisualProjectInput = z.infer<typeof visualProjectInput>;

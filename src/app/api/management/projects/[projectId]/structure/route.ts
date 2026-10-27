@@ -1,5 +1,5 @@
-import { visualBuildingInput } from "@/lib/access/visual-structure-contracts";
-import { saveVisualBuilding } from "@/lib/access/visual-structure";
+import { visualBuildingInput, visualProjectInput } from "@/lib/access/visual-structure-contracts";
+import { saveVisualBuilding, saveVisualProject } from "@/lib/access/visual-structure";
 import { buildingLayoutInput } from "@/lib/access/building-layout-contracts";
 import { updateBuildingLayouts } from "@/lib/access/building-layout";
 import { z } from "zod";
@@ -62,6 +62,16 @@ async function write(request: Request, context: Context, update: boolean) {
     const value = await body(request);
     const { db } = await import("@/lib/db/client");
     if (request.method === "PUT") {
+      if (
+        value &&
+        typeof value === "object" &&
+        "action" in value &&
+        value.action === "saveProjectStructure"
+      ) {
+        const input = visualProjectInput.safeParse(value);
+        if (!input.success) return respond({ error: "INVALID_INPUT" }, 400);
+        return respond(await saveVisualProject(db, user.id, projectId.data, input.data));
+      }
       if (value && typeof value === "object" && "expectedVersion" in value) {
         const detailed = visualBuildingInput.safeParse(value);
         if (!detailed.success) return respond({ error: "INVALID_INPUT" }, 400);

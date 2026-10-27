@@ -16,8 +16,11 @@ import {
   updateManagementStructure,
   StructureManagementError,
 } from "@/lib/access/structure-management";
-vi.mock("@/lib/access/visual-structure", () => ({ saveVisualBuilding: vi.fn() }));
-import { saveVisualBuilding } from "@/lib/access/visual-structure";
+vi.mock("@/lib/access/visual-structure", () => ({
+  saveVisualBuilding: vi.fn(),
+  saveVisualProject: vi.fn(),
+}));
+import { saveVisualBuilding, saveVisualProject } from "@/lib/access/visual-structure";
 import { POST, PATCH, PUT } from "./route";
 const id = "c44c9aec-f8e4-46b3-9957-12ceba088994";
 const context = { params: Promise.resolve({ projectId: id }) };
@@ -140,4 +143,41 @@ it("validates detailed snapshots and passes only the verified actor to the visua
     new StructureManagementError(409, "STALE_STRUCTURE"),
   );
   check(await PUT(put(input), context), 409);
+});
+
+it("validates a project snapshot and dispatches one atomic save", async () => {
+  const value = {
+    action: "saveProjectStructure",
+    buildings: [
+      {
+        id,
+        expectedVersion: "a".repeat(64),
+        name: "A",
+        address: "",
+        floors: [
+          {
+            id: "27e8d799-5714-4f4f-831d-715a0cced687",
+            number: 0,
+            type: "residential",
+            apartments: [],
+          },
+        ],
+      },
+    ],
+  };
+  const put = (body: unknown) =>
+    new Request("https://structure.test/api", {
+      method: "PUT",
+      headers: { origin: "https://structure.test", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  vi.mocked(saveVisualProject).mockResolvedValue({ ids: [id] });
+  check(await PUT(put(value), context), 200);
+  expect(saveVisualProject).toHaveBeenCalledExactlyOnceWith({}, "verified", id, value);
+  expect(saveVisualBuilding).not.toHaveBeenCalled();
+  check(
+    await PUT(put({ ...value, buildings: [...value.buildings, ...value.buildings] }), context),
+    400,
+  );
+  expect(saveVisualProject).toHaveBeenCalledTimes(1);
 });
