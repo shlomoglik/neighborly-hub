@@ -15,6 +15,7 @@ export function HouseholdDetailsContent({
   onEdit,
   status,
   floor,
+  hideHeading = false,
 }: {
   name: string;
   building: string;
@@ -23,6 +24,7 @@ export function HouseholdDetailsContent({
   onEdit?: (id: string) => void;
   status?: ResidentStatus;
   floor?: string;
+  hideHeading?: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -30,9 +32,11 @@ export function HouseholdDetailsContent({
       <div className="flex items-center gap-3">
         <FamilyAvatar name={name} />
         <div className="min-w-0">
-          <h2 className="break-words text-xl font-semibold">
-            <bdi>{name}</bdi>
-          </h2>
+          {!hideHeading && (
+            <h2 className="break-words text-xl font-semibold">
+              <bdi>{name}</bdi>
+            </h2>
+          )}
           <p>
             {t("building")} <bdi dir="ltr">{building}</bdi> · {t("apartment")}{" "}
             <bdi dir="ltr">{apartment}</bdi>

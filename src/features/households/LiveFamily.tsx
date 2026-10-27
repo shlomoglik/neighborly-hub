@@ -1,18 +1,18 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { AppShell } from "@/components/AppShell";
 import { usePrivateResource } from "@/features/shared/use-private-resource";
 import { usePrivateAction } from "@/features/shared/use-private-action";
 import { familyApi } from "./family-api";
 import { FamilyWorkspace } from "./FamilyWorkspace";
 export function LiveFamily({ id }: { id: string }) {
-  return (
-    <AppShell>
-      <FamilyController key={id} id={id} />
-    </AppShell>
-  );
+  const shared = useContext(HouseholdNavigationContext);
+  const content = <FamilyController key={id} id={id} />;
+  return shared ? content : <AppShell>{content}</AppShell>;
 }
 function FamilyController({ id }: { id: string }) {
+  const shared = useContext(HouseholdNavigationContext);
   const [page, setPage] = useState(1);
   const [invitationPage, setInvitationPage] = useState(1);
   const [created, setCreated] = useState<{ id: string; url: string; email: string } | null>(null);
@@ -23,11 +23,19 @@ function FamilyController({ id }: { id: string }) {
     ]);
     return { family, invitations };
   });
-  const denied = resource.status === "expired" || resource.status === "unavailable";
-  const action = usePrivateAction(`${id}:${denied ? resource.status : "active"}`);
+  const status =
+    shared?.resource.status === "expired" || shared?.resource.status === "unavailable"
+      ? shared.resource.status
+      : resource.status;
+  const denied = status === "expired" || status === "unavailable";
+  const action = usePrivateAction(`${id}:${denied ? status : "active"}`);
+  const invalidateNavigation = shared?.resource.invalidate;
   useEffect(() => {
-    if (denied) setCreated(null);
-  }, [denied]);
+    if (denied) {
+      setCreated(null);
+      invalidateNavigation?.(status === "expired" ? 401 : 403);
+    }
+  }, [denied, status, invalidateNavigation]);
   const invalidate = (code: number) => {
     setCreated(null);
     resource.invalidate(code);
@@ -35,8 +43,8 @@ function FamilyController({ id }: { id: string }) {
   return (
     <FamilyWorkspace
       id={id}
-      status={resource.status}
-      data={resource.data}
+      status={status}
+      data={denied ? null : resource.data}
       busy={action.busy}
       error={action.error}
       created={created}

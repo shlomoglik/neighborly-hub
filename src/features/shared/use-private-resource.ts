@@ -1,20 +1,27 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PrivateRequestError } from "./private-api";
 export type ResourceStatus = "loading" | "ready" | "expired" | "unavailable" | "error";
-/** No cache: discard the old snapshot before fetching, abort stale work and revalidate visible tabs. */
-export function usePrivateResource<T>(key: string, loader: (signal: AbortSignal) => Promise<T>) {
+/** Revalidate visible tabs; optional same-key retention never survives hiding or access loss. */
+export function usePrivateResource<T>(
+  key: string,
+  loader: (signal: AbortSignal) => Promise<T>,
+  { keepDataOnRefresh = false }: { keepDataOnRefresh?: boolean } = {},
+) {
   const [revision, setRevision] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [snapshot, setSnapshot] = useState<{ key: string; status: ResourceStatus; data: T | null }>(
-    { key: "", status: "loading", data: null },
-  );
+  const [snapshot, setSnapshot] = useState<{
+    key: string;
+    source: string;
+    status: ResourceStatus;
+    data: T | null;
+  }>({ key: "", source: key, status: "loading", data: null });
   const load = useRef(loader);
   load.current = loader;
   const active = useRef<AbortController | null>(null);
   const requestKey = JSON.stringify([key, revision, paused]);
-  const latest = useRef(requestKey);
-  latest.current = requestKey;
+  const latest = useRef({ requestKey, key });
+  latest.current = { requestKey, key };
   useEffect(() => {
     const refresh = () => setRevision((n) => n + 1);
     const visibility = () => {
@@ -44,12 +51,25 @@ export function usePrivateResource<T>(key: string, loader: (signal: AbortSignal)
   useEffect(() => {
     const controller = new AbortController();
     active.current = controller;
-    setSnapshot({ key: requestKey, status: "loading", data: null });
+    setSnapshot((previous) => ({
+      key: requestKey,
+      source: key,
+      status: "loading",
+      data:
+        keepDataOnRefresh &&
+        !paused &&
+        typeof document !== "undefined" &&
+        document.visibilityState !== "hidden" &&
+        previous.source === key
+          ? previous.data
+          : null,
+    }));
     if (!paused && document.visibilityState !== "hidden")
       void load
         .current(controller.signal)
         .then((data) => {
-          if (!controller.signal.aborted) setSnapshot({ key: requestKey, status: "ready", data });
+          if (!controller.signal.aborted)
+            setSnapshot({ key: requestKey, source: key, status: "ready", data });
         })
         .catch((cause) => {
           if (controller.signal.aborted) return;
@@ -64,24 +84,37 @@ export function usePrivateResource<T>(key: string, loader: (signal: AbortSignal)
                 : 0;
           setSnapshot({
             key: requestKey,
+            source: key,
             status: code === 401 ? "expired" : [403, 404].includes(code) ? "unavailable" : "error",
             data: null,
           });
         });
     return () => controller.abort();
-  }, [requestKey, paused]);
-  return {
-    ...(snapshot.key === requestKey
+  }, [requestKey, paused, key, keepDataOnRefresh]);
+  const refresh = useCallback(() => setRevision((n) => n + 1), []);
+  const invalidate = useCallback((code: number) => {
+    active.current?.abort();
+    setSnapshot({
+      key: latest.current.requestKey,
+      source: latest.current.key,
+      status: code === 401 ? "expired" : "unavailable",
+      data: null,
+    });
+  }, []);
+  const view =
+    snapshot.key === requestKey
       ? snapshot
-      : { key: requestKey, status: "loading" as const, data: null }),
-    refresh: () => setRevision((n) => n + 1),
-    invalidate: (code: number) => {
-      active.current?.abort();
-      setSnapshot({
-        key: latest.current,
-        status: code === 401 ? "expired" : "unavailable",
-        data: null,
-      });
-    },
-  };
+      : {
+          key: requestKey,
+          status: "loading" as const,
+          data:
+            keepDataOnRefresh &&
+            !paused &&
+            typeof document !== "undefined" &&
+            document.visibilityState !== "hidden" &&
+            snapshot.source === key
+              ? snapshot.data
+              : null,
+        };
+  return { key: view.key, status: view.status, data: view.data, refresh, invalidate };
 }

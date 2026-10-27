@@ -246,6 +246,7 @@ export const dict = {
     en: "This contact already exists. Refresh and edit it instead of adding it again.",
     ru: "Этот контакт уже существует. Обновите страницу и отредактируйте его вместо повторного добавления.",
   },
+  householdSections: { he: "מדורי המשפחה", en: "Household sections", ru: "Разделы семьи" },
   homeMine: { he: "המשפחה שלי", en: "My households", ru: "Мои семьи" },
   homeOpen: {
     he: "פתיחת פרטי המשפחה",
