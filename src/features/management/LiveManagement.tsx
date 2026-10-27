@@ -131,7 +131,7 @@ function ManagementContent({
                 onDirtyChange={setDirty}
                 onBusyChange={setStructureBusy}
                 onBuildingChange={(ids) => {
-                  if (!structureBusy && discard()) workspace.onBuildingChange(ids);
+                  if (!structureBusy) workspace.onBuildingChange(ids);
                 }}
                 onSaved={workspace.onRefresh}
                 onAccessLost={workspace.onAccessLost}

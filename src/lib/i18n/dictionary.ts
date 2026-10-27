@@ -712,9 +712,14 @@ export const dict = {
   },
   managementViewStructure: { he: "חזרה לתצוגה", en: "Back to view", ru: "Вернуться к просмотру" },
   managementStructureHint: {
-    he: "ערכו את מבנה הבניינים ושמרו את השינויים בכל בניין בנפרד.",
-    en: "Edit the building structures and save each building separately.",
-    ru: "Измените структуру зданий и сохраните изменения для каждого здания отдельно.",
+    he: "ערכו את מבנה הבניינים ושמרו את כל שינויי הפרויקט יחד.",
+    en: "Edit building structures and save all project changes together.",
+    ru: "Измените структуру зданий и сохраните все изменения проекта вместе.",
+  },
+  managementStructureUnsaved: {
+    he: "שינויים שלא נשמרו ב־{count} בניינים, כולל בניינים מוסתרים בסינון.",
+    en: "Unsaved changes in {count} buildings, including buildings hidden by filters.",
+    ru: "Несохранённые изменения в {count} зданиях, включая скрытые фильтрами.",
   },
   managementSections: {
     he: "אזורים בניהול הפרויקט",
