@@ -10,13 +10,16 @@ export function AppShell({
   children,
   title,
   wide = false,
+  activePath,
 }: {
   children: ReactNode;
   title?: string;
   wide?: boolean;
+  activePath?: string;
 }) {
   const { t } = useI18n();
   const pathname = usePathname();
+  const navigationPath = activePath ?? pathname;
   const nav = [
     { to: "/directory", label: t("directory"), icon: BookUser },
     { to: "/household", label: t("homeMine"), icon: Users },
@@ -55,7 +58,7 @@ export function AppShell({
               <Link
                 key={n.to}
                 href={n.to}
-                className={`whitespace-nowrap rounded-full px-2 py-1.5 text-sm font-medium ${pathname === n.to || pathname?.startsWith(`${n.to}/`) ? "bg-secondary text-foreground" : "text-muted-foreground"}`}
+                className={`whitespace-nowrap rounded-full px-2 py-1.5 text-sm font-medium ${navigationPath === n.to || navigationPath?.startsWith(`${n.to}/`) ? "bg-secondary text-foreground" : "text-muted-foreground"}`}
               >
                 {n.label}
               </Link>
@@ -93,7 +96,7 @@ export function AppShell({
             <Link
               key={n.to}
               href={n.to}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${pathname === n.to || pathname?.startsWith(`${n.to}/`) ? "text-primary" : "text-muted-foreground"}`}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${navigationPath === n.to || navigationPath?.startsWith(`${n.to}/`) ? "text-primary" : "text-muted-foreground"}`}
             >
               <n.icon className="h-5 w-5" />
               {n.label}

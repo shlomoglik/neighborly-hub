@@ -11,7 +11,8 @@ Family management retains its separate authorized API. Its access failures also
 clear the shared navigation; navigation access failures hide family content.
 
 Breadcrumbs point to **My households** when `ownContacts !== null` (an existing
-server indication of household membership), otherwise to **Directory**. The
+server indication of household membership), otherwise to **Directory**. The same context selects the active application
+navigation item on desktop and mobile. The
 family management tab follows the existing `canRename` representative capability;
 server authorization remains authoritative for direct links and mutations.
 
