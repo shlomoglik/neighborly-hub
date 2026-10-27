@@ -38,3 +38,14 @@ Project management includes a link to [scoped invitations and join request revie
 Project pages open in view mode. Building selection, search, type filtering and collapsing remain available, while names, floor levels, addresses and unit types render as plain values. Structural additions, drag/move controls and Save/Cancel actions appear only after choosing **Edit structure**. Returning to view confirms discarding unsaved drafts; saves and revalidation block the transition. Fresh server data drives view mode, without generating placeholder floors for empty buildings.
 
 The editor has explicit `view`, `edit` and `create` modes. Project creation remains in the separate setup wizard. The detailed summary, section preview and preflight checks are creation/editing aids; view mode omits them. Summary and section preview are desktop-only (`xl`); successful preflight feedback is also desktop-only, while validation errors remain visible on mobile.
+
+### Persistent project navigation
+
+The `/manage/(project)` route group shares one `ProjectManagementLayout` across
+structure, staff and invitation pages without changing their public URLs. The
+layout owns the authenticated project hierarchy, project heading, navigation and
+breadcrumb (`Management / Project / Tab`). Route loading boundaries replace only
+the tab content. Structure edits refresh the same shared hierarchy and counts.
+The management index and setup wizard retain their separate page shells. Hidden
+pages, project changes and authorization failures clear metadata through the
+existing `useManagement` lifecycle; project data is not stored in a global cache.
