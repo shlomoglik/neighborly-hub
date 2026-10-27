@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
@@ -52,6 +52,10 @@ it.each(["he", "en", "ru"] as const)(
   "submits exact existing email and explicitly selected building scope in %s",
   async (lang) => {
     const p = mount(lang);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByLabelText(translate(lang, "email"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "staffAdd") }));
+    expect(screen.getByRole("dialog", { name: translate(lang, "staffAdd") })).toBeTruthy();
     fireEvent.change(screen.getByLabelText(translate(lang, "email")), {
       target: { value: " TARGET@example.test " },
     });
@@ -90,13 +94,15 @@ it("requires explicit confirmation before revoking and allows cancellation", asy
 });
 it("blocks controls while writing and retains a draft on failure", async () => {
   const p = mount("en", { onAdd: vi.fn().mockResolvedValue(false) });
+  fireEvent.click(screen.getByRole("button", { name: "Add assignment" }));
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "target@example.test" } });
   fireEvent.submit(screen.getByRole("button", { name: "Add assignment" }).closest("form")!);
   await waitFor(() => expect(p.onAdd).toHaveBeenCalledOnce());
   expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("target@example.test");
   cleanup();
   mount("en", { busy: true });
-  expect(screen.getByLabelText("Email").closest("fieldset")?.hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByLabelText("Email")).toBeNull();
+  expect(screen.getByRole("button", { name: "Add assignment" })).toHaveProperty("disabled", true);
   expect(
     screen.getByRole("button", { name: /Revoke assignment for/ }).hasAttribute("disabled"),
   ).toBe(true);
@@ -128,3 +134,19 @@ it.each(["he", "en", "ru"] as const)(
     expect(screen.getByText(translate(lang, "staffEmpty"))).toBeTruthy();
   },
 );
+
+it("cancels creation without writing and restores focus to the add button", async () => {
+  const p = mount();
+  const trigger = screen.getByRole("button", { name: "Add assignment" });
+  fireEvent.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "Add assignment" });
+  fireEvent.change(within(dialog).getByLabelText("Email"), {
+    target: { value: "draft@example.test" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(p.onAdd).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  fireEvent.click(trigger);
+  expect(screen.getByLabelText("Email")).toHaveProperty("value", "");
+});

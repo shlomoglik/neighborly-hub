@@ -40,6 +40,15 @@ All endpoints require a verified database session, return `Cache-Control: privat
 
 Approval conflicts return 409 (`APARTMENT_OCCUPIED`, `IDENTITY_UNAVAILABLE`, `REQUEST_REVIEWED`, `INVITATION_INACTIVE`); self-review returns 403. A deleted issuer grant makes further claims/approvals unavailable. No public account directory or arbitrary user/person identity binding is introduced.
 
+## Creation dialogs
+
+The management invitation list is the default view. **Create invitation** opens a
+centered desktop dialog or a mobile bottom sheet. Creation closes only on success;
+failed writes preserve the draft and offer explicit refresh for uncertain results.
+The resulting one-time share URL remains in the page after the dialog closes.
+Staff assignments use the same responsive form dialog. Closing, Escape and outside
+clicks are blocked during writes. Access loss hides the form and clears its scope.
+
 ## UI and sharing
 
 The management project links to `/manage/invitations/:projectId`. `/join/:token` requires Google sign-in and preserves only a validated local invitation return path; `/join` shows the account's requests across projects. The invitation page uses no-referrer/noindex headers. Configure infrastructure logs/analytics to avoid capturing invitation token paths; tokens are bearer secrets until consumed/expired/revoked. No tokens are stored in browser persistence.

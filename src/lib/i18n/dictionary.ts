@@ -615,9 +615,9 @@ export const dict = {
   staffAdd: { he: "הוספת מינוי", en: "Add assignment", ru: "Добавить назначение" },
   staffAssignments: { he: "מינויים קיימים", en: "Current assignments", ru: "Текущие назначения" },
   staffRegisteredHint: {
-    he: "הזינו כתובת אימייל מדויקת של משתמש שכבר נרשם. המינוי מעניק גישה בהיקף שנבחר, ואינו משייך דייר או מעניק הרשאת מנהל מערכת.",
-    en: "Enter the exact email of an existing registered user. The assignment grants the selected scope; it does not link a resident or grant system administration.",
-    ru: "Введите точный email уже зарегистрированного пользователя. Назначение предоставляет доступ в выбранных пределах, без привязки жильца и без прав администратора системы.",
+    he: "הזינו כתובת אימייל מדויקת של משתמש שכבר נרשם. המינוי מעניק מיד גישה בהיקף שנבחר, ואינו משייך דייר או מעניק הרשאת מנהל מערכת.",
+    en: "Enter the exact email of an existing registered user. The assignment immediately grants the selected scope; it does not link a resident or grant system administration.",
+    ru: "Введите точный email уже зарегистрированного пользователя. Назначение сразу предоставляет доступ в выбранных пределах, без привязки жильца и без прав администратора системы.",
   },
   staffAdminOnly: {
     he: "ניהול מינויים זמין למנהלי מערכת בלבד.",
