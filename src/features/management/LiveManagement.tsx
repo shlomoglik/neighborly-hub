@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { ProjectManagementContext } from "./ProjectManagementContext";
 import { AppShell } from "@/components/AppShell";
 import { useI18n } from "@/lib/i18n";
 import type { ManagementHierarchy } from "@/lib/access/management-contracts";
@@ -11,8 +12,31 @@ import { ManagementWorkspace } from "./ManagementWorkspace";
 import { useManagement } from "./use-management";
 
 export function LiveManagement({ projectId }: { projectId: string }) {
-  const { t } = useI18n();
+  const shared = useContext(ProjectManagementContext);
+  return shared ? (
+    <ManagementContent projectId={projectId} workspace={shared} />
+  ) : (
+    <StandaloneManagement projectId={projectId} />
+  );
+}
+
+function StandaloneManagement({ projectId }: { projectId: string }) {
   const workspace = useManagement(projectId);
+  return (
+    <AppShell wide>
+      <ManagementContent projectId={projectId} workspace={workspace} />
+    </AppShell>
+  );
+}
+
+function ManagementContent({
+  projectId,
+  workspace,
+}: {
+  projectId: string;
+  workspace: ReturnType<typeof useManagement>;
+}) {
+  const { t } = useI18n();
   const [layout, setLayout] = useState<{ data: ManagementHierarchy } | null>(null);
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [dirty, setDirty] = useState(false);
@@ -56,7 +80,7 @@ export function LiveManagement({ projectId }: { projectId: string }) {
     (workspace.status === "loading" || workspace.status === "ready");
   const structureData = workspace.status === "ready" ? workspace.data : layout?.data;
   return (
-    <AppShell wide>
+    <>
       <div ref={container} className="mx-auto min-w-0 max-w-7xl">
         <ManagementWorkspace
           status={workspace.status}
@@ -129,6 +153,6 @@ export function LiveManagement({ projectId }: { projectId: string }) {
           }}
         />
       )}
-    </AppShell>
+    </>
   );
 }
