@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
@@ -10,8 +10,8 @@ afterEach(cleanup);
 const projectId = "c44c9aec-f8e4-46b3-9957-12ceba088994";
 const buildingId = "27e8d799-5714-4f4f-831d-715a0cced685";
 const apartmentId = "94864538-67d1-4f89-8ea5-3b4a707e9a32";
-function localized(node: React.ReactNode, lang: Lang = "en") {
-  return render(
+function localizedView(node: React.ReactNode, lang: Lang = "en") {
+  return (
     <I18nContext.Provider
       value={{
         lang,
@@ -21,8 +21,11 @@ function localized(node: React.ReactNode, lang: Lang = "en") {
       }}
     >
       {node}
-    </I18nContext.Provider>,
+    </I18nContext.Provider>
   );
+}
+function localized(node: React.ReactNode, lang: Lang = "en") {
+  return render(localizedView(node, lang));
 }
 function workspace(overrides: Partial<InvitationWorkspaceProps> = {}, lang: Lang = "en") {
   const props: InvitationWorkspaceProps = {
@@ -64,6 +67,9 @@ it.each(["he", "en", "ru"] as const)(
   "localizes manager scope and submits exact invitation scope in %s",
   async (lang) => {
     const p = workspace({}, lang);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByLabelText(translate(lang, "inviteRecipientEmail"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "inviteCreate") }));
     expect(screen.queryByRole("option", { name: translate(lang, "project_manager") })).toBeNull();
     expect(screen.queryByRole("option", { name: translate(lang, "building_manager") })).toBeNull();
     fireEvent.change(screen.getByLabelText(translate(lang, "building")), {
@@ -89,6 +95,7 @@ it("shows staff invitations only with server capability", () => {
   workspace({
     data: { ...p.data!, invitations: { ...p.data!.invitations, canInviteStaff: true } },
   });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
   expect(screen.getByRole("option", { name: translate("en", "project_manager") })).toBeTruthy();
 });
 it.each(["loading", "error", "unavailable", "expired"] as const)(
@@ -197,3 +204,51 @@ it.each(["he", "en", "ru"] as const)(
     await waitFor(() => expect(p.onSubmit).toHaveBeenCalledWith({ fullName: "Adult member" }));
   },
 );
+
+it("keeps the invitation draft open on failure and cancels without creating a link", async () => {
+  const p = workspace({ onCreate: vi.fn().mockResolvedValue(false) });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  const dialog = screen.getByRole("dialog", { name: translate("en", "inviteCreate") });
+  fireEvent.change(within(dialog).getByLabelText(translate("en", "building")), {
+    target: { value: buildingId },
+  });
+  fireEvent.change(within(dialog).getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "new@example.test" },
+  });
+  fireEvent.submit(
+    within(dialog)
+      .getByRole("button", { name: translate("en", "inviteCreate") })
+      .closest("form")!,
+  );
+  await waitFor(() => expect(p.onCreate).toHaveBeenCalledOnce());
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.getByLabelText(translate("en", "inviteRecipientEmail"))).toHaveProperty(
+    "value",
+    "new@example.test",
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: translate("en", "cancel") }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(p.onCreate).toHaveBeenCalledOnce();
+});
+
+it("keeps creation open through revalidation and clears it when access is lost", async () => {
+  const p = workspace();
+  cleanup();
+  const rendered = localized(<InvitationWorkspace {...p} />);
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "draft@example.test" },
+  });
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} status="loading" data={null} />));
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.queryByLabelText(translate("en", "inviteRecipientEmail"))).toBeNull();
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} />));
+  expect(screen.getByLabelText(translate("en", "inviteRecipientEmail"))).toHaveProperty(
+    "value",
+    "draft@example.test",
+  );
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} status="unavailable" data={null} />));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} />));
+  expect(screen.queryByRole("dialog")).toBeNull();
+});

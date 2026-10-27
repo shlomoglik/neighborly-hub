@@ -1,4 +1,6 @@
 "use client";
+import { Plus } from "lucide-react";
+import { ResponsiveFormDialog } from "@/components/community/ResponsiveFormDialog";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useEffect, useRef, useState } from "react";
 import { useI18n, type TKey } from "@/lib/i18n";
@@ -36,6 +38,7 @@ export type StaffWorkspaceProps = {
 };
 export function StaffWorkspace(p: StaffWorkspaceProps) {
   const { t, dir } = useI18n();
+  const [creating, setCreating] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<StaffInput["role"]>("project_manager");
   const [buildingId, setBuilding] = useState("");
@@ -47,7 +50,14 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
     restoreFocus.current = true;
   };
   useEffect(() => {
-    if (p.status !== "ready") setConfirm(null);
+    if (p.status !== "ready") {
+      setConfirm(null);
+      if (p.status !== "loading") setCreating(false);
+    }
+    if (["forbidden", "unavailable", "expired"].includes(p.status)) {
+      setEmail("");
+      setBuilding("");
+    }
     if (p.status !== "loading" && restoreFocus.current) {
       heading.current?.focus();
       restoreFocus.current = false;
@@ -67,6 +77,104 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
           {t("staffManagement")}
         </h2>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          {((p.status === "ready" && p.data) || (creating && p.status === "loading")) && (
+            <ResponsiveFormDialog
+              open={creating}
+              onOpenChange={(open) => {
+                if (open) {
+                  setEmail("");
+                  setRole("project_manager");
+                  setBuilding("");
+                }
+                setCreating(open);
+              }}
+              title={t("staffAdd")}
+              description={t("staffRegisteredHint")}
+              busy={p.busy}
+              fallbackFocus={heading}
+              trigger={
+                <Button disabled={p.busy || p.status === "loading"}>
+                  <Plus aria-hidden />
+                  {t("staffAdd")}
+                </Button>
+              }
+            >
+              {p.status === "ready" && p.data ? (
+                <form
+                  className="space-y-4"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (input.success && validBuilding) {
+                      requestFocus();
+                      if (await p.onAdd(input.data)) {
+                        setEmail("");
+                        setCreating(false);
+                      }
+                    }
+                  }}
+                >
+                  {p.notice?.error && <p role="alert">{t(p.notice.key)}</p>}
+                  <fieldset disabled={p.busy} className="space-y-3">
+                    <label className="block space-y-2">
+                      <span>{t("email")}</span>
+                      <Input
+                        type="email"
+                        dir="ltr"
+                        autoComplete="off"
+                        required
+                        maxLength={254}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </label>
+                    <label className="block space-y-2">
+                      <span>{t("staffRole")}</span>
+                      <select
+                        className="min-h-11 w-full rounded-xl border bg-card px-3 focus-visible:outline-2 focus-visible:outline-primary"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value as StaffInput["role"])}
+                      >
+                        <option value="project_manager">{t("project_manager")}</option>
+                        <option value="building_manager">{t("building_manager")}</option>
+                      </select>
+                    </label>
+                    {role === "building_manager" && (
+                      <label className="block space-y-2">
+                        <span>{t("building")}</span>
+                        <select
+                          required
+                          className="min-h-11 w-full rounded-xl border bg-card px-3 focus-visible:outline-2 focus-visible:outline-primary"
+                          value={buildingId}
+                          onChange={(e) => setBuilding(e.target.value)}
+                        >
+                          <option value="">{t("filterBuilding")}</option>
+                          {p.data.buildings.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setCreating(false)}>
+                        {t("cancel")}
+                      </Button>
+                      <Button
+                        type="submit"
+                        loading={p.busy}
+                        disabled={!input.success || !validBuilding}
+                      >
+                        {t("staffAdd")}
+                      </Button>
+                    </div>
+                  </fieldset>
+                </form>
+              ) : (
+                <CommunitySkeleton variant="form" />
+              )}
+            </ResponsiveFormDialog>
+          )}
           <RefreshButton
             disabled={p.busy || p.status === "loading"}
             onClick={() => {
@@ -77,7 +185,8 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
           />
         </div>
       </div>
-      {p.notice && (
+      <p className="text-sm text-muted-foreground">{t("staffRegisteredHint")}</p>
+      {p.notice && !creating && (
         <div role={p.notice.error ? "alert" : "status"} className="rounded-xl border bg-card p-4">
           {t(p.notice.key)}
         </div>
@@ -101,65 +210,6 @@ export function StaffWorkspace(p: StaffWorkspaceProps) {
       )}
       {p.status === "ready" && p.data && (
         <div className="community-enter space-y-5">
-          <form
-            className="space-y-4 rounded-2xl border bg-card p-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (input.success && validBuilding) {
-                requestFocus();
-                if (await p.onAdd(input.data)) setEmail("");
-              }
-            }}
-          >
-            <h3 className="font-bold">{t("staffAdd")}</h3>
-            <p className="text-sm text-muted-foreground">{t("staffRegisteredHint")}</p>
-            <fieldset disabled={p.busy} className="space-y-3">
-              <label className="block space-y-2">
-                <span>{t("email")}</span>
-                <Input
-                  type="email"
-                  dir="ltr"
-                  autoComplete="off"
-                  required
-                  maxLength={254}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
-              <label className="block space-y-2">
-                <span>{t("staffRole")}</span>
-                <select
-                  className="min-h-11 w-full rounded-xl border bg-card px-3 focus-visible:outline-2 focus-visible:outline-primary"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as StaffInput["role"])}
-                >
-                  <option value="project_manager">{t("project_manager")}</option>
-                  <option value="building_manager">{t("building_manager")}</option>
-                </select>
-              </label>
-              {role === "building_manager" && (
-                <label className="block space-y-2">
-                  <span>{t("building")}</span>
-                  <select
-                    required
-                    className="min-h-11 w-full rounded-xl border bg-card px-3 focus-visible:outline-2 focus-visible:outline-primary"
-                    value={buildingId}
-                    onChange={(e) => setBuilding(e.target.value)}
-                  >
-                    <option value="">{t("filterBuilding")}</option>
-                    {p.data.buildings.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <Button type="submit" disabled={!input.success || !validBuilding}>
-                {t("staffAdd")}
-              </Button>
-            </fieldset>
-          </form>
           <section className="space-y-3" aria-label={t("staffAssignments")}>
             <h3 className="font-bold">{t("staffAssignments")}</h3>
             {!p.data.assignments.length && (
