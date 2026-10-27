@@ -9,7 +9,15 @@ export function HouseholdLayout({ id, children }: { id: string; children: ReactN
   const workspace = useHouseholdWorkspace(id);
   const family = usePathname().endsWith("/members");
   return (
-    <AppShell>
+    <AppShell
+      activePath={
+        workspace.resource.data
+          ? workspace.resource.data.ownContacts !== null
+            ? "/household"
+            : "/directory"
+          : ""
+      }
+    >
       <HouseholdNavigationContext.Provider value={workspace}>
         <div className="min-w-0 space-y-6">
           {workspace.resource.data && (

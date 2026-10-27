@@ -12,7 +12,9 @@ const route = vi.hoisted(() => ({ path: "/household/one" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.path }));
 vi.mock("./household-api", () => ({ householdApi: { detail: vi.fn(), update: vi.fn() } }));
 vi.mock("@/components/AppShell", () => ({
-  AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+  AppShell: ({ children, activePath }: { children: ReactNode; activePath?: string }) => (
+    <main data-active-path={activePath}>{children}</main>
+  ),
 }));
 afterEach(() => {
   cleanup();
@@ -62,6 +64,7 @@ it.each(["he", "en", "ru"] as const)(
     expect(screen.getByRole("heading", { name: "Family", level: 1 })).toBe(heading);
     expect(screen.getByText("Loading content")).toBeTruthy();
     expect(householdApi.detail).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("main").getAttribute("data-active-path")).toBe("/household");
     const tabs = screen.getByRole("navigation", { name: translate(lang, "householdSections") });
     expect(
       within(tabs)
@@ -87,6 +90,7 @@ it("uses directory navigation for another household and hides family editing fro
   });
   render(view(<div>Content</div>));
   await screen.findByRole("heading", { name: "Family" });
+  expect(screen.getByRole("main").getAttribute("data-active-path")).toBe("/directory");
   const breadcrumb = screen.getByRole("navigation", { name: "breadcrumb" });
   expect(
     within(breadcrumb)
