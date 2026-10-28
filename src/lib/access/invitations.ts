@@ -1,4 +1,5 @@
 import "server-only";
+import { grantStaffRole, staffRoleStatus } from "./staff-role";
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -173,6 +174,8 @@ export async function createInvitation(
     }
     const apartmentId = input.kind === "resident" ? input.apartmentId : null;
     if (apartmentId) await apartment(tx, { buildingId, projectId, apartmentId }, apartmentId);
+    if (input.kind !== "resident")
+      await checkStaffRecipient(tx, input.recipientEmail, projectId, input.kind, buildingId);
     return insertInvitation(
       tx,
       userId,
@@ -378,7 +381,16 @@ export async function submitJoin(db: Database, userId: string, token: string, va
     } else if (i.kind === "resident") {
       if (!("apartmentId" in input)) throw new InvitationError(400, "INVALID_INPUT");
       await apartment(tx, i, input.apartmentId);
-    } else if ("fullName" in input) throw new InvitationError(400, "INVALID_INPUT");
+    } else {
+      if ("fullName" in input) throw new InvitationError(400, "INVALID_INPUT");
+      await tx
+        .select({ id: s.appUsers.id })
+        .from(s.appUsers)
+        .where(eq(s.appUsers.id, userId))
+        .for("update");
+      if ((await staffRoleStatus(tx, userId, i.projectId, i.kind, i.buildingId)) === "assigned")
+        throw new InvitationError(409, "ALREADY_ASSIGNED");
+    }
     const [row] = await tx
       .insert(s.joinRequests)
       .values({
@@ -606,10 +618,18 @@ export async function reviewJoinRequest(
         }
       } else {
         if (!scope.admin) throw missing();
-        await tx
-          .insert(s.staffAssignments)
-          .values({ userId: request.userId, projectId, buildingId: i.buildingId, role: i.kind })
-          .onConflictDoNothing();
+        if (
+          (await staffRoleStatus(tx, request.userId, projectId, i.kind, i.buildingId)) ===
+          "assigned"
+        )
+          throw new InvitationError(409, "ALREADY_ASSIGNED");
+        await grantStaffRole(
+          tx,
+          request.userId,
+          projectId,
+          i.kind === "project_manager" ? "project_manager" : "building_manager",
+          i.buildingId,
+        );
       }
     }
     const next = decision === "approve" ? "approved" : "rejected";
@@ -619,4 +639,80 @@ export async function reviewJoinRequest(
       .where(eq(s.joinRequests.id, id));
     return { id, status: next };
   });
+}
+
+async function checkStaffRecipient(
+  tx: Tx,
+  email: string | null,
+  projectId: string,
+  role: string,
+  buildingId: string | null,
+  boundUserId?: string | null,
+) {
+  if (!email) throw new InvitationError(400, "INVITE_EMAIL_REQUIRED");
+  const users = await tx
+    .select({ id: s.appUsers.id })
+    .from(s.appUsers)
+    .where(
+      boundUserId ? eq(s.appUsers.id, boundUserId) : sql`lower(${s.appUsers.email}) = ${email}`,
+    )
+    .limit(2)
+    .for("update");
+  if (users.length > 1) throw new InvitationError(409, "IDENTITY_UNAVAILABLE");
+  if (
+    users.length &&
+    (await staffRoleStatus(tx, users[0].id, projectId, role, buildingId)) === "assigned"
+  )
+    throw new InvitationError(409, "ALREADY_ASSIGNED");
+}
+
+/** Rotate the bearer secret; pending requests remain attached to the same invitation. */
+export async function renewInvitation(db: Database, userId: string, projectId: string, id: string) {
+  return db.transaction(async (tx) => {
+    const scope = await actorScope(tx, userId, projectId, true);
+    const [i] = await tx
+      .select()
+      .from(s.invitations)
+      .where(
+        and(eq(s.invitations.id, id), eq(s.invitations.projectId, projectId), scopeWhere(scope)),
+      )
+      .for("update");
+    if (!i || i.kind === "household_member" || !permitted(scope, i)) throw missing();
+    return rotateInvitation(tx, userId, i);
+  });
+}
+
+/** The caller must lock the invitation and authorize its exact scope first. */
+export async function rotateInvitation(tx: Tx, userId: string, i: Invite) {
+  const completed = await tx
+    .select({ id: s.joinRequests.id })
+    .from(s.joinRequests)
+    .where(
+      and(
+        eq(s.joinRequests.invitationId, i.id),
+        inArray(s.joinRequests.status, ["approved", "rejected"]),
+      ),
+    )
+    .limit(1);
+  if (completed.length && !reusable(i)) throw new InvitationError(409, "REQUEST_REVIEWED");
+  if (i.kind === "project_manager" || i.kind === "building_manager")
+    await checkStaffRecipient(
+      tx,
+      i.recipientEmail,
+      i.projectId,
+      i.kind,
+      i.buildingId,
+      i.recipientUserId,
+    );
+  const token = randomBytes(32).toString("hex");
+  await tx
+    .update(s.invitations)
+    .set({
+      tokenHash: hashInvitationToken(token),
+      expiresAt: new Date(Date.now() + 7 * 86400000),
+      revokedAt: null,
+      createdBy: userId,
+    })
+    .where(eq(s.invitations.id, i.id));
+  return { id: i.id, token };
 }

@@ -1,3 +1,4 @@
+import type { StaffInput, StaffRecipient } from "@/lib/access/staff-contracts";
 import type {
   InvitationInput,
   InvitationPage,
@@ -9,6 +10,14 @@ import { PrivateRequestError, privateRequest as read } from "@/features/shared/p
 export { PrivateRequestError as InvitationRequestError };
 const project = (id: string) => `/api/management/projects/${encodeURIComponent(id)}`;
 export const invitationApi = {
+  inspectRecipient: (id: string, input: StaffInput, signal: AbortSignal) =>
+    read<StaffRecipient>(`${project(id)}/staff/recipient`, signal, "POST", input),
+  renew: (id: string, invitationId: string, signal: AbortSignal) =>
+    read<{ id: string; url: string }>(
+      `${project(id)}/invitations/${encodeURIComponent(invitationId)}`,
+      signal,
+      "POST",
+    ),
   invitations: (id: string, page: number, signal: AbortSignal) =>
     read<InvitationPage>(`${project(id)}/invitations?page=${page}`, signal),
   requests: (id: string, page: number, signal: AbortSignal) =>

@@ -60,3 +60,27 @@ QR codes are generated locally with pinned `qrcode`, because the existing stack 
 ## Verification
 
 `invitations.integration.test.ts` uses actual Better Auth signed sessions and migrated disposable PostgreSQL in the existing CI database job. It covers authorization/forged identity, cross-project isolation, real approval/grants, hash-only storage, idempotency, reusable links, concurrent apartment approval, person reuse across projects, verified-recipient restrictions, expiry/revocation, self-review, and pagination. Unit/component tests cover HTTP privacy/body/origin boundaries, local QR/share links, safe return paths, localized capabilities/states and stale-response cancellation. Google consent and actual WhatsApp/mail-client sending remain deployment/device smoke checks.
+
+## Re-sharing and account-aware management invitations
+
+Personal request history now lives in `/account#join-requests`; `/join` remains an
+authenticated redirect for existing links. Invitation token routes are unchanged.
+
+The persisted token is a hash, so re-sharing uses an authorized POST on the
+invitation resource to rotate its secret and renew expiry for seven days. The old
+URL stops working, while pending requests keep their IDs and approval state.
+Completed single-use requests cannot be renewed. Revoked/expired open invitations
+can be explicitly renewed. The most recent authorized renewer becomes the issuer;
+subsequent approval revalidates their authority. Household renewals also recheck
+the representative and active-invitation limit. Raw tokens remain response-only.
+
+Management invitations require a recipient email. Global administrators can inspect
+one exact address via the private same-origin `/staff/recipient` POST: only account
+existence and target-role coverage are returned, with no account IDs or global list.
+New users register and verify that email; existing users sign in to their account.
+Neither lookup nor registration grants a role: the existing independent approval
+step remains required. Creation, renewal, direct assignment and approval recheck
+role coverage. A project-manager grant covers every building; a building grant
+covers only that building. Project-manager upgrades atomically replace narrower
+building grants in that project. Different projects/scopes remain independent.
+Account-row locks serialize grants and approvals to prevent duplicate/racing roles.

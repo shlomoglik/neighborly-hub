@@ -1,4 +1,5 @@
 "use client";
+import type { StaffInput, StaffRecipient } from "@/lib/access/staff-contracts";
 import { Plus } from "lucide-react";
 import { ResponsiveFormDialog } from "@/components/community/ResponsiveFormDialog";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
@@ -14,6 +15,7 @@ import {
   type InvitationPage,
   type RequestPage,
 } from "@/lib/access/invitation-contracts";
+import { useStaffRecipient } from "./use-staff-recipient";
 import { InvitationShare } from "./InvitationShare";
 import { RequestList } from "./RequestList";
 import { InvitationFeedback, InvitationPagination, invitationErrorKey } from "./InvitationFeedback";
@@ -36,6 +38,8 @@ export type InvitationWorkspaceProps = {
     buildingId: string | null;
   } | null;
   contacts?: { name: string; phone: string }[];
+  onInspectRecipient: (input: StaffInput, signal: AbortSignal) => Promise<StaffRecipient>;
+  onRenew: (id: string) => Promise<void>;
   onCreate: (input: InvitationInput) => Promise<boolean>;
   onRevoke: (id: string) => Promise<void>;
   onReview: (id: string, decision: "approve" | "reject") => Promise<boolean>;
@@ -76,8 +80,19 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
     ...(email.trim() ? { recipientEmail: email } : {}),
     expiresInDays: days,
   });
+  const recipient = useStaffRecipient(
+    creating && input.success && input.data.kind !== "resident"
+      ? ({
+          email: input.data.recipientEmail,
+          role: input.data.kind,
+          buildingId: input.data.kind === "project_manager" ? null : input.data.buildingId,
+        } as StaffInput)
+      : null,
+    p.onInspectRecipient,
+  );
   const valid =
     input.success &&
+    (kind === "resident" || (!!recipient.data && recipient.data.role !== "assigned")) &&
     (kind === "project_manager" ? !!p.data?.invitations.canInviteStaff : !!selected) &&
     (kind === "resident" || p.data?.invitations.canInviteStaff) &&
     (!apartmentId || selected?.floors.some((f) => f.apartments.some((a) => a.id === apartmentId)));
@@ -209,6 +224,7 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                     <label className="block space-y-2">
                       <span>{t("inviteRecipientEmail")}</span>
                       <Input
+                        required={kind !== "resident"}
                         type="email"
                         maxLength={254}
                         dir="ltr"
@@ -216,6 +232,30 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                         onChange={(e) => setEmail(e.target.value)}
                       />
                     </label>
+                    {kind !== "resident" && (
+                      <p
+                        role={
+                          recipient.failed || recipient.data?.role === "assigned"
+                            ? "alert"
+                            : "status"
+                        }
+                        className="text-sm text-muted-foreground"
+                      >
+                        {t(
+                          recipient.failed
+                            ? "recipientCheckFailed"
+                            : recipient.data?.role === "assigned"
+                              ? "staffAlreadyHasRole"
+                              : recipient.data?.role === "upgrade"
+                                ? "staffUpgradeHint"
+                                : recipient.data?.account === "existing"
+                                  ? "inviteExistingAccount"
+                                  : recipient.data?.account === "new"
+                                    ? "inviteNewAccount"
+                                    : "recipientCheckHint",
+                        )}
+                      </p>
+                    )}
                     <label className="block space-y-2">
                       <span>{t("inviteExpires")}</span>
                       <Input
@@ -310,6 +350,14 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                             : "inviteActive",
                     )}
                   </p>
+                  {i.kind !== "household_member" && (
+                    <div className="space-y-1">
+                      <Button variant="outline" disabled={p.busy} onClick={() => p.onRenew(i.id)}>
+                        {t("inviteRenew")}
+                      </Button>
+                      <p className="text-sm text-muted-foreground">{t("inviteRenewHint")}</p>
+                    </div>
+                  )}
                   {!i.revoked && (
                     <Button variant="outline" disabled={p.busy} onClick={() => setRevoke(i.id)}>
                       {t("inviteRevoke")}

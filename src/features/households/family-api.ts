@@ -3,6 +3,12 @@ import type { FamilyPage, FamilyMutation } from "@/lib/access/family-contracts";
 import type { InvitationPage, HouseholdInvitationInput } from "@/lib/access/invitation-contracts";
 const base = (id: string) => `/api/households/${encodeURIComponent(id)}`;
 export const familyApi = {
+  renew: (id: string, invitationId: string, signal: AbortSignal) =>
+    privateRequest<{ id: string; url: string }>(
+      `${base(id)}/invitations/${encodeURIComponent(invitationId)}`,
+      signal,
+      "POST",
+    ),
   members: (id: string, page: number, signal: AbortSignal) =>
     privateRequest<FamilyPage>(`${base(id)}/members?page=${page}`, signal),
   mutate: (id: string, input: FamilyMutation, signal: AbortSignal) =>

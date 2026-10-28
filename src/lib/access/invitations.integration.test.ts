@@ -10,6 +10,7 @@ import { createProjectStructure } from "../db/project-structure";
 import { readManagementHierarchy } from "./management";
 import { readDirectoryProjects } from "./projects";
 import {
+  renewInvitation,
   createInvitation,
   hashInvitationToken,
   listInvitations,
@@ -27,9 +28,14 @@ import {
   POST as create,
   GET as discover,
 } from "@/app/api/management/projects/[projectId]/invitations/route";
-import { DELETE as revoke } from "@/app/api/management/projects/[projectId]/invitations/[invitationId]/route";
+import { POST as inspectRecipient } from "@/app/api/management/projects/[projectId]/staff/recipient/route";
+import {
+  POST as renew,
+  DELETE as revoke,
+} from "@/app/api/management/projects/[projectId]/invitations/[invitationId]/route";
 import { POST as submit, GET as context } from "@/app/api/join/[token]/route";
 import { POST as review } from "@/app/api/management/projects/[projectId]/join-requests/[requestId]/route";
+import { assignProjectStaff, inspectStaffRecipient } from "./staff";
 import { GET as mine } from "@/app/api/join/requests/route";
 const config = {
   baseURL: "https://invite.test",
@@ -218,7 +224,11 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
   it("requires a verified session and scopes invitations independently of resident directory access", async () => {
     check(
       await create(
-        await request("POST", undefined, { kind: "project_manager", expiresInDays: 7 }),
+        await request("POST", undefined, {
+          kind: "project_manager",
+          recipientEmail: `${staffTarget}@example.test`,
+          expiresInDays: 7,
+        }),
         ctx(),
       ),
       401,
@@ -238,7 +248,11 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     for (const actor of [pm, bm])
       check(
         await create(
-          await request("POST", actor, { kind: "building_manager", buildingId: buildingA }),
+          await request("POST", actor, {
+            kind: "building_manager",
+            buildingId: buildingA,
+            recipientEmail: `${staffTarget}@example.test`,
+          }),
           ctx(),
         ),
         404,
@@ -408,6 +422,7 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     const created = await create(
       await request("POST", admin, {
         kind: "building_manager",
+        recipientEmail: `${staffTarget}@example.test`,
         buildingId: buildingOther,
         expiresInDays: 7,
       }),
@@ -435,7 +450,11 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
         .where(eq(s.userPersonLinks.userId, staffTarget)),
     ).toEqual([]);
     const personal = await create(
-      await request("POST", admin, { kind: "project_manager", expiresInDays: 7 }),
+      await request("POST", admin, {
+        kind: "project_manager",
+        recipientEmail: `${staffTarget}@example.test`,
+        expiresInDays: 7,
+      }),
       ctx(c),
     );
     const token2 = new URL((await personal.json()).url).pathname.split("/").at(-1)!;
@@ -639,6 +658,156 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
       .set({ expiresAt: new Date(0) })
       .where(eq(s.authSessions.token, signed.token));
     check(await discover(new Request(config.baseURL, { headers: signed.headers }), ctx()), 401);
+  });
+  it("inspects accounts, blocks redundant roles and upgrades building grants atomically", async () => {
+    const target = {
+      email: `${staffTarget}@example.test`,
+      role: "project_manager" as const,
+      buildingId: null,
+    };
+    expect(await inspectStaffRecipient(fixture.db, admin, a, target)).toEqual({
+      account: "existing",
+      role: "upgrade",
+    });
+    await expect(inspectStaffRecipient(fixture.db, staffTarget, a, target)).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(
+      await inspectStaffRecipient(fixture.db, admin, a, {
+        ...target,
+        email: "not-registered@example.test",
+      }),
+    ).toEqual({ account: "new", role: "available" });
+    const invitation = await createInvitation(fixture.db, admin, a, {
+      kind: "project_manager",
+      recipientEmail: target.email,
+      expiresInDays: 7,
+    });
+    const pending = await submit(await request("POST", staffTarget, {}), {
+      params: Promise.resolve({ token: invitation.token }),
+    });
+    check(await decide((await pending.json()).id), 200);
+    const grants = await fixture.db
+      .select()
+      .from(s.staffAssignments)
+      .where(and(eq(s.staffAssignments.userId, staffTarget), eq(s.staffAssignments.projectId, a)));
+    expect(grants.map((g) => g.role)).toEqual(["project_manager"]);
+    expect(await inspectStaffRecipient(fixture.db, admin, a, target)).toEqual({
+      account: "existing",
+      role: "assigned",
+    });
+    await expect(
+      createInvitation(fixture.db, admin, a, {
+        kind: "building_manager",
+        recipientEmail: target.email,
+        buildingId: buildingA,
+        expiresInDays: 7,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "ALREADY_ASSIGNED" });
+    await expect(assignProjectStaff(fixture.db, admin, a, target)).rejects.toMatchObject({
+      status: 409,
+      code: "ALREADY_ASSIGNED",
+    });
+  });
+  it("renews expired or pending invitations without exposing or retaining the old bearer token", async () => {
+    const i = await createInvitation(fixture.db, admin, b, {
+      kind: "resident",
+      buildingId: (await readManagementHierarchy(fixture.db, admin, b))!.buildings[0].id,
+      apartmentId: null,
+      expiresInDays: 7,
+    });
+    await expect(renewInvitation(fixture.db, stranger, b, i.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(renewInvitation(fixture.db, admin, a, i.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await fixture.db
+      .update(s.invitations)
+      .set({ expiresAt: new Date(0), revokedAt: new Date() })
+      .where(eq(s.invitations.id, i.id));
+    const renewed = await renewInvitation(fixture.db, admin, b, i.id);
+    expect(renewed.id).toBe(i.id);
+    expect(renewed.token).not.toBe(i.token);
+    check(
+      await context(await request("GET", applicant), {
+        params: Promise.resolve({ token: i.token }),
+      }),
+      404,
+    );
+    check(
+      await context(await request("GET", applicant), {
+        params: Promise.resolve({ token: renewed.token }),
+      }),
+      200,
+    );
+    const listing = await listInvitations(fixture.db, admin, b);
+    expect(JSON.stringify(listing)).not.toContain(renewed.token);
+    const [row] = await fixture.db.select().from(s.invitations).where(eq(s.invitations.id, i.id));
+    expect(row.tokenHash).toBe(hashInvitationToken(renewed.token));
+    expect(row.revokedAt).toBeNull();
+  });
+  it("separates new-account creation from role approval and preserves pending requests when re-sharing", async () => {
+    const id = crypto.randomUUID();
+    const email = `${id}@example.test`;
+    const target = { email, role: "project_manager" as const, buildingId: null };
+    const inspected = await inspectRecipient(await request("POST", admin, target), ctx(b));
+    check(inspected, 200);
+    expect(await inspected.json()).toEqual({ account: "new", role: "available" });
+    check(await inspectRecipient(await request("POST", staffTarget, target), ctx(b)), 403);
+    const link = await createInvitation(fixture.db, admin, b, {
+      kind: "project_manager",
+      recipientEmail: email,
+      expiresInDays: 7,
+    });
+    check(
+      await submit(await request("POST", stranger, {}), {
+        params: Promise.resolve({ token: link.token }),
+      }),
+      404,
+    );
+    const test = (await fixture.auth.$context).test;
+    await test.saveUser(test.createUser({ id, email, name: "New account", emailVerified: false }));
+    users.push(id);
+    check(
+      await submit(await request("POST", id, {}), {
+        params: Promise.resolve({ token: link.token }),
+      }),
+      404,
+    );
+    await fixture.db.update(s.appUsers).set({ emailVerified: true }).where(eq(s.appUsers.id, id));
+    const pending = await submit(await request("POST", id, {}), {
+      params: Promise.resolve({ token: link.token }),
+    });
+    check(pending, 201);
+    const pendingId = (await pending.json()).id;
+    expect(await readManagementHierarchy(fixture.db, id, b)).toBeNull();
+    const renewed = await renew(await request("POST", admin), {
+      params: Promise.resolve({ projectId: b, invitationId: link.id }),
+    });
+    check(renewed, 200);
+    const token = new URL((await renewed.json()).url).pathname.split("/").at(-1)!;
+    check(
+      await context(await request("GET", id), { params: Promise.resolve({ token: link.token }) }),
+      404,
+    );
+    const current = await context(await request("GET", id), { params: Promise.resolve({ token }) });
+    expect((await current.json()).request).toEqual({ id: pendingId, status: "pending" });
+    check(await decide(pendingId, admin, b), 200);
+    expect(await readManagementHierarchy(fixture.db, id, b)).not.toBeNull();
+    await expect(
+      createInvitation(fixture.db, admin, b, {
+        kind: "project_manager",
+        recipientEmail: email,
+        expiresInDays: 7,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "ALREADY_ASSIGNED" });
+    check(
+      await renew(await request("POST", admin), {
+        params: Promise.resolve({ projectId: b, invitationId: link.id }),
+      }),
+      409,
+    );
   });
   it("bounds scoped invitation/request pagination without returning token hashes or raw account IDs", async () => {
     for (let n = 0; n < 22; n++)

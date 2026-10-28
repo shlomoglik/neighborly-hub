@@ -7,7 +7,7 @@ import {
   type HouseholdInvitationInput,
   type InvitationPage,
 } from "./invitation-contracts";
-import { insertInvitation, InvitationError } from "./invitations";
+import { insertInvitation, rotateInvitation, InvitationError } from "./invitations";
 import { managementPageSchema } from "./management-contracts";
 import { HouseholdError } from "./households";
 export async function createFamilyInvitation(
@@ -117,6 +117,47 @@ export async function revokeFamilyInvitation(
       await familyRepresentative(tx, userId, householdId, "issuer");
       await tx.update(s.invitations).set({ revokedAt: new Date() }).where(eq(s.invitations.id, id));
       return { id };
+    })
+    .catch((error) => {
+      if (error instanceof InvitationError) throw new HouseholdError(error.status, error.code);
+      throw error;
+    });
+}
+
+export async function renewFamilyInvitation(
+  db: FamilyDatabase,
+  userId: string,
+  householdId: string,
+  id: string,
+) {
+  return db
+    .transaction(async (tx) => {
+      const [i] = await tx
+        .select()
+        .from(s.invitations)
+        .where(
+          and(
+            eq(s.invitations.id, id),
+            eq(s.invitations.householdId, householdId),
+            eq(s.invitations.kind, "household_member"),
+          ),
+        )
+        .for("update");
+      if (!i) throw new HouseholdError(404, "NOT_FOUND");
+      await familyRepresentative(tx, userId, householdId, "issuer");
+      const [count] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(s.invitations)
+        .where(
+          and(
+            eq(s.invitations.householdId, householdId),
+            sql`${s.invitations.id} <> ${id}`,
+            sql`${s.invitations.revokedAt} is null`,
+            sql`${s.invitations.expiresAt}>now()`,
+          ),
+        );
+      if (count.n >= 20) throw new HouseholdError(409, "FAMILY_INVITE_LIMIT");
+      return rotateInvitation(tx, userId, i);
     })
     .catch((error) => {
       if (error instanceof InvitationError) throw new HouseholdError(error.status, error.code);

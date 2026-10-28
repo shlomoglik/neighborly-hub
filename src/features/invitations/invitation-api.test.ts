@@ -9,7 +9,11 @@ it("uses private same-origin reads and exact typed writes without actor paramete
     );
   vi.stubGlobal("fetch", fetcher);
   const signal = new AbortController().signal;
-  const input = { kind: "project_manager" as const, expiresInDays: 7 };
+  const input = {
+    kind: "project_manager" as const,
+    recipientEmail: "manager@example.test",
+    expiresInDays: 7,
+  };
   await invitationApi.create("p/a", input, signal);
   expect(fetcher).toHaveBeenLastCalledWith(
     "/api/management/projects/p%2Fa/invitations",

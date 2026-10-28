@@ -1,4 +1,6 @@
 import "server-only";
+import { grantStaffRole, staffRoleStatus } from "./staff-role";
+import type { StaffRecipient } from "./staff-contracts";
 import { and, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../../../drizzle/schema";
@@ -99,13 +101,21 @@ export async function assignProjectStaff(
       .select({ id: s.appUsers.id })
       .from(s.appUsers)
       .where(sql`lower(${s.appUsers.email}) = ${input.email}`)
-      .limit(2);
+      .limit(2)
+      .for("update");
     if (users.length !== 1) throw new StaffError(400, "USER_UNAVAILABLE");
-    const [assignment] = await tx
-      .insert(s.staffAssignments)
-      .values({ userId: users[0].id, projectId, role: input.role, buildingId: input.buildingId })
-      .onConflictDoNothing()
-      .returning({ assignmentId: s.staffAssignments.id });
+    if (
+      (await staffRoleStatus(tx, users[0].id, projectId, input.role, input.buildingId)) ===
+      "assigned"
+    )
+      throw new StaffError(409, "ALREADY_ASSIGNED");
+    const assignment = await grantStaffRole(
+      tx,
+      users[0].id,
+      projectId,
+      input.role,
+      input.buildingId,
+    );
     if (!assignment) throw new StaffError(409, "ALREADY_ASSIGNED");
     return assignment;
   });
@@ -127,4 +137,38 @@ export async function revokeProjectStaff(
     if (!removed.length) throw new StaffError(404, "NOT_FOUND");
     return { removed: true };
   });
+}
+
+export async function inspectStaffRecipient(
+  db: Database,
+  actorId: string,
+  projectId: string,
+  value: StaffInput,
+): Promise<StaffRecipient> {
+  const input = staffInput.parse(value);
+  return db.transaction(
+    async (tx) => {
+      await authorize(tx, actorId, projectId);
+      if (input.buildingId) {
+        const [building] = await tx
+          .select({ id: s.buildings.id })
+          .from(s.buildings)
+          .where(and(eq(s.buildings.id, input.buildingId), eq(s.buildings.projectId, projectId)));
+        if (!building) throw new StaffError(404, "NOT_FOUND");
+      }
+      const users = await tx
+        .select({ id: s.appUsers.id })
+        .from(s.appUsers)
+        .where(sql`lower(${s.appUsers.email}) = ${input.email}`)
+        .limit(2);
+      if (users.length > 1) throw new StaffError(409, "USER_UNAVAILABLE");
+      return {
+        account: users.length ? "existing" : "new",
+        role: users.length
+          ? await staffRoleStatus(tx, users[0].id, projectId, input.role, input.buildingId)
+          : "available",
+      };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
 }

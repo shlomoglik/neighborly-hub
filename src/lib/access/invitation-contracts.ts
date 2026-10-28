@@ -18,12 +18,18 @@ export const invitationInput = z.discriminatedUnion("kind", [
       expiresInDays,
     })
     .strict(),
-  z.object({ kind: z.literal("project_manager"), recipientEmail, expiresInDays }).strict(),
+  z
+    .object({
+      kind: z.literal("project_manager"),
+      recipientEmail: recipientEmail.unwrap(),
+      expiresInDays,
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("building_manager"),
       buildingId: uuid,
-      recipientEmail,
+      recipientEmail: recipientEmail.unwrap(),
       expiresInDays,
     })
     .strict(),

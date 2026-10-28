@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { managementApi } from "@/features/management/management-api";
 import { directoryApi } from "@/features/directory/directory-api";
 import type { InvitationInput } from "@/lib/access/invitation-contracts";
@@ -9,6 +9,11 @@ import { useInvitationAction } from "./use-invitation-action";
 import { PendingInvitationCountContext } from "@/features/management/ProjectManagementContext";
 import { InvitationWorkspace } from "./InvitationWorkspace";
 export function LiveInvitations({ projectId }: { projectId: string }) {
+  const inspectRecipient = useCallback(
+    (input: Parameters<typeof invitationApi.inspectRecipient>[1], signal: AbortSignal) =>
+      invitationApi.inspectRecipient(projectId, input, signal),
+    [projectId],
+  );
   const [ipage, setIpage] = useState(1);
   const [rpage, setRpage] = useState(1);
   const [search, setSearch] = useState("");
@@ -75,6 +80,26 @@ export function LiveInvitations({ projectId }: { projectId: string }) {
         }}
         onInvitationPage={setIpage}
         onRequestPage={setRpage}
+        onInspectRecipient={inspectRecipient}
+        onRenew={async (id) => {
+          const invitation = resource.data?.invitations.invitations.find((i) => i.id === id);
+          if (!invitation || invitation.kind === "household_member") return;
+          const result = await action.run(
+            (signal) => invitationApi.renew(projectId, id, signal),
+            (code) => {
+              setCreated(null);
+              resource.invalidate(code);
+            },
+          );
+          if (!result) return;
+          setCreated({
+            ...result.value,
+            email: invitation.recipientEmail ?? "",
+            kind: invitation.kind,
+            buildingId: invitation.buildingId,
+          });
+          resource.refresh();
+        }}
         onCreate={async (input) => {
           const result = await action.run(
             (signal) => invitationApi.create(projectId, input, signal),

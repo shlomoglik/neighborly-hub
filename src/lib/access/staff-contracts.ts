@@ -41,3 +41,8 @@ export type StaffPage = {
   hasNext: boolean;
 };
 export const staffHref = (projectId: string) => `/manage/staff/${encodeURIComponent(projectId)}`;
+
+export type StaffRecipient = {
+  account: "existing" | "new";
+  role: "assigned" | "upgrade" | "available";
+};
