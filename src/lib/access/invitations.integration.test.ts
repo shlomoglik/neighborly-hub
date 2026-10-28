@@ -724,7 +724,11 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     });
     await fixture.db
       .update(s.invitations)
-      .set({ expiresAt: new Date(0), revokedAt: new Date() })
+      .set({
+        createdAt: new Date(Date.now() - 2 * 86400000),
+        expiresAt: new Date(Date.now() - 86400000),
+        revokedAt: new Date(),
+      })
       .where(eq(s.invitations.id, i.id));
     const renewed = await renewInvitation(fixture.db, admin, b, i.id);
     expect(renewed.id).toBe(i.id);
