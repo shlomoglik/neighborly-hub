@@ -37,7 +37,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
   return (
     <section className="mx-auto max-w-2xl space-y-5">
       <h1 className="text-2xl font-bold">{t("joinTitle")}</h1>
-      <Link className="text-primary underline" href="/join">
+      <Link className="text-primary underline" href="/account#join-requests">
         {t("inviteMyRequests")}
       </Link>
       <InvitationFeedback status={p.status} onRetry={p.onRefresh} signInHref={p.signInHref} />
@@ -70,7 +70,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
                 )}
               </p>
               {!data.active && data.request.status === "pending" && <p>{t("inviteInactive")}</p>}
-              <Link href="/join" className="text-primary underline">
+              <Link href="/account#join-requests" className="text-primary underline">
                 {t("inviteMyRequests")}
               </Link>
             </div>
