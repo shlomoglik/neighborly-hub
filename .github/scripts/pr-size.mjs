@@ -69,6 +69,10 @@ function formatLOC(value) {
   return String(Math.round(value * 100) / 100);
 }
 
+function formatChanges(additions, deletions) {
+  return `🟢 +${additions}<br>🔴 -${deletions}`;
+}
+
 export function renderComment(report) {
   const { categories: c, topContributors: top, totalEffectiveLOC: total, status } = report;
   const verdict =
@@ -80,13 +84,13 @@ export function renderComment(report) {
   const categoryRows = Object.entries(WEIGHTS)
     .map(([type, weights]) => {
       const item = c[type];
-      return `| ${type} | +${item.additions} | -${item.deletions} | ${weights.join(" / ")} | **${formatLOC(item.effectiveLOC)}** |`;
+      return `| ${type} | ${formatChanges(item.additions, item.deletions)} | ${weights.join(" / ")} | **${formatLOC(item.effectiveLOC)}** |`;
     })
     .join("\n");
   const topRows = top
     .map(
       (f) =>
-        `| ${escapeCell(f.filename)} | ${f.type} | +${f.additions} / -${f.deletions} | **${formatLOC(f.effectiveLOC)}** |`,
+        `| ${escapeCell(f.filename)} | ${f.type} | ${formatChanges(f.additions, f.deletions)} | **${formatLOC(f.effectiveLOC)}** |`,
     )
     .join("\n");
   return `${MARKER}
@@ -94,13 +98,15 @@ export function renderComment(report) {
 
 **Effective LOC:** ${formatLOC(total)} (soft: ${SOFT_LIMIT}, hard: ${HARD_LIMIT})
 
-| Category | Added | Deleted | Weights (add/delete) | Effective LOC |
-| --- | ---: | ---: | ---: | ---: |
+| Category | Changes | Weights | LOC |
+| --- | ---: | ---: | ---: |
 ${categoryRows}
+
+🟢 additions / 🔴 deletions · Weights: add / delete · LOC: effective lines
 
 #### Top contributors
 
-| File | Category | Raw changes | Effective LOC |
+| File | Category | Changes | LOC |
 | --- | --- | ---: | ---: |
 ${topRows || "| — | — | — | — |"}
 
