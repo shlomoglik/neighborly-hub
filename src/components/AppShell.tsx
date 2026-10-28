@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookUser, Search, CircleUserRound, Settings2, UserPlus, Users } from "lucide-react";
+import { BookUser, Search, CircleUserRound, Settings2, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
@@ -23,7 +23,6 @@ export function AppShell({
   const nav = [
     { to: "/directory", label: t("directory"), icon: BookUser },
     { to: "/household", label: t("homeMine"), icon: Users },
-    { to: "/join", label: t("join"), icon: UserPlus },
     { to: "/manage", label: t("manage"), icon: Settings2 },
   ];
   return (

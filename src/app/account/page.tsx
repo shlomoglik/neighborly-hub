@@ -1,3 +1,5 @@
+import { AppShell } from "@/components/AppShell";
+import { MyJoinRequests } from "@/features/invitations/LiveJoin";
 import { LoginMethods } from "@/features/auth/LoginMethods";
 import { readAuthConfig } from "@/lib/auth/config";
 import { PasswordForm } from "@/features/auth/PasswordForm";
@@ -27,43 +29,46 @@ export default async function AccountPage({
   const cookie = (await cookies()).get(LANG_COOKIE)?.value;
   const lang = isLang(cookie) ? cookie : DEFAULT_LANG;
   return (
-    <main className="mx-auto max-w-lg space-y-4 px-4 py-8">
-      <h1 className="text-2xl">{translate(lang, "authAccount")}</h1>
-      <div className="space-y-3 rounded-2xl border bg-card p-6">
-        <p>
-          <bdi>{user.name}</bdi>
-        </p>
-        <p>
-          <bdi dir="ltr">{user.email}</bdi>
-        </p>
-        <p className="text-sm text-muted-foreground">{translate(lang, "authAccessNotice")}</p>
-        <Link
-          href="/directory"
-          className="inline-flex min-h-11 items-center text-primary underline"
-        >
-          {translate(lang, "openBook")}
-        </Link>
-        <Link
-          href="/household"
-          className="inline-flex min-h-11 items-center text-primary underline"
-        >
-          {translate(lang, "homeMine")}
-        </Link>
+    <AppShell>
+      <section className="mx-auto max-w-lg space-y-6">
+        <h1 className="text-2xl">{translate(lang, "authAccount")}</h1>
+        <div className="space-y-3 rounded-2xl border bg-card p-6">
+          <p>
+            <bdi>{user.name}</bdi>
+          </p>
+          <p>
+            <bdi dir="ltr">{user.email}</bdi>
+          </p>
+          <p className="text-sm text-muted-foreground">{translate(lang, "authAccessNotice")}</p>
+          <Link
+            href="/directory"
+            className="inline-flex min-h-11 items-center text-primary underline"
+          >
+            {translate(lang, "openBook")}
+          </Link>
+          <Link
+            href="/household"
+            className="inline-flex min-h-11 items-center text-primary underline"
+          >
+            {translate(lang, "homeMine")}
+          </Link>
 
-        <SignOut />
-      </div>
-      <LoginMethods
-        hasGoogle={accounts?.some((account) => account.providerId === "google") ?? false}
-        hasPassword={hasPassword}
-        googleEnabled={Boolean(config?.googleClientId)}
-        emailDeliveryEnabled={Boolean(config?.mail)}
-        emailVerified={session?.user.emailVerified ?? false}
-        email={user.email}
-        initialError={Boolean(params.error)}
-      />
-      <div className="rounded-2xl border bg-card p-6">
-        <PasswordForm mode={hasPassword ? "change" : "set"} />
-      </div>
-    </main>
+          <SignOut />
+        </div>
+        <LoginMethods
+          hasGoogle={accounts?.some((account) => account.providerId === "google") ?? false}
+          hasPassword={hasPassword}
+          googleEnabled={Boolean(config?.googleClientId)}
+          emailDeliveryEnabled={Boolean(config?.mail)}
+          emailVerified={session?.user.emailVerified ?? false}
+          email={user.email}
+          initialError={Boolean(params.error)}
+        />
+        <div className="rounded-2xl border bg-card p-6">
+          <PasswordForm mode={hasPassword ? "change" : "set"} />
+        </div>
+        <MyJoinRequests />
+      </section>
+    </AppShell>
   );
 }
