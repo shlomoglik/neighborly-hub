@@ -52,6 +52,8 @@ function workspace(overrides: Partial<InvitationWorkspaceProps> = {}, lang: Lang
       invitations: { invitations: [], canInviteStaff: false, page: 1, hasNext: false },
       requests: { requests: [], page: 1, hasNext: false },
     },
+    onRenew: vi.fn(),
+    onInspectRecipient: vi.fn().mockResolvedValue({ account: "existing", role: "available" }),
     onCreate: vi.fn().mockResolvedValue(true),
     onRevoke: vi.fn(),
     onReview: vi.fn(),
@@ -251,4 +253,82 @@ it("keeps creation open through revalidation and clears it when access is lost",
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   rendered.rerender(localizedView(<InvitationWorkspace {...p} />));
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+it("blocks an already-covered role and permits a verified building-to-project upgrade choice", async () => {
+  const p = workspace({
+    onInspectRecipient: vi.fn<InvitationWorkspaceProps["onInspectRecipient"]>(async (input) => ({
+      account: "existing",
+      role: input.role === "project_manager" ? "upgrade" : "assigned",
+    })),
+  });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  // Non-admin capabilities cannot be overridden by the form.
+  cleanup();
+  const data = { ...p.data!, invitations: { ...p.data!.invitations, canInviteStaff: true } };
+  const value = workspace({ ...p, data });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "building_manager" },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "building")), {
+    target: { value: buildingId },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "manager@example.test" },
+  });
+  await screen.findByText(translate("en", "staffAlreadyHasRole"));
+  expect(screen.getByRole("button", { name: translate("en", "inviteCreate") })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "project_manager" },
+  });
+  await screen.findByText(translate("en", "staffUpgradeHint"));
+  fireEvent.submit(
+    screen.getByRole("button", { name: translate("en", "inviteCreate") }).closest("form")!,
+  );
+  await waitFor(() =>
+    expect(value.onCreate).toHaveBeenCalledWith({
+      kind: "project_manager",
+      recipientEmail: "manager@example.test",
+      expiresInDays: 7,
+    }),
+  );
+});
+it("explains account creation for a new email and renews invitations directly from the list", async () => {
+  const base = workspace();
+  cleanup();
+  const p = workspace({
+    onInspectRecipient: vi.fn().mockResolvedValue({ account: "new", role: "available" }),
+    data: {
+      ...base.data!,
+      invitations: {
+        ...base.data!.invitations,
+        canInviteStaff: true,
+        invitations: [
+          {
+            id: "old",
+            kind: "project_manager",
+            buildingId: null,
+            apartmentId: null,
+            recipientEmail: "new@example.test",
+            expiresAt: new Date(0).toISOString(),
+            revoked: false,
+            consumed: false,
+          },
+        ],
+      },
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteRenew") }));
+  expect(p.onRenew).toHaveBeenCalledWith("old");
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "project_manager" },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "new@example.test" },
+  });
+  await screen.findByText(translate("en", "inviteNewAccount"));
 });

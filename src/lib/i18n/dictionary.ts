@@ -334,6 +334,51 @@ export const dict = {
     en: "Invitations and join requests",
     ru: "Приглашения и заявки",
   },
+  inviteRenew: {
+    he: "חידוש ושיתוף הזמנה",
+    en: "Renew and share invitation",
+    ru: "Обновить и отправить приглашение",
+  },
+  inviteRenewHint: {
+    he: "נוצר קישור חדש ל־7 ימים שמבטל את הקודם. הרשאה שכבר ניתנה אינה משתנה.",
+    en: "Creates a new 7-day link and invalidates the old link. Existing access is unchanged.",
+    ru: "Новая ссылка действует 7 дней и заменяет старую. Выданные права не изменяются.",
+  },
+  inviteStaffEmailRequired: {
+    he: "הזמנה לתפקיד ניהול מחייבת כתובת אימייל של הנמען.",
+    en: "Management invitations require the recipient's email.",
+    ru: "Для приглашения управляющего необходим email получателя.",
+  },
+  staffAlreadyHasRole: {
+    he: "למשתמש כבר יש הרשאה זו או הרשאה רחבה יותר בפרויקט. אפשר לבחור שדרוג או היקף אחר.",
+    en: "This account already has this access or broader project access. Choose an upgrade or a different scope.",
+    ru: "У аккаунта уже есть эти или более широкие права. Выберите повышение или другую область.",
+  },
+  staffUpgradeHint: {
+    he: "זהו שדרוג ממנהל בניין למנהל פרויקט. ההרשאה הרחבה תינתן רק לאחר אישור הבקשה.",
+    en: "This upgrades a building manager to project manager after the request is approved.",
+    ru: "Это повышение управляющего домом до управляющего проектом после одобрения заявки.",
+  },
+  inviteExistingAccount: {
+    he: "לנמען כבר יש חשבון. הוא יתחבר לחשבון הקיים ויבקש את התפקיד בפרויקט.",
+    en: "This recipient has an account. They sign in to that account and request the project role.",
+    ru: "У получателя есть аккаунт. Он войдёт в него и запросит роль в проекте.",
+  },
+  inviteNewAccount: {
+    he: "לנמען עדיין אין חשבון. עליו ליצור חשבון עם כתובת זו ולאמת אותה, ואז לקבל את ההזמנה ולבקש תפקיד.",
+    en: "This recipient needs to create and verify an account with this email, then accept the invitation and request the role.",
+    ru: "Получателю нужно создать и подтвердить аккаунт с этим email, затем принять приглашение и запросить роль.",
+  },
+  recipientCheckHint: {
+    he: "הזינו אימייל ובחרו תפקיד והיקף כדי לבדוק את החשבון וההרשאות.",
+    en: "Enter an email and choose a role and scope to check the account and access.",
+    ru: "Введите email, выберите роль и область для проверки аккаунта и прав.",
+  },
+  recipientCheckFailed: {
+    he: "בדיקת החשבון נכשלה. שנו את הכתובת כדי לנסות שוב.",
+    en: "Account inspection failed. Edit the email to retry.",
+    ru: "Не удалось проверить аккаунт. Измените email, чтобы повторить.",
+  },
   inviteCreate: { he: "יצירת הזמנה", en: "Create invitation", ru: "Создать приглашение" },
   inviteResident: {
     he: "דייר / נציג משק בית",

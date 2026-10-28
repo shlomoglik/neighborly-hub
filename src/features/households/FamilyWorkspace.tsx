@@ -44,10 +44,12 @@ export type FamilyWorkspaceProps = {
   onInvitationPage: (page: number) => void;
   onMutate: (input: FamilyMutation) => Promise<boolean>;
   onInvite: (input: HouseholdInvitationInput) => Promise<boolean>;
+  onRenew: (id: string) => Promise<boolean>;
   onRevoke: (id: string) => Promise<boolean>;
 };
 const errors: Record<string, TKey> = {
   STALE_FAMILY: "familyStale",
+  REQUEST_REVIEWED: "inviteReviewed",
   FAMILY_LIMIT: "familyLimit",
   FAMILY_INVITE_LIMIT: "familyInviteLimit",
   INVALID_INPUT: "familyInvalid",
@@ -320,6 +322,10 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
                           : "inviteActive",
                     )}
                   </p>
+                  <Button variant="outline" disabled={p.busy} onClick={() => p.onRenew(i.id)}>
+                    {t("inviteRenew")}
+                  </Button>
+                  <p className="text-sm text-muted-foreground">{t("inviteRenewHint")}</p>
                   <Button
                     variant="outline"
                     disabled={p.busy || i.revoked}

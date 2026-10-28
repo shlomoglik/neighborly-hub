@@ -72,6 +72,20 @@ function FamilyController({ id }: { id: string }) {
         resource.refresh();
         return true;
       }}
+      onRenew={async (invitationId) => {
+        const invitation = resource.data?.invitations.invitations.find(
+          (i) => i.id === invitationId,
+        );
+        if (!invitation) return false;
+        const result = await action.run(
+          (signal) => familyApi.renew(id, invitationId, signal),
+          invalidate,
+        );
+        if (!result) return false;
+        setCreated({ ...result.value, email: invitation.recipientEmail ?? "" });
+        resource.refresh();
+        return true;
+      }}
       onRevoke={async (invitationId) => {
         const result = await action.run(
           (signal) => familyApi.revoke(id, invitationId, signal),

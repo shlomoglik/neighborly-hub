@@ -93,6 +93,8 @@ function Example({
         busy={false}
         error={null}
         created={null}
+        onRenew={async () => {}}
+        onInspectRecipient={async () => ({ account: "existing", role: "available" })}
         onCreate={async () => false}
         onRevoke={async () => {}}
         onReview={async () => false}
