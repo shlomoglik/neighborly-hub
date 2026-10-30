@@ -29,6 +29,7 @@ export default tseslint.config(
       "src/features/**/*.{ts,tsx}",
       "src/components/**/*.{ts,tsx}",
       "src/lib/**/*.{ts,tsx}",
+      "src/middleware*.ts",
     ],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },

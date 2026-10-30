@@ -2,7 +2,11 @@
 
 אפליקציה קהילתית לניהול ספר שכנים, פרטי קשר וימי הולדת של דיירים בבניינים ובמתחמים.
 
-[החזון שלנו · Our Vision · Наше видение](https://neighborly-hub.vercel.app/vision)
+<p align="center">
+  <a href="https://neighborly-hub.vercel.app/vision?lang=he"><img src="docs/assets/vision-he.svg" alt="קריאת החזון בעברית" width="160" height="56"></a>
+  <a href="https://neighborly-hub.vercel.app/vision?lang=en"><img src="docs/assets/vision-en.svg" alt="Read our vision in English" width="160" height="56"></a>
+  <a href="https://neighborly-hub.vercel.app/vision?lang=ru"><img src="docs/assets/vision-ru.svg" alt="Читать наше видение на русском" width="160" height="56"></a>
+</p>
 
 Read the canonical [product vision](docs/product-vision.md) for product decisions and
 long-term direction. The public vision page supports Hebrew, English and Russian.
