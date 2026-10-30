@@ -2,9 +2,11 @@
 
 אפליקציה קהילתית לניהול ספר שכנים, פרטי קשר וימי הולדת של דיירים בבניינים ובמתחמים.
 
-Read the canonical [product vision](docs/product-vision.md), or visit the public
-Our Vision page at `/vision` in the application. The vision describes product direction,
-not a list of delivered features.
+[החזון שלנו · Our Vision · Наше видение](https://neighborly-hub.vercel.app/vision)
+
+Read the canonical [product vision](docs/product-vision.md) for product decisions and
+long-term direction. The public vision page supports Hebrew, English and Russian.
+The vision describes product direction, not a list of delivered features.
 
 ## Current status
 
@@ -281,3 +283,19 @@ See [pilot environment](docs/pilot-environment.md) for a separate local PostgreS
 ### Storybook runtime verification
 
 Storybook uses `@storybook/nextjs-vite` with App Router support and a compatible Vite 7 development dependency, providing the official Next.js link and navigation mocks. Do not alias Next.js modules to custom components or polyfill `process` globally. CI builds Storybook and runs `scripts/check-storybook.mjs` against every indexed story in Chromium; a successful static build alone does not guarantee that stories render. Browser tooling is installed in an isolated temporary directory. Screenshot capture remains opt-in.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, privacy expectations,
+verification commands and the pull request workflow. Start with the
+[product vision](docs/product-vision.md) when proposing product changes.
+
+## License
+
+Neighborly Hub source code and documentation are licensed under the
+[MIT License](LICENSE). Use, modification, redistribution and commercial use are
+permitted subject to its terms, including retaining the copyright and license
+notice. The software is provided without warranty.
+
+Third-party dependencies and bundled assets retain their own licenses; see their
+package notices and the font license files in [public/fonts](public/fonts).

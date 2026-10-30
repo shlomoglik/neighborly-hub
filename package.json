@@ -1,6 +1,7 @@
 {
   "name": "neighborly-hub",
   "private": true,
+  "license": "MIT",
   "sideEffects": false,
   "type": "module",
   "scripts": {
