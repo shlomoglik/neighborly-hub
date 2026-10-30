@@ -86,6 +86,14 @@ export function AppShell({
       <main className={`mx-auto min-w-0 px-4 py-4 ${wide ? "max-w-7xl" : "max-w-3xl"}`}>
         {children}
       </main>
+      <footer className="mx-auto max-w-3xl px-4 py-4 text-center text-sm text-muted-foreground">
+        <Link
+          href="/vision"
+          className="inline-flex min-h-11 items-center underline underline-offset-4"
+        >
+          {t("visionTitle")}
+        </Link>
+      </footer>
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

@@ -2,6 +2,10 @@
 
 אפליקציה קהילתית לניהול ספר שכנים, פרטי קשר וימי הולדת של דיירים בבניינים ובמתחמים.
 
+Read the canonical [product vision](docs/product-vision.md), or visit the public
+Our Vision page at `/vision` in the application. The vision describes product direction,
+not a list of delivered features.
+
 ## Current status
 
 The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household profiles and self-service contacts now use authorized live data. Configure [authentication](docs/authentication.md), apply migrations 0001–0006 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
@@ -23,6 +27,7 @@ Open http://localhost:3000. `/directory` requires configured authentication; com
 ## Routes
 
 - `/` — landing page
+- `/vision` — public product vision in Hebrew, English and Russian
 - `/directory` — protected live directory, authorized project/building selection, server search and pagination
 - `/api/directory/projects` — authorized project/building metadata
 - `/api/projects/:projectId/directory` — private paginated adult resident DTOs
