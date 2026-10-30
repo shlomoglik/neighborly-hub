@@ -49,6 +49,7 @@ it.each(["he", "en", "ru"] as const)(
     }
     for (const key of [
       "visionIntro",
+      "visionHomeBody",
       "visionDirectoryBody",
       "visionGrowthBody",
       "visionPilotBody",

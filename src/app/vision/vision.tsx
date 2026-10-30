@@ -16,6 +16,7 @@ export function Vision() {
             {t("visionHero")}
           </h1>
           <p className="text-lg leading-relaxed">{t("visionIntro")}</p>
+          <p className="leading-relaxed">{t("visionHomeBody")}</p>
         </header>
         <section className="space-y-3" aria-labelledby="vision-directory">
           <h2 id="vision-directory" className="text-2xl">
