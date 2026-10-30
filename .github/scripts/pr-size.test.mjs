@@ -92,7 +92,7 @@ test("tie order is deterministic and empty reports have a valid table", () => {
     ["a.ts", "b.ts"],
   );
   assert.equal(analyze([]).status, "pass");
-  assert.match(renderComment(analyze([])), /\| — \| — \| — \| — \|/);
+  assert.match(renderComment(analyze([])), /\| — \| — \| — \| — \| — \|/);
 });
 
 test("untrusted filenames remain literal and cannot inject table rows or mentions", () => {
@@ -106,4 +106,13 @@ test("untrusted filenames remain literal and cannot inject table rows or mention
   assert.ok(!body.includes("`|"));
   assert.match(body, /&#124;/);
   assert.match(body, /&#96;/);
+});
+
+test("aligns markers, changes and weights in addition/deletion order", () => {
+  const body = renderComment(analyze([{ filename: "src/app.ts", additions: 188, deletions: 4 }]));
+  assert.ok(body.includes("| Category | +- | Changes | Weights | LOC |"));
+  assert.ok(body.includes("| CODE | 🟢<br>🔴 | +188<br>-4 | 1<br>0.25 | **189** |"));
+  assert.ok(body.includes("| TEST | 🟢<br>🔴 | +0<br>-0 | 0.5<br>0.15 | **0** |"));
+  assert.ok(body.includes("| File | Category | +- | Changes | LOC |"));
+  assert.ok(body.includes("| CODE | 🟢<br>🔴 | +188<br>-4 | **189** |"));
 });

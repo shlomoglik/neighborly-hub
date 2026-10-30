@@ -70,7 +70,7 @@ function formatLOC(value) {
 }
 
 function formatChanges(additions, deletions) {
-  return `🟢 +${additions}<br>🔴 -${deletions}`;
+  return `+${additions}<br>-${deletions}`;
 }
 
 export function renderComment(report) {
@@ -84,13 +84,13 @@ export function renderComment(report) {
   const categoryRows = Object.entries(WEIGHTS)
     .map(([type, weights]) => {
       const item = c[type];
-      return `| ${type} | ${formatChanges(item.additions, item.deletions)} | ${weights.join(" / ")} | **${formatLOC(item.effectiveLOC)}** |`;
+      return `| ${type} | 🟢<br>🔴 | ${formatChanges(item.additions, item.deletions)} | ${weights.join("<br>")} | **${formatLOC(item.effectiveLOC)}** |`;
     })
     .join("\n");
   const topRows = top
     .map(
       (f) =>
-        `| ${escapeCell(f.filename)} | ${f.type} | ${formatChanges(f.additions, f.deletions)} | **${formatLOC(f.effectiveLOC)}** |`,
+        `| ${escapeCell(f.filename)} | ${f.type} | 🟢<br>🔴 | ${formatChanges(f.additions, f.deletions)} | **${formatLOC(f.effectiveLOC)}** |`,
     )
     .join("\n");
   return `${MARKER}
@@ -98,17 +98,17 @@ export function renderComment(report) {
 
 **Effective LOC:** ${formatLOC(total)} (soft: ${SOFT_LIMIT}, hard: ${HARD_LIMIT})
 
-| Category | Changes | Weights | LOC |
-| --- | ---: | ---: | ---: |
+| Category | +- | Changes | Weights | LOC |
+| --- | :---: | ---: | ---: | ---: |
 ${categoryRows}
 
-🟢 additions / 🔴 deletions · Weights: add / delete · LOC: effective lines
+🟢 additions / 🔴 deletions · Changes and weights: additions above deletions · LOC: effective lines
 
 #### Top contributors
 
-| File | Category | Changes | LOC |
-| --- | --- | ---: | ---: |
-${topRows || "| — | — | — | — |"}
+| File | Category | +- | Changes | LOC |
+| --- | --- | :---: | ---: | ---: |
+${topRows || "| — | — | — | — | — |"}
 
 > This measures changed lines, not complexity or correctness.
 `;
