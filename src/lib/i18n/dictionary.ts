@@ -6,6 +6,94 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  visionTitle: { he: "החזון שלנו", en: "Our Vision", ru: "Наше видение" },
+  visionHero: {
+    he: "הופכים שכנות לקהילה",
+    en: "Turning neighbors into a community",
+    ru: "Превращаем соседство в сообщество",
+  },
+  visionIntro: {
+    he: "Neighborly Hub עוזרת לשכנים להכיר, להתחבר ולהרגיש חלק מקהילה. כי מאחורי כל דלת יש אנשים, סיפורים והזדמנות לקשר.",
+    en: "Neighborly Hub helps neighbors get to know each other, connect and feel part of a community. Behind every door are people, stories and a chance to connect.",
+    ru: "Neighborly Hub помогает соседям знакомиться, общаться и чувствовать себя частью сообщества. За каждой дверью — люди, истории и возможность стать ближе.",
+  },
+  visionDirectoryTitle: {
+    he: "מתחילים בהיכרות",
+    en: "It starts with getting to know each other",
+    ru: "Начинаем со знакомства",
+  },
+  visionDirectoryBody: {
+    he: "ספר השכנים הדיגיטלי הוא נקודת ההתחלה שלנו: מקום להכיר את האנשים והמשפחות שגרים לידנו ולמצוא בקלות את מי שמחפשים. אנחנו שואפים לאפשר לכל אחד ואחת לבחור אילו פרטים לשתף ועם מי. הטכנולוגיה היא הכלי; הקשרים האנושיים הם המטרה.",
+    en: "Our digital neighborhood directory is the starting point: a place to discover the people and families nearby and easily find a neighbor. We aim to let everyone choose which details to share and with whom. Technology is the tool; human connections are the goal.",
+    ru: "Цифровой справочник соседей — наша отправная точка: место, где можно познакомиться с людьми и семьями рядом и легко найти соседа. Мы стремимся дать каждому возможность выбирать, какими сведениями и с кем делиться. Технология — инструмент, а человеческие связи — цель.",
+  },
+  visionGrowthTitle: {
+    he: "צומחים עם הקהילה",
+    en: "Growing with the community",
+    ru: "Растём вместе с сообществом",
+  },
+  visionGrowthBody: {
+    he: "בהמשך נרצה לפתוח מקום גם לפעילויות ואירועים, לעזרה הדדית, לשיתוף משאבים ולידע מקומי. אלה כיוונים לעתיד, שנבחן יחד עם הקהילה לפי הצרכים שלה — לא יכולות שכבר זמינות היום.",
+    en: "Over time, we hope to make room for activities and events, mutual help, shared resources and local knowledge. These are future directions to explore with the community according to its needs, rather than features available today.",
+    ru: "В будущем мы хотим создать пространство для встреч и событий, взаимопомощи, общих ресурсов и местных знаний. Это направления, которые мы будем изучать вместе с сообществом с учётом его потребностей; сегодня эти возможности ещё не доступны.",
+  },
+  visionValuesTitle: { he: "העקרונות שלנו", en: "Our values", ru: "Наши ценности" },
+  visionPrivacyTitle: {
+    he: "פרטיות ואמון",
+    en: "Privacy and trust",
+    ru: "Конфиденциальность и доверие",
+  },
+  visionPrivacyBody: {
+    he: "המידע האישי צריך להישאר בשליטתכם. גישה ניהולית נועדה לצורך מוגדר, מתוך כבוד לפרטיות של כל שכן ושכנה.",
+    en: "Your personal information should stay under your control. Administrative access serves a defined purpose, with respect for every neighbor’s privacy.",
+    ru: "Ваши личные данные должны оставаться под вашим контролем. Доступ администраторов служит определённой цели и уважает частную жизнь каждого соседа.",
+  },
+  visionPeopleTitle: {
+    he: "קשרים אנושיים, לא פרסומות",
+    en: "Human connections, not advertising",
+    ru: "Человеческие связи, а не реклама",
+  },
+  visionPeopleBody: {
+    he: "המטרה היא להכיר ולעזור זה לזה, וגם לגלות שירותים מקומיים מועילים. ליבת הקהילה צריכה להישאר חינמית לחברים, בלי למכור חשיפה פרסומית או גישה למידע פרטי.",
+    en: "The goal is to connect, help each other and discover useful local services. The community core should remain free for members, without selling advertising exposure or access to private information.",
+    ru: "Наша цель — знакомиться, помогать друг другу и находить полезные местные услуги. Основные возможности сообщества должны оставаться бесплатными для участников, без продажи рекламного охвата или доступа к личным данным.",
+  },
+  visionIndependenceTitle: {
+    he: "עצמאות קהילתית",
+    en: "Community independence",
+    ru: "Независимость сообщества",
+  },
+  visionIndependenceBody: {
+    he: "הקהילה שייכת לחבריה. בניינים, מתחמים ושכונות יכולים לקיים קהילות עצמאיות וגם ליצור קשרים ביניהן.",
+    en: "A community belongs to its members. Buildings, residential complexes and neighborhoods can have independent communities and build connections between them.",
+    ru: "Сообщество принадлежит его участникам. Дома, жилые комплексы и районы могут создавать независимые сообщества и поддерживать связи между ними.",
+  },
+  visionSimplicityTitle: {
+    he: "פשטות ונגישות",
+    en: "Simplicity and accessibility",
+    ru: "Простота и доступность",
+  },
+  visionSimplicityBody: {
+    he: "אנחנו שואפים לחוויה ברורה ונוחה, גם בטלפון, שמאפשרת ליותר שכנים לקחת חלק.",
+    en: "We aim for a clear, welcoming experience, including on phones, so more neighbors can take part.",
+    ru: "Мы стремимся сделать всё понятным и удобным, в том числе на телефоне, чтобы больше соседей могли участвовать.",
+  },
+  visionPilotTitle: {
+    he: "בונים יחד את ההמשך",
+    en: "Building what comes next, together",
+    ru: "Вместе создаём будущее",
+  },
+  visionPilotBody: {
+    he: "הפיילוט הראשון מתוכנן במתחם מגורים חדש, עם מטרה פשוטה: לעזור לשכנים להכיר. בהמשך נלמד ממשוב ומסקרים מה באמת נחוץ. צוות המוצר יוביל את המחקר והשיפור, ונציגי הקהילה יסייעו בהצטרפות ובמעורבות. נתקדם בצעדים קטנים, יחד.",
+    en: "Our first pilot is planned for a new residential complex, with a simple goal: helping neighbors get to know each other. We intend to learn through feedback and surveys what people really need. The product team will lead research and improvements, while community representatives support onboarding and participation. We will move forward in small steps, together.",
+    ru: "Первый пилот планируется в новом жилом комплексе с простой целью: помочь соседям познакомиться. Мы намерены узнавать о реальных потребностях через отзывы и опросы. Команда продукта будет вести исследования и улучшения, а представители сообщества помогут с присоединением и участием. Будем двигаться вперёд небольшими шагами, вместе.",
+  },
+  visionClosing: {
+    he: "Neighborly Hub — הופכים שכנות לקהילה.",
+    en: "Neighborly Hub — turning neighbors into a community.",
+    ru: "Neighborly Hub — превращаем соседство в сообщество.",
+  },
+
   editorTitle: { he: "מבנה ויחידות", en: "Structure and units", ru: "Структура и помещения" },
   editorTypes: { he: "סוגי יחידות ומפרט", en: "Unit types and details", ru: "Типы и сведения" },
   editorReview: { he: "סקירה ויצירה", en: "Review and create", ru: "Проверка и создание" },
