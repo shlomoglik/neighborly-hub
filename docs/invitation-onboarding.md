@@ -51,7 +51,7 @@ clicks are blocked during writes. Access loss hides the form and clears its scop
 
 ## UI and sharing
 
-The management project links to `/manage/invitations/:projectId`. `/join/:token` requires Google sign-in and preserves only a validated local invitation return path; `/join` shows the account's requests across projects. The invitation page uses no-referrer/noindex headers. Configure infrastructure logs/analytics to avoid capturing invitation token paths; tokens are bearer secrets until consumed/expired/revoked. No tokens are stored in browser persistence.
+The management project links to `/manage/invitations/:projectId`. `/join/:token` requires sign-in (Google or verified email/password) and preserves only a validated local invitation return path; `/join` redirects to `/account#join-requests` for the account's requests across projects. The invitation page uses no-referrer/noindex headers. Configure infrastructure logs/analytics to avoid capturing invitation token paths; tokens are bearer secrets until consumed/expired/revoked. No tokens are stored in browser persistence.
 
 API adapters, abortable resource/action coordination and presentation are separate. Scope/page changes, focus/visibility and visible 30-second revalidation discard previous data; late reads and writes are ignored. Denied writes invalidate the view. Writes never automatically retry; ambiguous failure requires refresh and inspection. All new UI states use typed Hebrew/English/Russian dictionaries and existing components/tokens. Storybook renders synthetic props only.
 
@@ -84,3 +84,44 @@ role coverage. A project-manager grant covers every building; a building grant
 covers only that building. Project-manager upgrades atomically replace narrower
 building grants in that project. Different projects/scopes remain independent.
 Account-row locks serialize grants and approvals to prevent duplicate/racing roles.
+
+## Pilot onboarding guidance (PR-01)
+
+The invitation and account request list explain pending, approved and rejected
+requests. Pending grants no new access; residents can return to
+`/account#join-requests`, or contact the invitation sender if blocked. Approved
+resident/adult-member requests link directly to `/directory` and `/household` for
+contact editing. An inactive link never renders a new-request form; existing
+approved requests retain their navigation even when the invitation is inactive.
+An unavailable response stays generic and offers history/renewal guidance without
+identifying another account. Ask the sender to renew a blocked pending invitation;
+do not submit a duplicate. Rejected requests may require a new invitation.
+
+Before submission, the resident form distinguishes a first resident from an adult
+joining an existing household (use a representative-issued household-member link).
+Both resident flows display the agreed reciprocal-participation policy before
+submission: approval lists adult identity and household/building/apartment context
+within the existing community scope. Optional phone/email use separate privacy
+controls, with managers-only defaults and current cross-project effects. Children
+remain excluded; submission itself grants no access. Residents cannot hide their
+basic identity while keeping access to others' profiles.
+
+The submit notice explicitly acknowledges participation without an extra checkbox
+or additional form state. This is presentation only: no acknowledgment evidence,
+policy version or legal consent record is persisted. Legal review must determine
+whether further notice/consent evidence and retention are required; this UI alone
+must not be treated as satisfying those requirements.
+
+Audit coverage: G1 invitation/history handoff, G2 applicant guidance and G7 listing
+disclosure. Deferred: G1 unlinked-directory guidance (outside this PR's file
+boundary) and G2 reviewer conflict recovery. G7 listing scope is now a confirmed
+product decision; per-community contact overrides remain outside this PR. G10 real-login/two-building device
+verification and the wider pilot guide remain follow-ups. No authorization,
+transaction, membership, renewal or provisioning behavior changes here.
+
+Before pilot enrollment, record commit/device/browser and results at 390px for
+both enabled sign-in methods: return to invitation, submit, pending refresh,
+rejection recovery, approval, directory and own contacts using visible links.
+Repeat for two buildings and an existing-household adult. Check expired, revoked,
+used and renewed/old links, keyboard focus, long labels and actual QR/share delivery.
+Component checks do not establish these device or delivery results.

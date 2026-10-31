@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { joinInput, type JoinInput, type JoinContext } from "@/lib/access/invitation-contracts";
 import { InvitationFeedback, InvitationPagination, invitationErrorKey } from "./InvitationFeedback";
+import { JoinRequestGuidance } from "./JoinRequestGuidance";
 import type { ResourceStatus } from "./use-invitation-resource";
 export type JoinInvitationProps = {
   signInHref?: string;
@@ -35,12 +36,13 @@ export function JoinInvitation(p: JoinInvitationProps) {
   const valid =
     input.success && (data?.kind !== "resident" || data.apartments.some((a) => a.id === selected));
   return (
-    <section className="mx-auto max-w-2xl space-y-5">
+    <section className="mx-auto max-w-2xl space-y-5 break-words">
       <h1 className="text-2xl font-bold">{t("joinTitle")}</h1>
       <Link className="text-primary underline" href="/account#join-requests">
         {t("inviteMyRequests")}
       </Link>
       <InvitationFeedback status={p.status} onRetry={p.onRefresh} signInHref={p.signInHref} />
+      {p.status === "unavailable" && <p>{t("joinInactiveNext")}</p>}
       {p.error && (
         <div role="alert" className="space-y-2">
           <p>{t(invitationErrorKey(p.error))}</p>
@@ -69,11 +71,17 @@ export function JoinInvitation(p: JoinInvitationProps) {
                       : "inviteRejected",
                 )}
               </p>
-              {!data.active && data.request.status === "pending" && <p>{t("inviteInactive")}</p>}
+              <JoinRequestGuidance
+                status={data.request.status}
+                kind={data.kind}
+                active={data.active}
+              />
               <Link href="/account#join-requests" className="text-primary underline">
                 {t("inviteMyRequests")}
               </Link>
             </div>
+          ) : !data.active ? (
+            <p role="status">{t("joinInactiveNext")}</p>
           ) : (
             <form
               className="space-y-4"
@@ -84,6 +92,21 @@ export function JoinInvitation(p: JoinInvitationProps) {
               }}
             >
               <p>{t("inviteJoinHint")}</p>
+              {data.kind === "resident" && <p>{t("joinFirstResident")}</p>}
+              {(data.kind === "resident" || data.kind === "household_member") && (
+                <aside
+                  aria-labelledby="join-participation"
+                  className="space-y-3 rounded-xl border p-3 text-sm"
+                >
+                  <h3 id="join-participation" className="font-semibold">
+                    {t("joinParticipation")}
+                  </h3>
+                  <p>{t("joinListingScope")}</p>
+                  <p>{t("joinContactPrivacy")}</p>
+                  <p>{t("joinChildrenPrivacy")}</p>
+                  <p>{t("joinParticipationNotice")}</p>
+                </aside>
+              )}
               <fieldset className="space-y-3" disabled={p.busy || !data.active}>
                 {data.kind === "household_member" && (
                   <>
@@ -97,6 +120,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
                       <span>{t("fullName")}</span>
                       <Input
                         required
+                        autoComplete="name"
                         maxLength={200}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -128,6 +152,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
                       <span>{t("fullName")}</span>
                       <Input
                         required
+                        autoComplete="name"
                         maxLength={200}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
