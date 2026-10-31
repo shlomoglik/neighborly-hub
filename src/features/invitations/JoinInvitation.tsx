@@ -94,7 +94,18 @@ export function JoinInvitation(p: JoinInvitationProps) {
               <p>{t("inviteJoinHint")}</p>
               {data.kind === "resident" && <p>{t("joinFirstResident")}</p>}
               {(data.kind === "resident" || data.kind === "household_member") && (
-                <p className="text-sm text-muted-foreground">{t("joinListingScope")}</p>
+                <aside
+                  aria-labelledby="join-participation"
+                  className="space-y-3 rounded-xl border p-3 text-sm"
+                >
+                  <h3 id="join-participation" className="font-semibold">
+                    {t("joinParticipation")}
+                  </h3>
+                  <p>{t("joinListingScope")}</p>
+                  <p>{t("joinContactPrivacy")}</p>
+                  <p>{t("joinChildrenPrivacy")}</p>
+                  <p>{t("joinParticipationNotice")}</p>
+                </aside>
               )}
               <fieldset className="space-y-3" disabled={p.busy || !data.active}>
                 {data.kind === "household_member" && (

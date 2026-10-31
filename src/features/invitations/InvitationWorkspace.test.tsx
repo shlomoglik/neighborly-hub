@@ -369,11 +369,30 @@ it.each(["he", "en", "ru"] as const)(
   },
 );
 it.each(["he", "en", "ru"] as const)(
-  "explains first-resident and listing scope before submitting in %s",
+  "discloses reciprocal participation and privacy before either resident flow in %s",
   (lang) => {
-    join({}, lang);
-    expect(screen.getByText(translate(lang, "joinFirstResident"))).toBeTruthy();
-    expect(screen.getByText(translate(lang, "joinListingScope"))).toBeTruthy();
+    const base = join({}, lang);
+    for (const kind of ["resident", "household_member"] as const) {
+      cleanup();
+      join({ data: { ...base.data!, kind } }, lang);
+      const notice = screen.getByRole("complementary", {
+        name: translate(lang, "joinParticipation"),
+      });
+      for (const key of [
+        "joinListingScope",
+        "joinContactPrivacy",
+        "joinChildrenPrivacy",
+        "joinParticipationNotice",
+      ] as const) {
+        expect(within(notice).getByText(translate(lang, key))).toBeTruthy();
+      }
+      const submit = screen.getByRole("button", { name: translate(lang, "inviteSubmit") });
+      expect(notice.closest("form")).toBe(submit.closest("form"));
+      expect(
+        notice.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByRole("checkbox")).toBeNull();
+    }
   },
 );
 it.each(["ready", "unavailable"] as const)(

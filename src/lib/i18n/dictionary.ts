@@ -572,10 +572,30 @@ export const dict = {
     en: "This invitation is for the first resident of a household in the apartment. If a household is already approved, ask its representative for a household-member invitation instead of submitting another request here.",
     ru: "Это приглашение для первого жильца домохозяйства в квартире. Если домохозяйство уже одобрено, попросите его представителя пригласить вас как участника вместо подачи новой заявки здесь.",
   },
+  joinParticipation: {
+    he: "מכירים את השכנים ומשתתפים בספר",
+    en: "Get to know neighbors and take part",
+    ru: "Знакомьтесь с соседями и участвуйте",
+  },
   joinListingScope: {
-    he: "לאחר אישור, שמות המבוגרים ושם משק הבית, הבניין והדירה מופיעים בספר למי שמורשה לצפות בו לפי הגדרות הפרויקט. אין אפשרות להסתיר את הרישום. פרטי ילדים אינם מופיעים. פרטי קשר חדשים מוגדרים למנהלים בלבד כברירת מחדל; שינוי פרטי הקשר והחשיפה חל בכל הפרויקטים שלכם.",
-    en: "After approval, adult names, household name, building and apartment appear to directory readers authorized by the project settings. There is no listing opt-out. Children are not listed. New contacts default to managers only; contact details and visibility changes apply across all your projects.",
-    ru: "После одобрения имена взрослых, название домохозяйства, дом и квартира видны читателям справочника с доступом по настройкам проекта. Скрыть запись нельзя. Дети не отображаются. Новые контакты по умолчанию видны только управляющим; изменения контактов и видимости действуют во всех ваших проектах.",
+    he: "אחרי האישור, השם שלכם ופרטי משק הבית, הבניין והדירה יופיעו לשכנים המורשים לפי הגדרות הקהילה. ההשתתפות הדדית: אפשר להכיר אחרים, וגם הם יוכלו להכיר אתכם.",
+    en: "After approval, your name and household, building and apartment details will be visible to authorized neighbors according to community settings. Participation is reciprocal: you can discover others, and they can discover you.",
+    ru: "После одобрения ваше имя, домохозяйство, дом и квартира будут видны соседям с доступом по настройкам сообщества. Участие взаимное: вы знакомитесь с другими, а они — с вами.",
+  },
+  joinContactPrivacy: {
+    he: "טלפון ואימייל הם פרטים לבחירה, עם הגדרות חשיפה נפרדות. פרטי קשר חדשים גלויים למנהלים בלבד כברירת מחדל. כיום שינוי בפרטי הקשר או בחשיפה חל בכל הפרויקטים שלכם.",
+    en: "Phone and email are optional, with separate privacy controls. New contacts default to managers only. Currently, changes to contacts or their visibility apply across all your projects.",
+    ru: "Телефон и email необязательны и имеют отдельные настройки видимости. Новые контакты по умолчанию видны только управляющим. Сейчас изменения контактов и их видимости действуют во всех ваших проектах.",
+  },
+  joinChildrenPrivacy: {
+    he: "פרטי ילדים נשארים מוגנים ואינם מופיעים בספר השכנים.",
+    en: "Children’s information stays protected and is excluded from the neighborhood directory.",
+    ru: "Данные детей остаются защищёнными и не отображаются в справочнике соседей.",
+  },
+  joinParticipationNotice: {
+    he: "בהגשת הבקשה אתם מסכימים להופיע בספר כחלק מההצטרפות לקהילה. אי אפשר להסתיר את פרטי הזהות הבסיסיים ולהמשיך לצפות באחרים. הגישה לספר תיפתח רק לאחר אישור הבקשה.",
+    en: "By submitting, you agree to appear in the directory as part of joining the community. You cannot hide your basic identity while keeping access to others. Directory access starts only after your request is approved.",
+    ru: "Подавая заявку, вы соглашаетесь появиться в справочнике как участник сообщества. Нельзя скрыть основные данные о себе, сохранив доступ к другим. Доступ откроется только после одобрения заявки.",
   },
   inviteApprove: { he: "אישור בקשה", en: "Approve request", ru: "Одобрить заявку" },
   inviteReject: { he: "דחיית בקשה", en: "Reject request", ru: "Отклонить заявку" },
