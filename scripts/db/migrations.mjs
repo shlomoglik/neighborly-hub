@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import postgres from "postgres";
+import { databaseTarget, validateDatabaseConnection } from "./target.mjs";
+import {
+  assertStagingIsolation,
+  restrictStagingObjects,
+  validateStagingConnections,
+} from "./staging-isolation.mjs";
 
 export class MigrationError extends Error {}
 
@@ -67,25 +73,30 @@ export function migrationPlan(migrations, history) {
  * One transaction owns the lock, DDL and history, including rollback on any failure.
  * @param {*} sql
  * @param {*} migrations
- * @param {{ baselineThrough?: string, onProgress?: (step: string) => void }} options
+ * @param {{ baselineThrough?: string, onProgress?: (step: string) => void, target?: ReturnType<typeof databaseTarget> }} options
  */
 export async function runMigrations(
   sql,
   migrations,
-  { baselineThrough, onProgress = () => {} } = {},
+  { baselineThrough, onProgress = () => {}, target = databaseTarget({}) } = {},
 ) {
+  if (target.schema === "staging" && baselineThrough)
+    throw new MigrationError(
+      "Staging must be initialized from authoritative migrations, not baselined",
+    );
   onProgress("connect-and-begin");
   return sql.begin(async (tx) => {
     onProgress("lock");
     await tx`set local lock_timeout = '10s'`;
     await tx`set local statement_timeout = '5min'`;
-    await tx`set local search_path = public, pg_catalog`;
+    await tx`select set_config('search_path', ${target.schema + ", pg_catalog"}, true)`;
+    if (target.schema === "staging") await assertStagingIsolation(tx, target);
     await tx`select pg_advisory_xact_lock(78234619, 1)`;
     onProgress("history");
-    const [existing] = await tx`select to_regclass('neighborly_migrations.history') as history`;
+    const [existing] = await tx`select to_regclass(${target.history + ".history"}) as history`;
     const [schema] = await tx`select exists (
       select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
-      where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f')
+      where n.nspname = ${target.schema} and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f')
     ) as populated`;
     if (!existing.history && schema.populated && !baselineThrough) {
       throw new MigrationError(
@@ -102,23 +113,24 @@ export async function runMigrations(
       : -1;
     if (baselineThrough && baselineIndex < 0)
       throw new MigrationError("Unknown baseline migration");
-    await tx`create schema if not exists neighborly_migrations`;
-    await tx`revoke all on schema neighborly_migrations from public`;
-    await tx`create table if not exists neighborly_migrations.history (
+    if (target.schema === "public") await tx`create schema if not exists neighborly_migrations`;
+    await tx`revoke all on schema ${tx(target.history)} from public`;
+    await tx`create table if not exists ${tx(target.history)}.history (
       name text primary key, checksum text not null, applied_at timestamptz not null default now(),
       baselined boolean not null default false
     )`;
-    await tx`revoke all on neighborly_migrations.history from public`;
+    await tx`revoke all on ${tx(target.history)}.history from public`;
     const history =
-      await tx`select name, checksum from neighborly_migrations.history order by name`;
+      await tx`select name, checksum from ${tx(target.history)}.history order by name`;
     const pending = migrationPlan(migrations, history);
     const selected = baselineThrough ? migrations.slice(0, baselineIndex + 1) : pending;
     for (const migration of selected) {
       onProgress(`${baselineThrough ? "baseline" : "apply"}:${migration.name}`);
       if (!baselineThrough) await tx.unsafe(migration.body);
-      await tx`insert into neighborly_migrations.history (name, checksum, baselined)
+      await tx`insert into ${tx(target.history)}.history (name, checksum, baselined)
         values (${migration.name}, ${migration.checksum}, ${!!baselineThrough})`;
     }
+    if (target.schema === "staging") await restrictStagingObjects(tx, target);
     onProgress("commit");
     return {
       applied: baselineThrough ? 0 : selected.length,
@@ -137,6 +149,8 @@ export function migrationConnection(environment = process.env) {
   const parsed = new URL(url);
   if (!["postgres:", "postgresql:"].includes(parsed.protocol))
     throw new MigrationError("Invalid migration connection protocol");
+  const target = databaseTarget(environment);
+  validateDatabaseConnection(url, target, "migration");
   return url;
 }
 
@@ -148,6 +162,7 @@ export async function migrate({
 } = {}) {
   onProgress("configuration");
   const connection = migrationConnection(environment);
+  const target = validateStagingConnections(environment);
   onProgress("load-files");
   const migrations = await loadMigrations();
   onProgress("create-client");
@@ -158,7 +173,7 @@ export async function migrate({
     onnotice: () => {},
   });
   try {
-    return await runMigrations(sql, migrations, { baselineThrough, onProgress });
+    return await runMigrations(sql, migrations, { baselineThrough, onProgress, target });
   } finally {
     await sql.end({ timeout: 5 });
   }

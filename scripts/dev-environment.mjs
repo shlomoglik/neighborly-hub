@@ -1,3 +1,4 @@
+import { databaseTarget, validateDatabaseConnection } from "./db/target.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -46,9 +47,12 @@ if (target === "production" && config.DATABASE_READ_ONLY !== "true") {
     "Production debugging requires DATABASE_READ_ONLY=true and a database role restricted to SELECT",
   );
 }
+const targetConfig = databaseTarget({ ...config, NEIGHBORLY_ENV_TARGET: target });
+validateDatabaseConnection(config.DATABASE_URL, targetConfig, "runtime");
 const env = {
   ...process.env,
   ...config,
+  DATABASE_SCHEMA: targetConfig.schema,
   BETTER_AUTH_URL: "http://localhost:3000",
   NEIGHBORLY_ENV_TARGET: target,
   NEXT_TELEMETRY_DISABLED: "1",

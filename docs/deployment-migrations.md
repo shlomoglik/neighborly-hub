@@ -1,6 +1,6 @@
 # Deployment migrations
 
-Vercel Git deployments use the committed `vercel.json` build command. `scripts/vercel-build.mjs` checks Vercel's system environment, builds the app, then runs pending SQL migrations **only for Production**. A failed build never migrates; a failed migration exits unsuccessfully, so Vercel does not publish that build. Ordinary `pnpm build`, PR CI builds, Preview and Development builds never migrate the live database. No new service or runtime migration hook is involved.
+Vercel Git deployments use the committed `vercel.json` build command. `scripts/vercel-build.mjs` checks Vercel's system environment, builds the app, then runs pending SQL migrations **for Production and the explicitly configured `staging` Preview branch**. A failed build never migrates; a failed migration exits unsuccessfully, so Vercel does not publish that build. Ordinary `pnpm build`, PR CI builds, unrelated Preview and Development builds never migrate the live database. No new service or runtime migration hook is involved.
 
 Enable automatically exposed Vercel system variables (`VERCEL` and `VERCEL_ENV`). Keep the Production Branch set to protected `main`, require PR checks, and verify no external deployment process bypasses this committed build command. Promoting an already built artifact or rolling back without a build does **not** run this gate: promote only an artifact whose migration gate completed for the same database. A rollback must remain compatible with the current schema.
 
@@ -44,3 +44,7 @@ Official platform references: [conditional build commands](https://vercel.com/kb
 Production logs report migration checkpoints: configuration, load-files, create-client, connect-and-begin, lock, history, each apply:<filename>, and commit. A checkpoint records an attempted operation, not success; apply messages do not mean a transaction committed. All pending migrations remain atomic. The failure line includes the last checkpoint, an allowlisted connection/filesystem code or validated SQLSTATE (including nested causes and AggregateError), and a fixed error kind. Unknown errors never print arbitrary messages or stacks.
 
 Pending migrations are expected and run automatically after history validation. Do not infer that missing migration history requires a baseline merely from a failed build. Verify the exact failure and existing schema first.
+
+## Staging rollout
+
+The exact `staging` Preview branch now has its own schema/role validation and post-build migration gate. See [Staging rollout](staging-rollout.md) for provisioning, exact branch variable scopes, runtime/migration isolation and live activation checks. Other previews remain migration-free.
