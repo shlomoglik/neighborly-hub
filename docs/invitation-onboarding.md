@@ -99,13 +99,23 @@ do not submit a duplicate. Rejected requests may require a new invitation.
 
 Before submission, the resident form distinguishes a first resident from an adult
 joining an existing household (use a representative-issued household-member link).
-Both resident flows disclose directory listing and global contact visibility.
-This is disclosure, not a new consent record or a change to access policy.
+Both resident flows display the agreed reciprocal-participation policy before
+submission: approval lists adult identity and household/building/apartment context
+within the existing community scope. Optional phone/email use separate privacy
+controls, with managers-only defaults and current cross-project effects. Children
+remain excluded; submission itself grants no access. Residents cannot hide their
+basic identity while keeping access to others' profiles.
+
+The submit notice explicitly acknowledges participation without an extra checkbox
+or additional form state. This is presentation only: no acknowledgment evidence,
+policy version or legal consent record is persisted. Legal review must determine
+whether further notice/consent evidence and retention are required; this UI alone
+must not be treated as satisfying those requirements.
 
 Audit coverage: G1 invitation/history handoff, G2 applicant guidance and G7 listing
 disclosure. Deferred: G1 unlinked-directory guidance (outside this PR's file
-boundary), G2 reviewer conflict recovery, G7 pilot-owner approval of listing scope
-and any opt-out/per-community policy changes. G10 real-login/two-building device
+boundary) and G2 reviewer conflict recovery. G7 listing scope is now a confirmed
+product decision; per-community contact overrides remain outside this PR. G10 real-login/two-building device
 verification and the wider pilot guide remain follow-ups. No authorization,
 transaction, membership, renewal or provisioning behavior changes here.
 
