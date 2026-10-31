@@ -16,6 +16,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
+import { JoinRequestGuidance } from "./JoinRequestGuidance";
 import { InvitationPagination } from "./InvitationFeedback";
 export function RequestList({
   data,
@@ -68,7 +69,15 @@ export function RequestList({
                     : "inviteRejected",
               )}
             </p>
-            {row.status === "pending" && !row.invitationActive && <p>{t("inviteInactive")}</p>}
+            {onReview ? (
+              row.status === "pending" && !row.invitationActive && <p>{t("inviteInactive")}</p>
+            ) : (
+              <JoinRequestGuidance
+                status={row.status}
+                kind={row.kind}
+                active={row.invitationActive}
+              />
+            )}
             {onReview && row.canReview && row.status === "pending" && (
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -92,26 +101,14 @@ export function RequestList({
                 </Button>
               </div>
             )}
-            {!onReview && row.status === "approved" && (
-              <Link
-                className="text-primary underline"
-                href={
-                  row.kind === "household_member"
-                    ? "/household"
-                    : row.kind === "resident"
-                      ? "/directory"
-                      : managementHref(row.projectId)
-                }
-              >
-                {t(
-                  row.kind === "household_member"
-                    ? "homeMine"
-                    : row.kind === "resident"
-                      ? "openBook"
-                      : "openProjectManagement",
-                )}
-              </Link>
-            )}
+            {!onReview &&
+              row.status === "approved" &&
+              row.kind !== "resident" &&
+              row.kind !== "household_member" && (
+                <Link className="text-primary underline" href={managementHref(row.projectId)}>
+                  {t("openProjectManagement")}
+                </Link>
+              )}
           </li>
         ))}
       </ul>

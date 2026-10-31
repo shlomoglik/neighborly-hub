@@ -547,6 +547,36 @@ export const dict = {
   },
   inviteApproved: { he: "הבקשה אושרה", en: "Request approved", ru: "Заявка одобрена" },
   inviteRejected: { he: "הבקשה נדחתה", en: "Request rejected", ru: "Заявка отклонена" },
+  joinPendingNext: {
+    he: "הבקשה נשלחה לבדיקה אצל מנהל מורשה. אין צורך לשלוח שוב. אפשר לחזור לבקשות ההצטרפות בחשבון כדי לבדוק את הסטטוס. אם ההמתנה נמשכת, פנו למי ששלח את ההזמנה.",
+    en: "An authorized manager will review your request. You do not need to submit again. Check its status in your account’s join requests. If you are still waiting, contact the person who sent the invitation.",
+    ru: "Заявку рассмотрит уполномоченный управляющий. Не нужно подавать её повторно. Проверяйте статус в заявках вашего аккаунта. Если ожидание затянулось, свяжитесь с отправителем приглашения.",
+  },
+  joinInactiveNext: {
+    he: "אי אפשר להצטרף דרך ההזמנה הזו כעת. אם כבר הגשתם בקשה, בדקו את הסטטוס בחשבון. פנו לשולח ההזמנה כדי לחדש אותה או לקבל קישור מתאים.",
+    en: "You cannot join through this invitation now. If you already submitted a request, check its status in your account. Ask the sender to renew the invitation or provide a suitable link.",
+    ru: "Сейчас вступить по этому приглашению нельзя. Если заявка уже подана, проверьте её статус в аккаунте. Попросите отправителя продлить приглашение или предоставить подходящую ссылку.",
+  },
+  joinRejectedNext: {
+    he: "הבקשה הזו לא העניקה גישה. פנו לשולח ההזמנה לבירור ולקבלת הזמנה חדשה במידת הצורך.",
+    en: "This request did not grant access. Contact the invitation sender to clarify and request a new invitation if needed.",
+    ru: "Эта заявка не предоставила доступ. Свяжитесь с отправителем для уточнения и при необходимости попросите новое приглашение.",
+  },
+  joinApprovedNext: {
+    he: "אפשר כעת להכיר את השכנים בספר ולעדכן את פרטי הקשר והחשיפה במסך הבית שלי.",
+    en: "You can now discover your neighbors in the directory and update your contact details and visibility in My household.",
+    ru: "Теперь можно знакомиться с соседями в справочнике и обновить контакты и их видимость в разделе «Моя семья».",
+  },
+  joinFirstResident: {
+    he: "ההזמנה הזו מיועדת לתושב הראשון במשק הבית בדירה. אם כבר יש משק בית מאושר, בקשו מנציג משק הבית הזמנה להצטרפות אליו במקום להגיש כאן בקשה נוספת.",
+    en: "This invitation is for the first resident of a household in the apartment. If a household is already approved, ask its representative for a household-member invitation instead of submitting another request here.",
+    ru: "Это приглашение для первого жильца домохозяйства в квартире. Если домохозяйство уже одобрено, попросите его представителя пригласить вас как участника вместо подачи новой заявки здесь.",
+  },
+  joinListingScope: {
+    he: "לאחר אישור, שמות המבוגרים ושם משק הבית, הבניין והדירה מופיעים בספר למי שמורשה לצפות בו לפי הגדרות הפרויקט. אין אפשרות להסתיר את הרישום. פרטי ילדים אינם מופיעים. פרטי קשר חדשים מוגדרים למנהלים בלבד כברירת מחדל; שינוי פרטי הקשר והחשיפה חל בכל הפרויקטים שלכם.",
+    en: "After approval, adult names, household name, building and apartment appear to directory readers authorized by the project settings. There is no listing opt-out. Children are not listed. New contacts default to managers only; contact details and visibility changes apply across all your projects.",
+    ru: "После одобрения имена взрослых, название домохозяйства, дом и квартира видны читателям справочника с доступом по настройкам проекта. Скрыть запись нельзя. Дети не отображаются. Новые контакты по умолчанию видны только управляющим; изменения контактов и видимости действуют во всех ваших проектах.",
+  },
   inviteApprove: { he: "אישור בקשה", en: "Approve request", ru: "Одобрить заявку" },
   inviteReject: { he: "דחיית בקשה", en: "Reject request", ru: "Отклонить заявку" },
   inviteReviewConfirm: {
