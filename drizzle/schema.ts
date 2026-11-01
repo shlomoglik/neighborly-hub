@@ -28,6 +28,27 @@ export const appUsers = pgTable("app_users", {
   createdAt: createdAt(),
 });
 
+export const productFeedback = pgTable(
+  "product_feedback",
+  {
+    id: id(),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id").notNull(),
+    message: text("message").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("product_feedback_author_submission_unique").on(t.authorUserId, t.submissionId),
+    check(
+      "product_feedback_message_check",
+      sql`length(${t.message}) BETWEEN 1 AND 2000 AND ${t.message} ~ '[^[:space:]]'`,
+    ),
+    index("product_feedback_created_idx").on(t.createdAt.desc(), t.id.desc()),
+  ],
+);
+
 export const authSessions = pgTable(
   "auth_sessions",
   {
