@@ -39,7 +39,7 @@ describe.skipIf(!url)("deployment migration runner against real PostgreSQL", () 
     const migrations = await loadMigrations();
     await runMigrations(sql, migrations);
     const failing = {
-      name: "0010_retry.sql",
+      name: "0012_retry.sql",
       checksum: "failed",
       body: "create table retry_test(id int); select missing_column from retry_test;",
     };

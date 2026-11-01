@@ -95,6 +95,12 @@ The planned PostgreSQL schema is defined in [Drizzle schema](drizzle/schema.ts),
 
 ```mermaid
 erDiagram
+    projects ||--o{ community_surveys : scopes
+    app_users |o--o{ community_surveys : created_by
+    community_surveys ||--|{ community_survey_options : offers
+    community_surveys ||--o{ community_survey_responses : receives
+    community_survey_options ||--o{ community_survey_responses : selected_in_survey
+    app_users ||--o{ community_survey_responses : answers
     projects ||--o{ buildings : contains
     buildings ||--o{ floors : contains
     floors ||--o{ apartments : contains

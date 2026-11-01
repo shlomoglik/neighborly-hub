@@ -57,3 +57,12 @@ Migration 0006 adds household-scoped private child-profile provenance (`is_manag
 Migration 0007 adds nullable `buildings.address` (maximum 500 characters). Addresses are independent of project city and building name. Floor counts are derived from explicit apartment rows, never persisted as an independent count. See [flexible building layouts](building-layouts.md).
 
 The same apartments table represents residential, commercial and parking units; its legacy table name remains for compatibility. `position` is independent of `number`. No derived counts are stored. See [visual structure editor](visual-structure-editor.md) for the editing contract and migration.
+
+## Community survey foundation
+
+Migration 0011 and the matching Drizzle declarations add project-scoped
+`community_surveys`, ordered `community_survey_options` and account-linked
+`community_survey_responses` with primary key `(survey_id, user_id)`. SQL guards
+freeze published content, serialize options and response/closure writes, and check
+2–6 options at commit. No browser access, API or UI is enabled. See the
+[approved contract and unresolved retention launch gate](pilot-surveys-contract.md).
