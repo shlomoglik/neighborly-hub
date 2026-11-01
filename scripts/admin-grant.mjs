@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import postgres from "postgres";
-import { databaseTarget, validateDatabaseConnection, validateEnvironmentHost } from "./db/target.mjs";
+import {
+  databaseTarget,
+  validateDatabaseConnection,
+  validateEnvironmentHost,
+} from "./db/target.mjs";
 
 const [target, ...args] = process.argv.slice(2);
 const supported = ["local", "development", "staging"];
