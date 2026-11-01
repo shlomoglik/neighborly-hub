@@ -60,7 +60,7 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
   });
   it("initializes and repeats Staging migrations without changing Production history or data", async () => {
     expect(await runMigrations(migration, migrations, { target })).toEqual({
-      applied: 8,
+      applied: migrations.length,
       baselined: 0,
     });
     expect(await runMigrations(migration, migrations, { target })).toEqual({
@@ -71,7 +71,7 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
       (select count(*)::int from public.projects where name = 'Production sentinel') as sentinel,
       (select count(*)::int from neighborly_migrations.history) as production,
       (select count(*)::int from neighborly_staging_migrations.history) as staging`;
-    expect(snapshot).toEqual({ sentinel: 1, production: 8, staging: 8 });
+    expect(snapshot).toEqual({ sentinel: 1, production: migrations.length, staging: migrations.length });
     await expect(
       runMigrations(migration, migrations, { target, baselineThrough: migrations[0].name }),
     ).rejects.toThrow("not baselined");
@@ -125,7 +125,7 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
   });
   it("rolls back failed Staging migrations and grants runtime access to new objects on retry", async () => {
     const next = {
-      name: "0009_staging_test.sql",
+      name: `${String(Number(migrations.at(-1)!.name.slice(0, 4)) + 1).padStart(4, "0")}_staging_test.sql`,
       checksum: "failed",
       body: "create table isolation_retry(id int); select absent from isolation_retry;",
     };
