@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   numeric,
@@ -459,5 +460,83 @@ export const joinRequests = pgTable(
     index("join_requests_user_idx").on(t.userId, t.createdAt, t.id),
     index("join_requests_invitation_status_idx").on(t.invitationId, t.status, t.createdAt, t.id),
     // Audit completeness and global-admin-only self-review are enforced in SQL migration 0010.
+  ],
+);
+
+// Cross-row guards, deferred option count and deferred option FK are authoritative in 0011.
+export const communitySurveys = pgTable(
+  "community_surveys",
+  {
+    id: id(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").references(() => appUsers.id, { onDelete: "set null" }),
+    question: text("question").notNull(),
+    state: text("state").notNull().default("draft"),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+  },
+  (t) => [
+    check("community_surveys_state_check", sql`${t.state} IN ('draft', 'published', 'closed')`),
+    check(
+      "community_surveys_question_check",
+      sql`length(${t.question}) BETWEEN 1 AND 500 AND ${t.question} ~ '[^[:space:]]'`,
+    ),
+    check(
+      "community_surveys_timestamps_check",
+      sql`${t.updatedAt} >= ${t.createdAt} AND (
+      (${t.state} = 'draft' AND ${t.publishedAt} IS NULL AND ${t.closedAt} IS NULL) OR
+      (${t.state} = 'published' AND ${t.publishedAt} IS NOT NULL AND ${t.publishedAt} >= ${t.createdAt} AND ${t.closedAt} IS NULL) OR
+      (${t.state} = 'closed' AND ${t.publishedAt} IS NOT NULL AND ${t.closedAt} IS NOT NULL AND ${t.closedAt} >= ${t.publishedAt} AND ${t.publishedAt} >= ${t.createdAt})
+    )`,
+    ),
+    index("community_surveys_project_created_idx").on(t.projectId, t.createdAt.desc(), t.id.desc()),
+    index("community_surveys_creator_idx").on(t.createdBy),
+  ],
+);
+export const communitySurveyOptions = pgTable(
+  "community_survey_options",
+  {
+    id: id(),
+    surveyId: uuid("survey_id")
+      .notNull()
+      .references(() => communitySurveys.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    check(
+      "community_survey_options_label_check",
+      sql`length(${t.label}) BETWEEN 1 AND 200 AND ${t.label} ~ '[^[:space:]]'`,
+    ),
+    check("community_survey_options_position_check", sql`${t.position} BETWEEN 1 AND 6`),
+    unique("community_survey_options_position_unique").on(t.surveyId, t.position),
+    unique("community_survey_options_scope_unique").on(t.surveyId, t.id),
+  ],
+);
+export const communitySurveyResponses = pgTable(
+  "community_survey_responses",
+  {
+    surveyId: uuid("survey_id")
+      .notNull()
+      .references(() => communitySurveys.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    optionId: uuid("option_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.surveyId, t.userId] }),
+    foreignKey({
+      name: "community_survey_responses_option_fk",
+      columns: [t.surveyId, t.optionId],
+      foreignColumns: [communitySurveyOptions.surveyId, communitySurveyOptions.id],
+    }).onDelete("no action"),
+    index("community_survey_responses_option_idx").on(t.surveyId, t.optionId),
+    index("community_survey_responses_user_idx").on(t.userId),
   ],
 );

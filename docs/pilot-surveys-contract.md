@@ -1,8 +1,11 @@
 # PR-08A — Community surveys pilot contract
 
-**Status: proposal for product-owner review, not approved behavior.** Documentation
-only; no survey functionality or migration is introduced. Reviewed `main` at
-`f0c5ad2f28fee94953fe24590e12ac7498779154`; PR-00 (#80) is merged.
+**Status: pilot product defaults approved; inert persistence implemented in PR-08B.**
+No survey endpoints or UI exist yet. PR-08A (#88) is merged.
+
+**LAUNCH BLOCKER — real-person collection is not ready.** Retention/deletion period,
+responsible operator, request procedure, backup expiry and withdrawal/erasure
+handling remain unresolved. Schema and synthetic tests do not resolve this gate.
 
 ## 1. Evidence and scope
 
@@ -25,9 +28,9 @@ only; no survey functionality or migration is introduced. Reviewed `main` at
   and permits global-admin retrieval. Neither permission implies survey eligibility
   or authority. Share HTTP conventions, never its authorization service.
 
-## 2. Recommended pilot behavior
+## 2. Approved pilot behavior
 
-All recommendations below require the decisions in section 5 before implementation.
+The product owner approved the pilot defaults below; section 5 records the remaining launch gate.
 
 - One project, one required single-choice question, two to six ordered options per
   survey. Put the question directly on the survey; no question table, free-text
@@ -52,13 +55,13 @@ All recommendations below require the decisions in section 5 before implementati
   least **five** surviving responses. Below five, return suppression without counts
   or total; no live totals, respondent lists, individual-answer export or breakdowns.
   Residents see their own answer/confirmation, not aggregate results in this slice.
-  These are conservative defaults for review, not an anonymity guarantee.
+  These are approved conservative defaults, not an anonymity guarantee.
 - Survey text is authored once in its chosen language; do not add translated content
   storage initially. Later UI chrome, notices and errors must support HE/EN/RU.
 
-## 3. Proposed entities and eligibility
+## 3. Persistence entities and eligibility
 
-Names are provisional; use UUIDs, named constraints and `timestamptz` as in the
+The implemented model uses UUIDs, named constraints and `timestamptz` as in the
 current schema. Store no duplicated person, household, building, email or contact data.
 
 | Entity                       | Proposed fields and relationships                                                                                                                                                                                                                                 |
@@ -114,7 +117,7 @@ reads/writes but does not retroactively remove an already accepted response.
 | Model evaluated                          | Integrity and privacy trade-off                                                                                                                                                                                                                                                                            | Pilot recommendation                                                                                 |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Identifiable answers exposed to managers | Simple account uniqueness and deletion, but reveals who chose what and can discourage candid participation.                                                                                                                                                                                                | Reject individual-answer access through product APIs/UI.                                             |
-| Confidential, account-linked storage     | Unique account key supports retries/deletion. Managers receive only aggregates, but trusted database operators/backups can link accounts to choices.                                                                                                                                                       | **Recommend**, with explicit disclosure; this is not anonymous storage.                              |
+| Confidential, account-linked storage     | Unique account key supports retries/deletion. Managers receive only aggregates, but trusted database operators/backups can link accounts to choices.                                                                                                                                                       | **Approved for pilot**, with explicit disclosure; this is not anonymous storage.                     |
 | Anonymous answer storage                 | Removing the account key loses simple one-per-account enforcement and targeted deletion. A separate participation ledger plus unlinkable submission mechanism adds complexity; IDs, timing, logs or small groups can still permit correlation. Hashing a user ID alone is pseudonymization, not anonymity. | Defer; a genuine anonymity requirement needs a revised threat model and contract before schema work. |
 
 No respondent/account identifiers, individual timestamps or participation rosters
@@ -123,7 +126,11 @@ exceptions. Suppression and closed-only results reduce inference; small communit
 unanimous answers and comparisons after deletions still permit inference. Do not
 promise secrecy against trusted operators or re-identification resistance.
 
-**Product owner must explicitly approve (record the decision here before follow-ups):**
+**Product-owner decision record (2026-11-01):**
+
+Items 1–4 below are approved pilot behavior. Item 5 remains open and blocks
+real-person collection. Approval does not establish verified age evidence or
+remove the need for localized pre-submit disclosure and integrated verification.
 
 1. Project as community boundary; one single-choice question/2–6 options; adult
    classification; account response unit and immutable answers, rather than household voting.
@@ -137,11 +144,13 @@ promise secrecy against trusted operators or re-identification resistance.
 4. Closed-only manager results, minimum five responses, no resident aggregate view,
    and accepted residual inference risk. Changing audience/timing/threshold requires
    updating this contract and tests, not silently widening access.
-5. Retention duration, responsible operator, deletion-request channel, backup expiry,
+5. **OPEN — launch blocker:** Retention duration, responsible operator, deletion-request channel, backup expiry,
    disclosure of changing historical counts and whether withdrawal must be available.
 
-These are open decisions, not implied approvals from the vision, PR-00 or this PR.
-Document review may proceed now; schema/API/UI work and launch depend on recorded decisions.
+The project scope, single question/2–6 options, account response unit, final answers,
+manager authority, confidential account-linked storage and closed-only suppressed
+results are approved. Inert schema and synthetic tests may proceed; the operational
+retention/withdrawal policy remains undecided and real-person collection must remain disabled.
 
 ## 6. Retention and deletion
 
@@ -269,8 +278,9 @@ return 409 `INVALID_STATE`. No response/option existence oracle across projects.
 
 ## 10. Acceptance and required verification
 
-This PR validates source/design and Markdown only. The following are requirements
-for implementation PRs, not tests claimed to pass today:
+PR-08B implements SQL/Drizzle persistence and database integrity tests only.
+Authorization, API, aggregate suppression and UI requirements below remain for
+follow-up PRs; persistence alone does not deliver a usable survey feature:
 
 - Disposable migrated PostgreSQL + real signed-session integration fixtures with
   two projects/two buildings, two adults in one home, a multi-home adult, pending-only,
@@ -299,3 +309,29 @@ for implementation PRs, not tests claimed to pass today:
   existing CI, then typecheck/lint/build. UI slices add HE/EN/RU, RTL/LTR, keyboard,
   loading/empty/expired/revoked/uncertain-save checks at mobile width using fictional
   data. Record the integrated resident/manager journey before declaring surveys delivered.
+
+## 11. Persistence implementation notes (PR-08B)
+
+Migration `0011_community_surveys.sql` is authoritative. SQL text limits use
+PostgreSQL character length (500/200); future API validation retains the stricter
+UTF-16 limits from section 7. No endpoint, fixture containing real people, retention
+interval, automatic purge or self-service withdrawal is introduced.
+
+Option identities/survey assignment are immutable even in drafts; replace options
+atomically instead. Each option mutation writes/locks its parent before deferred
+count validation: read-committed writers serialize and stale repeatable-read writers
+abort rather than validating an old snapshot. Future services must lock the survey
+before option rows to avoid deadlocks; direct conflicting SQL may abort and retry.
+Response inserts take a shared survey lock, including INSERT ON CONFLICT retries;
+updates always reject. Idempotent retry comparison belongs to PR-08C and must occur
+under this lock while still published. SQL does not assert resident eligibility.
+
+Creator provenance cannot be reassigned; FK SET NULL on account deletion is allowed
+in every state. Published/closed survey deletion is allowed only during project
+cascade (parent is absent), not ordinary manager deletion. Account-response erasure
+remains possible for trusted backend operators; no user-facing erasure promise is
+made. The deferred composite option FK permits whole-survey erasure but rejects
+orphaned answers. RLS without browser policies and revoked table/function privileges
+keep the foundation backend-only; deployment runtime ownership/BYPASSRLS must follow
+the existing server database model. Reconcile scoped runtime privileges when the
+open staging infrastructure PR (#58) lands; do not grant browser roles access.
