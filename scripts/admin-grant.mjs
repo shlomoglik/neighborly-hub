@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import postgres from "postgres";
-import { databaseTarget, validateDatabaseConnection } from "./db/target.mjs";
+import { databaseTarget, validateDatabaseConnection, validateEnvironmentHost } from "./db/target.mjs";
 
 const [target, ...args] = process.argv.slice(2);
 const supported = ["local", "development", "staging"];
@@ -30,16 +30,14 @@ const url = new URL(env.DATABASE_URL);
 if (!["postgres:", "postgresql:"].includes(url.protocol))
   throw new Error("Expected PostgreSQL URL");
 const host = url.hostname.toLowerCase();
-const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(host);
-if (target === "local" && !loopback) throw new Error("Local target requires loopback PostgreSQL");
-if (target !== "local" && loopback) throw new Error("Remote target requires remote PostgreSQL");
+const loopback = validateEnvironmentHost(url, target);
 if (env.DATABASE_READ_ONLY === "true" || env.ALLOW_PRODUCTION_DEBUG === "true") {
   throw new Error("Refusing admin changes with production-debug configuration");
 }
 if (/prod(uction)?/i.test(host) || /prod(uction)?/i.test(url.pathname)) {
   throw new Error("Refusing a production-looking database");
 }
-if (target !== "local" && env.ALLOW_REMOTE_ADMIN_BOOTSTRAP !== "true") {
+if (!loopback && env.ALLOW_REMOTE_ADMIN_BOOTSTRAP !== "true") {
   throw new Error(
     "Remote bootstrap requires ALLOW_REMOTE_ADMIN_BOOTSTRAP=true in the selected private env file",
   );
