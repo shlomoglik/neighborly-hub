@@ -35,3 +35,19 @@ The existing invitation private-request/resource/action implementation is shared
 Hebrew, English and Russian text, existing responsive components, skeletons, motion/reduced-motion styles and focus restoration are reused. Storybook examples are fictional and never call live APIs. Screenshots remain on demand.
 
 `households.integration.test.ts` runs in the existing disposable PostgreSQL CI job using actual signed Better Auth sessions. It exercises private HTTP boundaries, identity spoofing/expiry, multi-project memberships, contact visibility, child exclusion, management/edit separation, persisted edits, directory reflection, expected-value conflicts, concurrent writes/contact limits, pagination and revocation. Unit/component tests cover JSON boundaries, translations, contact validation, editor defaults, drafts, confirmations and loading/denied states. Existing shared lifecycle tests continue to exercise races, backgrounding and invalidation through the invitation compatibility exports.
+
+## Pilot household presentation (G5)
+
+A household can contain one resident, roommates or a family. The resident invitation
+keeps the required household display name, with solo/roommate examples before submission;
+a personal first name is valid without adding relatives. Existing-household invitations
+still request only the joining adult's full name and require manager approval.
+
+Hebrew, English and Russian use household terminology for display names, navigation,
+member management and invitations. A household rename changes its shared display name,
+not any adult's verified name. Adult name correction, removal and transfers remain
+separate authorization work. Child privacy and membership semantics are unchanged.
+
+`SoloResident` and `Roommates` Storybook examples use fictional records for 390px RTL/LTR
+review. Component tests cover solo submission, adult-only display and renaming a roommate
+household while preserving individual names, alongside the existing form tests.
