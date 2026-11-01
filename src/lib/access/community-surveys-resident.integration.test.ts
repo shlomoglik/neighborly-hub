@@ -158,6 +158,27 @@ describe.skipIf(!url)("Resident surveys with PostgreSQL and signed sessions", ()
           });
         }
       }
+      const invitation = uuid();
+      await tx.insert(s.invitations).values({
+        id: invitation,
+        projectId: projects[0],
+        kind: "resident",
+        recipientUserId: unlinked,
+        recipientEmail: `${unlinked}@example.test`,
+        tokenHash: uuid().replaceAll("-", "").repeat(2),
+        createdBy: admin,
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+      await tx.insert(s.joinRequests).values({
+        invitationId: invitation,
+        userId: unlinked,
+        apartmentId: apartments[8],
+        fullName: "Historical approval",
+        householdName: "Historical home",
+        status: "approved",
+        reviewedBy: admin,
+        reviewedAt: new Date(),
+      });
       // Same account in both buildings, and two non-representative adults in one home.
       await tx.insert(s.householdMembers).values({ householdId: homes[2], personId: persons[1] });
       await tx
@@ -240,6 +261,21 @@ describe.skipIf(!url)("Resident surveys with PostgreSQL and signed sessions", ()
         optionId: rows[0].option_id,
       });
     }
+  });
+  it("combines admin and residency independently and hides historical own answers after removal", async () => {
+    const f = await survey();
+    await fixture.client`insert into user_person_links(user_id, person_id, verified_by) values (${admin}, ${persons[0]}, ${admin})`;
+    await fixture.client`insert into household_members(person_id, household_id) values (${persons[0]}, ${homes[1]})`;
+    expect((await vote(admin, f)).status).toBe(200);
+    expect((await (await read(admin, f.id)).json()).ownResponse).toEqual({
+      optionId: f.options[0],
+    });
+    await fixture.client`delete from household_members where person_id = ${persons[0]}`;
+    expect((await (await read(admin, f.id)).json()).ownResponse).toBeNull();
+    expect((await vote(admin, f)).status).toBe(404);
+    expect(
+      await fixture.client`select * from community_survey_responses where survey_id = ${f.id}`,
+    ).toHaveLength(1);
   });
   it("paginates stable summaries without counts, options or identities", async () => {
     const ids: string[] = [];
