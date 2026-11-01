@@ -1,7 +1,8 @@
 # PR-08A — Community surveys pilot contract
 
 **Status: pilot product defaults approved; inert persistence implemented in PR-08B.**
-No survey endpoints or UI exist yet. PR-08A (#88) is merged.
+PR-08C adds resident read/response endpoints; management and UI remain future work.
+PR-08A (#88) and persistence PR-08B (#89) are merged.
 
 **LAUNCH BLOCKER — real-person collection is not ready.** Retention/deletion period,
 responsible operator, request procedure, backup expiry and withdrawal/erasure
@@ -176,7 +177,8 @@ pilot; avoid collecting unnecessary personal information in question/option text
 
 ## 7. API outline
 
-All routes below are **proposed**, under the existing App Router, with server-only
+The three resident routes below are implemented; management routes remain proposed.
+They use the existing App Router, with server-only
 services and strict Zod validation following the
 [feedback boundary](../src/app/api/product-feedback/route.ts).
 Use private/no-store and `Vary: Cookie` for successes and errors via
@@ -335,3 +337,31 @@ orphaned answers. RLS without browser policies and revoked table/function privil
 keep the foundation backend-only; deployment runtime ownership/BYPASSRLS must follow
 the existing server database model. Reconcile scoped runtime privileges when the
 open staging infrastructure PR (#58) lands; do not grant browser roles access.
+
+## 12. Resident API implementation notes (PR-08C)
+
+Resident listing requires current residency; published/closed detail additionally
+admits exact project managers/global admins. Managers without residency always
+receive `ownResponse: null`, including when a historical response exists. Drafts
+remain hidden on these routes. No publication endpoint or UI is introduced, and
+section 5's real-person collection gate remains in effect; use synthetic fixtures.
+
+Reads authorize and select in one read-only repeatable-read snapshot. Writes lock
+all qualifying identity/person/member/home/apartment/building rows in membership-ID
+order, recheck eligibility in a fresh read-committed statement after lock waits,
+then acquire a shared survey lock. Locks survive through response insertion and
+winning-row comparison. Closure and eligibility removal therefore serialize with
+submission. Management must acquire its grant before the survey; do not introduce
+survey-first operations that subsequently lock resident paths. SQL deadlock victims
+or unexpected failures produce sanitized errors; read own response before retrying.
+
+The response body has exactly one UUID field; duplicate keys (including escaped
+spellings), extra query/body fields and repeated pagination fields are rejected.
+UUID choices are canonicalized before retry comparison. No participant counts,
+account identifiers or other residents' choices are serialized or logged.
+
+Signed-session PostgreSQL tests are included in the database CI job: authorization
+matrix, two buildings and projects, shared/multiple homes, immutable concurrent
+responses, actual lock waits in both closure/revocation orders, historical response
+preservation, boundary validation and private response headers. Management/results
+and integrated resident/manager UI verification remain PR-08D/08E/08F work.
