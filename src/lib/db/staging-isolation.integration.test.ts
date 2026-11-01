@@ -71,7 +71,11 @@ describe.skipIf(!url)("Staging schema isolation using real login roles", () => {
       (select count(*)::int from public.projects where name = 'Production sentinel') as sentinel,
       (select count(*)::int from neighborly_migrations.history) as production,
       (select count(*)::int from neighborly_staging_migrations.history) as staging`;
-    expect(snapshot).toEqual({ sentinel: 1, production: migrations.length, staging: migrations.length });
+    expect(snapshot).toEqual({
+      sentinel: 1,
+      production: migrations.length,
+      staging: migrations.length,
+    });
     await expect(
       runMigrations(migration, migrations, { target, baselineThrough: migrations[0].name }),
     ).rejects.toThrow("not baselined");
