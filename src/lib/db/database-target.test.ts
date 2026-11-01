@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { databaseTarget, validateDatabaseConnection } from "../../../scripts/db/target.mjs";
+import { databaseTarget, validateDatabaseConnection, validateEnvironmentHost } from "../../../scripts/db/target.mjs";
 import { validateStagingConnections } from "../../../scripts/db/staging-isolation.mjs";
 import { deploymentBuild } from "../../../scripts/vercel-build.mjs";
 
@@ -14,6 +14,17 @@ const staging = {
 };
 
 describe("database deployment targets", () => {
+  it("allows local Staging with a dedicated role while preserving other host restrictions", () => {
+    const localUrl = new URL("postgres://neighborly_staging_app:secret@127.0.0.1:55432/neighborly_pilot");
+    const stagingTarget = databaseTarget({ NEIGHBORLY_ENV_TARGET: "staging", DATABASE_SCHEMA: "staging" });
+    expect(validateEnvironmentHost(localUrl, "staging")).toBe(true);
+    expect(() => validateDatabaseConnection(localUrl.href, stagingTarget, "runtime")).not.toThrow();
+    expect(validateEnvironmentHost(new URL(staging.DATABASE_URL), "staging")).toBe(false);
+    expect(() => validateEnvironmentHost(localUrl, "development")).toThrow();
+    expect(() => validateEnvironmentHost(localUrl, "production")).toThrow();
+    expect(() => validateEnvironmentHost(new URL(staging.DATABASE_URL), "local")).toThrow();
+    expect(() => validateDatabaseConnection("postgres://neighborly:secret@127.0.0.1:55432/neighborly_pilot", stagingTarget, "runtime")).toThrow();
+  });
   it("preserves public and the existing Production history by default", () => {
     expect(databaseTarget({})).toMatchObject({
       schema: "public",
