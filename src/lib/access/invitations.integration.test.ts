@@ -695,6 +695,14 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
       expect(
         (await listJoinRequests(fixture.db, admin, a)).requests.find((r) => r.id === id)?.canReview,
       ).toBe(true);
+      await expect(
+        fixture.db
+          .update(s.joinRequests)
+          .set({ status: "approved", reviewedBy: actor, reviewedAt: new Date() })
+          .where(eq(s.joinRequests.id, id)),
+      ).rejects.toMatchObject({
+        cause: { code: "23514", constraint_name: "join_requests_no_self_review" },
+      });
       for (const decision of ["approve", "reject"] as const) {
         const denied = await decide(id, actor, a, decision);
         check(denied, 403);
