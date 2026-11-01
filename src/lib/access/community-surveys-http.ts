@@ -9,7 +9,9 @@ export async function surveyRoute(request: Request, context: SurveyContext, writ
   try {
     const user = await getCurrentUser(request.headers);
     if (!user) return respond({ error: "UNAUTHENTICATED" }, 401);
-    const { projectId, surveyId: id } = await context.params;
+    const routeParams = await context.params;
+    const projectId = routeParams.projectId.toLowerCase();
+    const id = routeParams.surveyId?.toLowerCase();
     if (
       !surveyId.safeParse(projectId).success ||
       (id !== undefined && !surveyId.safeParse(id).success)
