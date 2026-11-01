@@ -39,7 +39,12 @@ beforeEach(() => {
 it("uses the signed session identity and canonical UUID choice", async () => {
   const response = await surveyRoute(
     request(JSON.stringify({ optionId: optionId.toUpperCase() })),
-    context,
+    {
+      params: Promise.resolve({
+        projectId: projectId.toUpperCase(),
+        surveyId: surveyId.toUpperCase(),
+      }),
+    },
     true,
   );
   expect(response.status).toBe(200);
