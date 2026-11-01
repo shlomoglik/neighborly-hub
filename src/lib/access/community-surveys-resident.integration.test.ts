@@ -162,6 +162,7 @@ describe.skipIf(!url)("Resident surveys with PostgreSQL and signed sessions", ()
       await tx.insert(s.invitations).values({
         id: invitation,
         projectId: projects[0],
+        buildingId: buildings[0],
         kind: "resident",
         recipientUserId: unlinked,
         recipientEmail: `${unlinked}@example.test`,
