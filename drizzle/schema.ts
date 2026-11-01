@@ -458,5 +458,6 @@ export const joinRequests = pgTable(
     unique("join_requests_invitation_id_user_id_key").on(t.invitationId, t.userId),
     index("join_requests_user_idx").on(t.userId, t.createdAt, t.id),
     index("join_requests_invitation_status_idx").on(t.invitationId, t.status, t.createdAt, t.id),
+    // Audit completeness and global-admin-only self-review are enforced in SQL migration 0010.
   ],
 );
