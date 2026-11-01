@@ -406,7 +406,7 @@ export const userPersonLinks = pgTable(
       .references(() => appUsers.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
   },
-  (t) => [check("user_person_links_no_self_verification", sql`${t.userId} <> ${t.verifiedBy}`)],
+  // Self-verification requires a current global admin grant, enforced by the SQL trigger in 0010.
 );
 
 // Composite structural scope FKs and CHECKs are authoritative in migrations 0005–0006.

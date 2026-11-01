@@ -526,10 +526,181 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
       200,
     );
   });
+  it("enforces the non-admin identity self-verification restriction on database inserts and updates", async () => {
+    await expect(
+      fixture.db.transaction(async (tx) => {
+        const [party] = await tx
+          .insert(s.parties)
+          .values({ kind: "person" })
+          .returning({ id: s.parties.id });
+        await tx
+          .insert(s.people)
+          .values({ partyId: party.id, fullName: "Self verification denied" });
+        await tx
+          .insert(s.userPersonLinks)
+          .values({ userId: pm, personId: party.id, verifiedBy: pm });
+      }),
+    ).rejects.toMatchObject({
+      cause: { code: "23514", constraint_name: "user_person_links_no_self_verification" },
+    });
+    await expect(
+      fixture.db
+        .update(s.userPersonLinks)
+        .set({ verifiedBy: linked })
+        .where(eq(s.userPersonLinks.userId, linked)),
+    ).rejects.toMatchObject({
+      cause: { code: "23514", constraint_name: "user_person_links_no_self_verification" },
+    });
+  });
+  it("allows global admin resident self-approval with household membership and honest audit provenance", async () => {
+    const unit = (await readManagementHierarchy(fixture.db, admin, a))!.buildings[0].floors[0]
+      .apartments[3].id;
+    const i = await invite(admin, a, unit);
+    const pending = await apply(i.token, admin, unit);
+    check(pending, 201);
+    const { id } = await pending.json();
+    expect(
+      (await listJoinRequests(fixture.db, admin, a)).requests.find((r) => r.id === id)?.canReview,
+    ).toBe(true);
+    expect(
+      (await listJoinRequests(fixture.db, admin, null)).requests.find((r) => r.id === id)
+        ?.canReview,
+    ).toBe(false);
+    check(await decide(id), 200);
+    const [audit] = await fixture.db.select().from(s.joinRequests).where(eq(s.joinRequests.id, id));
+    expect(audit).toMatchObject({ status: "approved", reviewedBy: admin });
+    expect(audit.reviewedAt).toBeInstanceOf(Date);
+    const [link] = await fixture.db
+      .select()
+      .from(s.userPersonLinks)
+      .where(eq(s.userPersonLinks.userId, admin));
+    expect(link.verifiedBy).toBe(admin);
+    const [home] = await fixture.db
+      .select()
+      .from(s.households)
+      .where(eq(s.households.apartmentId, unit));
+    expect(home).toMatchObject({ approvalStatus: "approved", isActive: true, createdBy: admin });
+    expect(
+      await fixture.db
+        .select()
+        .from(s.householdMembers)
+        .where(eq(s.householdMembers.householdId, home.id)),
+    ).toMatchObject([{ personId: link.personId, isContactPerson: true }]);
+    // The admin exception does not bypass apartment occupancy or invitation activity.
+    const occupied = await invite(admin, a, unit);
+    const occupiedRequest = await apply(occupied.token, admin, unit);
+    const occupiedId = (await occupiedRequest.json()).id;
+    const conflict = await decide(occupiedId);
+    check(conflict, 409);
+    expect(await conflict.json()).toMatchObject({ error: "APARTMENT_OCCUPIED" });
+    for (const inactive of ["revoked", "expired"] as const) {
+      const invitation = await invite(admin, a, null);
+      const response = await apply(invitation.token, admin, unit);
+      const requestId = (await response.json()).id;
+      await fixture.db
+        .update(s.invitations)
+        .set(
+          inactive === "revoked"
+            ? { revokedAt: new Date() }
+            : { createdAt: new Date(0), expiresAt: new Date(1000) },
+        )
+        .where(eq(s.invitations.id, invitation.id));
+      const denied = await decide(requestId);
+      check(denied, 409);
+      expect(await denied.json()).toMatchObject({ error: "INVITATION_INACTIVE" });
+      check(await decide(requestId, admin, a, "reject"), 200);
+      const [rejected] = await fixture.db
+        .select()
+        .from(s.joinRequests)
+        .where(eq(s.joinRequests.id, requestId));
+      expect(rejected).toMatchObject({ status: "rejected", reviewedBy: admin });
+      expect(rejected.reviewedAt).toBeInstanceOf(Date);
+    }
+    // Revocation preserves historical provenance, but subsequent self-verification writes fail.
+    await fixture.db.delete(s.globalRoles).where(eq(s.globalRoles.userId, admin));
+    try {
+      await expect(
+        fixture.db
+          .update(s.userPersonLinks)
+          .set({ verifiedBy: admin })
+          .where(eq(s.userPersonLinks.userId, admin)),
+      ).rejects.toThrow();
+      expect(
+        (
+          await fixture.db
+            .select()
+            .from(s.userPersonLinks)
+            .where(eq(s.userPersonLinks.userId, admin))
+        )[0],
+      ).toEqual(link);
+    } finally {
+      await fixture.db.insert(s.globalRoles).values({ userId: admin, role: "admin" });
+    }
+  });
+  it.each(["project_manager", "building_manager"] as const)(
+    "allows global admin self-approval as %s",
+    async (kind) => {
+      // Separate projects keep the two assignments independent.
+      const projectId = kind === "project_manager" ? b : c;
+      const buildingId = (await readManagementHierarchy(fixture.db, admin, projectId))!.buildings[0]
+        .id;
+      const created = await create(
+        await request("POST", admin, {
+          kind,
+          recipientEmail: `${admin}@example.test`,
+          expiresInDays: 7,
+          ...(kind === "building_manager" ? { buildingId } : {}),
+        }),
+        ctx(projectId),
+      );
+      check(created, 201);
+      const token = new URL((await created.json()).url).pathname.split("/").at(-1)!;
+      const pending = await submit(await request("POST", admin, {}), {
+        params: Promise.resolve({ token }),
+      });
+      check(pending, 201);
+      const { id } = await pending.json();
+      expect(
+        (await listJoinRequests(fixture.db, admin, projectId)).requests.find((r) => r.id === id)
+          ?.canReview,
+      ).toBe(true);
+      check(await decide(id, admin, projectId), 200);
+      expect(
+        await fixture.db
+          .select()
+          .from(s.staffAssignments)
+          .where(
+            and(eq(s.staffAssignments.userId, admin), eq(s.staffAssignments.projectId, projectId)),
+          ),
+      ).toMatchObject([
+        { role: kind, buildingId: kind === "building_manager" ? buildingId : null },
+      ]);
+      const [audit] = await fixture.db
+        .select()
+        .from(s.joinRequests)
+        .where(eq(s.joinRequests.id, id));
+      expect(audit).toMatchObject({ status: "approved", reviewedBy: admin });
+      expect(audit.reviewedAt).toBeInstanceOf(Date);
+    },
+  );
   it("blocks self review, cross-scope review/revocation and expired/revoked invitations without removing approved access", async () => {
     const i = await invite(admin, a, null);
-    const self = await apply(i.token, admin, apartmentSpare);
-    check(await decide((await self.json()).id, admin), 403);
+    for (const actor of [pm, bm]) {
+      const self = await apply(i.token, actor, apartmentSpare);
+      check(self, 201);
+      const { id } = await self.json();
+      expect(
+        (await listJoinRequests(fixture.db, actor, a)).requests.find((r) => r.id === id)?.canReview,
+      ).toBe(false);
+      expect(
+        (await listJoinRequests(fixture.db, admin, a)).requests.find((r) => r.id === id)?.canReview,
+      ).toBe(true);
+      for (const decision of ["approve", "reject"] as const) {
+        const denied = await decide(id, actor, a, decision);
+        check(denied, 403);
+        expect(await denied.json()).toMatchObject({ error: "SELF_REVIEW" });
+      }
+    }
     check(
       await revoke(await request("DELETE", bm), {
         params: Promise.resolve({ projectId: b, invitationId: i.id }),
