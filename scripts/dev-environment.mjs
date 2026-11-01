@@ -1,4 +1,4 @@
-import { databaseTarget, validateDatabaseConnection } from "./db/target.mjs";
+import { databaseTarget, validateDatabaseConnection, validateEnvironmentHost } from "./db/target.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -31,12 +31,7 @@ for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET"]) {
 const url = new URL(config.DATABASE_URL);
 if (!["postgres:", "postgresql:"].includes(url.protocol))
   throw new Error("Expected PostgreSQL DATABASE_URL");
-if (target === "local" && !["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
-  throw new Error("Local target requires a loopback database host");
-}
-if (target !== "local" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
-  throw new Error("Remote target requires a remote database host");
-}
+validateEnvironmentHost(url, target);
 if (target === "production" && config.ALLOW_PRODUCTION_DEBUG !== "true") {
   throw new Error(
     "Production debugging requires ALLOW_PRODUCTION_DEBUG=true in the private environment file",
