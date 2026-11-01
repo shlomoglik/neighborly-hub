@@ -57,3 +57,19 @@ export const Loading: Story = { args: { status: "loading", data: null } };
 export const Unavailable: Story = { args: { status: "unavailable", data: null } };
 export const Expired: Story = { args: { status: "expired", data: null } };
 export const Conflict: Story = { args: { error: "STALE_HOUSEHOLD" } };
+
+export const SoloResident: Story = {
+  args: { data: { ...meta.args.data, name: "Dana" } },
+};
+export const Roommates: Story = {
+  args: {
+    data: {
+      ...meta.args.data,
+      name: "Apartment 12 roommates",
+      members: [
+        ...meta.args.data.members,
+        { id: "fictional-roommate", name: "Alex Levi", primary: false, contacts: [] },
+      ],
+    },
+  },
+};

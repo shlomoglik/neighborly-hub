@@ -143,3 +143,44 @@ it("requires deletion confirmation and blocks controls while saving", async () =
     true,
   );
 });
+
+it.each(["he", "en", "ru"] as const)(
+  "displays a solo resident and roommates without changing their individual names in %s",
+  async (lang) => {
+    const value = props();
+    value.data = {
+      ...value.data!,
+      name: "Dana",
+      members: [{ id: "dana", name: "Dana Cohen", primary: true, contacts: [] }],
+    };
+    const { rerender } = render(localized(value, lang));
+    expect(screen.getByText("Dana")).toBeTruthy();
+    expect(screen.getByText("Dana Cohen")).toBeTruthy();
+    expect(screen.getByText(translate(lang, "homeAdultsOnly"))).toBeTruthy();
+    value.data = {
+      ...value.data,
+      name: "Apartment 12 roommates",
+      members: [
+        ...value.data.members,
+        { id: "alex", name: "Alex Levi", primary: false, contacts: [] },
+      ],
+    };
+    rerender(localized(value, lang));
+    expect(screen.getByText("Apartment 12 roommates")).toBeTruthy();
+    expect(screen.getByText("Alex Levi")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "homeRename") }));
+    fireEvent.change(screen.getByLabelText(translate(lang, "familyName")), {
+      target: { value: "Our home" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "save") }));
+    await waitFor(() =>
+      expect(value.onSave).toHaveBeenCalledWith({
+        action: "rename",
+        name: "Our home",
+        expected: "Apartment 12 roommates",
+      }),
+    );
+    expect(screen.getByText("Dana Cohen")).toBeTruthy();
+    expect(screen.getByText("Alex Levi")).toBeTruthy();
+  },
+);
