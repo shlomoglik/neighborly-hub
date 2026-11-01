@@ -47,3 +47,14 @@ export function validateDatabaseConnection(connection, target, kind) {
   }
   return url;
 }
+
+/** Validate whether a local CLI target may use a loopback PostgreSQL endpoint. */
+export function validateEnvironmentHost(url, environment) {
+  const loopback = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname.toLowerCase());
+  if (environment === "local" && !loopback)
+    throw new Error("Local target requires a loopback database host");
+  if (["development", "production"].includes(environment) && loopback)
+    throw new Error("Remote target requires a remote database host");
+  // Staging may use a local container or a remote database, but always requires its dedicated role/schema.
+  return loopback;
+}
