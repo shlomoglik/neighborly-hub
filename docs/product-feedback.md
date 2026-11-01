@@ -98,3 +98,20 @@ no numbered SQL migration. This table uses the existing `pgTable` factory so tha
 schema selection can compose with #58; retain both changes when reconciling. The CI
 integration-test command also overlaps #58: retain both test lists. #81/#82 do not
 change schema or migrations. No other open PR used migration 0009 at preflight.
+
+## Resident submission UI (PR-07)
+
+The Account page links to `/account/product-feedback`. The route requires only a
+verified account session, so pending and unlinked users can report onboarding
+friction. The localized form explains account attribution and the private product
+team audience. It never retrieves feedback or publishes it to neighbors.
+
+The form reuses the shared validation contract and private request helper. One
+submission UUID and normalized message are frozen on the first valid send. During
+the request and after any failure, the message remains read-only so retries cannot
+change a possibly saved submission. A 20-second timeout allows retry with the same
+pair; only an API success shows confirmation and clears the text. After success,
+"Send more feedback" starts a new intentional submission with a fresh UUID.
+Expired sessions offer sign-in in a separate tab to keep the draft in place.
+Drafts and retry identities live in the mounted form only; leaving or reloading the
+page discards them. No feedback text is stored in browser storage or URLs.
