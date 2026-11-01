@@ -6,6 +6,71 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  productFeedbackTitle: {
+    he: "משוב על Neighborly Hub",
+    en: "Feedback about Neighborly Hub",
+    ru: "Отзыв о Neighborly Hub",
+  },
+  productFeedbackPrivacy: {
+    he: "המשוב נשלח לצוות המוצר של Neighborly Hub ומשויך לחשבון שלך. הוא לא מתפרסם לשכנים.",
+    en: "Your feedback goes to the Neighborly Hub product team and is linked to your account. It is not published to neighbors.",
+    ru: "Ваш отзыв отправляется команде продукта Neighborly Hub и связан с вашей учётной записью. Он не публикуется для соседей.",
+  },
+  productFeedbackMessage: {
+    he: "מה נוכל לשפר?",
+    en: "What could we improve?",
+    ru: "Что мы можем улучшить?",
+  },
+  productFeedbackHint: {
+    he: "עד 2,000 תווים. נשמח לשמוע מה עבד טוב ומה היה חסר.",
+    en: "Up to 2,000 characters. Tell us what worked well and what was missing.",
+    ru: "До 2 000 символов. Расскажите, что понравилось и чего не хватало.",
+  },
+  productFeedbackSend: {
+    he: "שליחת משוב",
+    en: "Send feedback",
+    ru: "Отправить отзыв",
+  },
+  productFeedbackSending: {
+    he: "שולחים את המשוב…",
+    en: "Sending feedback…",
+    ru: "Отправляем отзыв…",
+  },
+  productFeedbackRetry: {
+    he: "ניסיון חוזר",
+    en: "Retry",
+    ru: "Повторить",
+  },
+  productFeedbackSuccess: {
+    he: "תודה! המשוב נשמר ונשלח לצוות המוצר.",
+    en: "Thank you! Your feedback has been saved for the product team.",
+    ru: "Спасибо! Ваш отзыв сохранён для команды продукта.",
+  },
+  productFeedbackNew: {
+    he: "שליחת משוב נוסף",
+    en: "Send more feedback",
+    ru: "Отправить ещё один отзыв",
+  },
+  productFeedbackInvalid: {
+    he: "יש להזין הודעה תקינה באורך 1–2,000 תווים.",
+    en: "Enter a valid message of 1–2,000 characters.",
+    ru: "Введите корректное сообщение длиной от 1 до 2 000 символов.",
+  },
+  productFeedbackFailed: {
+    he: "לא ניתן לאשר שהמשוב נשמר. הטקסט נשמר ללא שינוי לניסיון חוזר בטוח.",
+    en: "We could not confirm your feedback was saved. Your text is kept unchanged for a safe retry.",
+    ru: "Не удалось подтвердить сохранение отзыва. Текст сохранён без изменений для безопасной повторной отправки.",
+  },
+  productFeedbackAuth: {
+    he: "יש להתחבר שוב ואז לנסות לשלוח את אותו משוב. הטקסט שלך נשמר כאן.",
+    en: "Sign in again, then retry the same feedback. Your text is kept here.",
+    ru: "Войдите снова, затем повторите отправку того же отзыва. Ваш текст сохранён здесь.",
+  },
+  productFeedbackSignIn: {
+    he: "התחברות בלשונית חדשה",
+    en: "Sign in in a new tab",
+    ru: "Войти в новой вкладке",
+  },
   visionTitle: { he: "החזון שלנו", en: "Our Vision", ru: "Наше видение" },
   visionHero: {
     he: "הופכים שכנות לקהילה",

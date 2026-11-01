@@ -53,6 +53,12 @@ export default async function AccountPage({
             {translate(lang, "homeMine")}
           </Link>
 
+          <Link
+            href="/account/product-feedback"
+            className="flex min-h-11 items-center text-primary underline"
+          >
+            {translate(lang, "productFeedbackTitle")}
+          </Link>
           <SignOut />
         </div>
         <LoginMethods
