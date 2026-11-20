@@ -139,14 +139,16 @@ function join(overrides: Partial<JoinInvitationProps> = {}, lang: Lang = "en") {
   return props;
 }
 it.each(["he", "en", "ru"] as const)(
-  "requests membership without granting it optimistically in %s",
+  "lets a solo resident request a household without adding relatives in %s",
   async (lang) => {
     const p = join({}, lang);
+    expect(screen.getByText(translate(lang, "joinFirstResident"))).toBeTruthy();
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
     fireEvent.change(screen.getByLabelText(translate(lang, "fullName")), {
-      target: { value: "New name" },
+      target: { value: "Dana" },
     });
     fireEvent.change(screen.getByLabelText(translate(lang, "familyName")), {
-      target: { value: "New home" },
+      target: { value: "Dana" },
     });
     fireEvent.submit(
       screen.getByRole("button", { name: translate(lang, "inviteSubmit") }).closest("form")!,
@@ -154,8 +156,8 @@ it.each(["he", "en", "ru"] as const)(
     await waitFor(() =>
       expect(p.onSubmit).toHaveBeenCalledWith({
         apartmentId,
-        fullName: "New name",
-        householdName: "New home",
+        fullName: "Dana",
+        householdName: "Dana",
       }),
     );
     expect(screen.queryByText(translate(lang, "inviteApproved"))).toBeNull();

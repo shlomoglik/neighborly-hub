@@ -469,7 +469,9 @@ export async function listJoinRequests(
           status: status(r.status),
           accountName: r.accountName,
           accountEmail: r.accountEmail,
-          canReview: !!projectId && r.userId !== userId,
+          canReview:
+            !!projectId &&
+            (r.userId !== userId || (scope?.admin === true && r.kind !== "household_member")),
           invitationActive: r.issuerActive && !r.revokedAt && r.expiresAt.getTime() > Date.now(),
         })),
         page,
@@ -533,7 +535,8 @@ export async function reviewJoinRequest(
       .where(eq(s.joinRequests.id, id))
       .for("update");
     if (!request) throw missing();
-    if (request.userId === reviewer) throw new InvitationError(403, "SELF_REVIEW");
+    if (request.userId === reviewer && (!scope.admin || i.kind === "household_member"))
+      throw new InvitationError(403, "SELF_REVIEW");
     if (request.status !== "pending") throw new InvitationError(409, "REQUEST_REVIEWED");
     if (decision === "approve") {
       if (!live(i)) throw new InvitationError(409, "INVITATION_INACTIVE");

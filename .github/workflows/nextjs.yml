@@ -1,9 +1,9 @@
 name: Next.js checks
 on:
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   push:
-    branches: [main]
+    branches: [main, staging]
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -97,10 +97,14 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify Staging isolation with distinct database roles
+        env:
+          MIGRATION_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
+        run: pnpm exec vitest run src/lib/db/staging-isolation.integration.test.ts
       - name: Verify migration lifecycle, rollback and concurrent runners
         env:
           MIGRATION_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
-        run: pnpm exec vitest run src/lib/db/deployment-migrations.integration.test.ts
+        run: pnpm exec vitest run src/lib/db/deployment-migrations.integration.test.ts src/lib/db/community-surveys.integration.test.ts
       - name: Apply all authoritative migrations using the production runner
         env:
           MIGRATION_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
@@ -116,7 +120,7 @@ jobs:
       - name: Verify real database sessions and OAuth request boundaries
         env:
           AUTH_TEST_DATABASE_URL: postgresql://neighborly:neighborly_test@localhost:5432/neighborly_test
-        run: pnpm exec vitest run --no-file-parallelism src/lib/auth/auth.integration.test.ts src/lib/access/directory.integration.test.ts src/lib/access/project-setup.integration.test.ts src/lib/access/management.integration.test.ts src/lib/access/staff.integration.test.ts src/lib/access/structure-management.integration.test.ts src/lib/access/visual-structure.integration.test.ts src/lib/access/invitations.integration.test.ts src/lib/access/households.integration.test.ts src/lib/access/family.integration.test.ts src/lib/access/product-feedback.integration.test.ts
+        run: pnpm exec vitest run --no-file-parallelism src/lib/auth/auth.integration.test.ts src/lib/access/directory.integration.test.ts src/lib/access/project-setup.integration.test.ts src/lib/access/management.integration.test.ts src/lib/access/staff.integration.test.ts src/lib/access/structure-management.integration.test.ts src/lib/access/visual-structure.integration.test.ts src/lib/access/invitations.integration.test.ts src/lib/access/households.integration.test.ts src/lib/access/family.integration.test.ts src/lib/access/product-feedback.integration.test.ts src/lib/access/community-surveys-resident.integration.test.ts
 
   pilot-smoke:
     name: Pilot browser journey
