@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookUser, Search, CircleUserRound, Settings2, Users } from "lucide-react";
+import { BookUser, Search, CircleUserRound, Settings2, Users, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
@@ -26,7 +26,7 @@ export function AppShell({
     { to: "/manage", label: t("manage"), icon: Settings2 },
   ];
   return (
-    <div className="min-h-screen bg-background pb-24 lg:pb-8">
+    <div className="min-h-screen min-h-dvh bg-background pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-16">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur">
         <div
           className={`mx-auto flex items-center gap-2 px-4 py-3 sm:gap-3 ${wide ? "max-w-7xl" : "max-w-3xl"}`}
@@ -86,12 +86,15 @@ export function AppShell({
       <main className={`mx-auto min-w-0 px-4 py-4 ${wide ? "max-w-7xl" : "max-w-3xl"}`}>
         {children}
       </main>
-      <footer className="mx-auto max-w-3xl px-4 py-4 text-center text-sm text-muted-foreground">
+      <footer className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-border/60 bg-background/95 px-4 py-1 text-center text-sm text-muted-foreground backdrop-blur lg:bottom-0">
         <Link
           href="/vision"
-          className="inline-flex min-h-11 items-center underline underline-offset-4"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-1.5 underline underline-offset-4"
         >
           {t("visionTitle")}
+          <ExternalLink className="size-3.5" aria-hidden="true" />
         </Link>
       </footer>
       <nav
