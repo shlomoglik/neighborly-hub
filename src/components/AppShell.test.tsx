@@ -24,4 +24,9 @@ it("keeps the three core destinations and account access without a primary join 
   expect(hrefs).not.toContain("/join");
   for (const href of ["/directory", "/household", "/manage", "/account"])
     expect(hrefs).toContain(href);
+  const visionLink = screen.getByRole("link", { name: translate("en", "visionTitle") });
+  expect(visionLink.getAttribute("href")).toBe("/vision");
+  expect(visionLink.getAttribute("target")).toBe("_blank");
+  expect(visionLink.getAttribute("rel")).toBe("noopener noreferrer");
+  expect(visionLink.parentElement?.className).toContain("fixed");
 });
