@@ -209,6 +209,26 @@ try {
     "desktop: issue a restricted resident invitation with local QR and share links",
     async () => {
       await adminPage.bringToFront();
+      // The create action opens a bottom sheet on mobile and a centered desktop dialog.
+      await adminPage.setViewportSize({ width: 390, height: 844 });
+      await button(adminPage, "inviteCreate").click();
+      const dialog = adminPage.getByRole("dialog", { name: t.inviteCreate, exact: true });
+      await dialog.waitFor();
+      await dialog.evaluate(async (element) => {
+        await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      });
+      const mobileBox = await dialog.boundingBox();
+      assert(mobileBox && Math.abs(mobileBox.y + mobileBox.height - 844) < 2);
+      await dialog.getByRole("button", { name: t.cancel, exact: true }).click();
+      await dialog.waitFor({ state: "hidden" });
+      await adminPage.setViewportSize({ width: 1280, height: 900 });
+      await button(adminPage, "inviteCreate").click();
+      await dialog.waitFor();
+      await dialog.evaluate(async (element) => {
+        await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      });
+      const desktopBox = await dialog.boundingBox();
+      assert(desktopBox && Math.abs(desktopBox.y + desktopBox.height / 2 - 450) < 2);
       await adminPage
         .locator("label")
         .filter({ has: adminPage.getByText(t.building, { exact: true }) })

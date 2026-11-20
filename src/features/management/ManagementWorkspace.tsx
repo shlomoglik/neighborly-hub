@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Eye, Pencil } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+import { useContext, useRef, type ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   managementHref,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
 import type { ManagementStatus } from "./use-management";
+import { ProjectManagementContext } from "./ProjectManagementContext";
 import { ManageProjectHeader } from "./ManageProjectHeader";
 
 export type ManagementWorkspaceProps = {
@@ -35,19 +36,19 @@ export type ManagementWorkspaceProps = {
 /** Pure navigation and page presentation; the shared editor owns structure rendering. */
 export function ManagementWorkspace(p: ManagementWorkspaceProps) {
   const { t } = useI18n();
+  const shared = useContext(ProjectManagementContext);
   const { data, discovery, status } = p;
   const detail = !!p.selectedProjectId;
   const heading = useRef<HTMLHeadingElement>(null);
   const refresh = p.onRefresh;
   return (
     <section className="min-w-0 space-y-6" aria-label={t("manage")}>
-      {detail && data ? (
+      {shared ? null : detail && data ? (
         <ManageProjectHeader
           project={data}
           active="structure"
           canManageStaff={!!discovery?.canCreateProject}
           pendingCount={p.pendingCount}
-          showProjectsBack={(discovery?.projects.length ?? 0) > 1}
         />
       ) : (
         <header className="flex flex-wrap items-start justify-between gap-4">

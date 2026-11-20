@@ -14,6 +14,7 @@ const meta = {
     onInvitationPage: () => {},
     onMutate: async () => true,
     onInvite: async () => true,
+    onRenew: async () => true,
     onRevoke: async () => true,
     data: {
       family: {

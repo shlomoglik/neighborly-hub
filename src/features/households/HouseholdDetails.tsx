@@ -1,22 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useContext } from "react";
 import { AppShell } from "@/components/AppShell";
-import { usePrivateResource } from "@/features/shared/use-private-resource";
+import { useHouseholdWorkspace } from "./use-household-workspace";
+import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { usePrivateAction } from "@/features/shared/use-private-action";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
 import { householdApi } from "./household-api";
 export function HouseholdDetails({ id }: { id: string }) {
+  const shared = useContext(HouseholdNavigationContext);
+  return shared ? (
+    <LiveHousehold id={id} workspace={shared} />
+  ) : (
+    <StandaloneHousehold key={id} id={id} />
+  );
+}
+function StandaloneHousehold({ id }: { id: string }) {
+  const workspace = useHouseholdWorkspace(id);
   return (
     <AppShell>
-      <LiveHousehold key={id} id={id} />
+      <LiveHousehold id={id} workspace={workspace} />
     </AppShell>
   );
 }
-function LiveHousehold({ id }: { id: string }) {
-  const [page, setPage] = useState(1);
-  const resource = usePrivateResource(`${id}:${page}`, (signal) =>
-    householdApi.detail(id, page, signal),
-  );
+function LiveHousehold({
+  id,
+  workspace,
+}: {
+  id: string;
+  workspace: ReturnType<typeof useHouseholdWorkspace>;
+}) {
+  const { resource, onPage } = workspace;
   const action = usePrivateAction(
     `${resource.key}:${resource.status === "expired" || resource.status === "unavailable" ? resource.status : ""}`,
   );
@@ -26,7 +39,7 @@ function LiveHousehold({ id }: { id: string }) {
       data={resource.data}
       busy={action.busy}
       error={action.error}
-      onPage={setPage}
+      onPage={onPage}
       onRefresh={resource.refresh}
       onSave={async (input) => {
         const result = await action.run(

@@ -144,7 +144,7 @@ it("preserves the draft during revalidation and removes it when authorization is
   );
   expect(privateRequest).not.toHaveBeenCalled();
 });
-it("saves only the selected building with original IDs and expected version, then refreshes", async () => {
+it("saves changed buildings in one project request with original IDs and versions, then refreshes", async () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
   vi.mocked(privateRequest).mockResolvedValue({});
@@ -156,32 +156,48 @@ it("saves only the selected building with original IDs and expected version, the
     "/api/management/projects/" + projectId + "/structure",
     expect.any(AbortSignal),
     "PUT",
-    expect.objectContaining({
-      id: buildingId,
-      expectedVersion: "a".repeat(64),
-      floors: [
+    {
+      action: "saveProjectStructure",
+      buildings: [
         expect.objectContaining({
-          id: floorId,
-          number: 0,
-          apartments: [expect.objectContaining({ id: unitId, number: "Suite-A" })],
+          id: buildingId,
+          expectedVersion: "a".repeat(64),
+          floors: [
+            expect.objectContaining({
+              id: floorId,
+              number: 0,
+              apartments: [expect.objectContaining({ id: unitId, number: "Suite-A" })],
+            }),
+          ],
         }),
       ],
-    }),
+    },
   );
 });
-it("warns before discarding changes on building switches", () => {
+it("keeps changes when filtering buildings and includes hidden drafts in project save", async () => {
   const initial = state();
   vi.mocked(useManagement).mockReturnValue(initial);
-  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-  renderEditor();
+  vi.mocked(privateRequest).mockResolvedValue({});
+  const confirm = vi.spyOn(window, "confirm");
+  const rendered = renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("checkbox", { name: "Other building" }));
-  expect(confirm).toHaveBeenCalledOnce();
-  expect(initial.onBuildingChange).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
-  confirm.mockReturnValue(true);
-  fireEvent.click(screen.getByRole("checkbox", { name: "Other building" }));
+  expect(confirm).not.toHaveBeenCalled();
   expect(initial.onBuildingChange).toHaveBeenCalledWith([buildingId, otherId]);
+  vi.mocked(useManagement).mockReturnValue({ ...initial, buildingIds: [otherId] });
+  rendered.rerender(view());
+  expect(screen.queryByRole("button", { name: "Unit name Building Suite-A" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(initial.onRefresh).toHaveBeenCalledOnce());
+  expect(privateRequest).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.any(AbortSignal),
+    "PUT",
+    {
+      action: "saveProjectStructure",
+      buildings: [expect.objectContaining({ id: buildingId })],
+    },
+  );
 });
 it("keeps stale edits on the original version and provides explicit reload on conflicts", async () => {
   const initial = state();
@@ -206,7 +222,9 @@ it("keeps stale edits on the original version and provides explicit reload on co
     expect.any(String),
     expect.any(AbortSignal),
     "PUT",
-    expect.objectContaining({ expectedVersion: "a".repeat(64) }),
+    expect.objectContaining({
+      buildings: [expect.objectContaining({ expectedVersion: "a".repeat(64) })],
+    }),
   );
   fireEvent.click(
     within(alert).getByRole("button", { name: translate("en", "refreshManagement") }),
@@ -240,66 +258,49 @@ it("shows only the selected subset and restores all buildings", () => {
   rendered.rerender(view());
   expect(screen.getByRole("button", { name: "Add floor Third building" })).toBeTruthy();
 });
-it("saving one building preserves another building's dirty draft and refreshes only the saved draft", async () => {
+it("renders one Save/Cancel pair and saves two changed buildings together", async () => {
   const initial = { ...state(), buildingIds: [] };
   vi.mocked(useManagement).mockReturnValue(initial);
   vi.mocked(privateRequest).mockResolvedValue({});
   const rendered = renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
-  const other = screen.getByRole("region", {
-    name: `${translate("en", "editorTitle")} · Other building`,
-  });
-  fireEvent.click(within(other).getByRole("button", { name: "Save" }));
+  expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(initial.onRefresh).toHaveBeenCalledOnce());
-  vi.mocked(useManagement).mockReturnValue({ ...initial, status: "loading", data: null });
-  rendered.rerender(view());
-  const updated = {
-    ...initial.data!,
-    buildings: initial.data!.buildings.map((b) =>
-      b.id === otherId ? { ...b, version: "c".repeat(64) } : b,
-    ),
-  };
-  vi.mocked(useManagement).mockReturnValue({ ...initial, data: updated });
-  rendered.rerender(view());
-  await waitFor(() =>
-    expect(
-      within(
-        screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
-      )
-        .getByRole("button", { name: "Save" })
-        .hasAttribute("disabled"),
-    ).toBe(true),
-  );
-  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
-  const first = screen.getByRole("region", {
-    name: `${translate("en", "editorTitle")} · Building`,
-  });
-  expect(within(first).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(false);
   expect(privateRequest).toHaveBeenCalledExactlyOnceWith(
     expect.any(String),
     expect.any(AbortSignal),
     "PUT",
-    expect.objectContaining({ id: otherId }),
+    {
+      action: "saveProjectStructure",
+      buildings: [
+        expect.objectContaining({ id: buildingId }),
+        expect.objectContaining({ id: otherId }),
+      ],
+    },
+  );
+  vi.mocked(useManagement).mockReturnValue({ ...initial, data: structuredClone(initial.data) });
+  rendered.rerender(view());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true),
   );
 });
-it("canceling a building leaves the other building's unsaved changes intact", () => {
-  vi.mocked(useManagement).mockReturnValue({ ...state(), buildingIds: [] });
-  renderEditor();
+it("cancel resets every building, including drafts hidden by filters", () => {
+  const initial = { ...state(), buildingIds: [] };
+  vi.mocked(useManagement).mockReturnValue(initial);
+  const rendered = renderEditor();
   editUnit();
   fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
-  const other = screen.getByRole("region", {
-    name: `${translate("en", "editorTitle")} · Other building`,
-  });
-  fireEvent.click(within(other).getByRole("button", { name: "Cancel" }));
-  expect(screen.getByRole("button", { name: "Unit name Building Suite-A" })).toBeTruthy();
-  expect(
-    within(
-      screen.getByRole("region", { name: `${translate("en", "editorTitle")} · Other building` }),
-    )
-      .getByRole("button", { name: "Save" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
+  vi.mocked(useManagement).mockReturnValue({ ...initial, buildingIds: [otherId] });
+  rendered.rerender(view());
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  vi.mocked(useManagement).mockReturnValue(initial);
+  rendered.rerender(view());
+  expect(screen.getByRole("button", { name: "Unit name Building 1" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
   expect(privateRequest).not.toHaveBeenCalled();
 });
 it("immediately removes a revoked building while all buildings are displayed", () => {
@@ -342,10 +343,7 @@ it("renders one project toolbar, live summary and checks for multiple buildings"
   expect(counts()).toEqual(["2", "2", "1"]);
   fireEvent.click(screen.getByRole("button", { name: "Add floor Other building" }));
   expect(counts()).toEqual(["2", "3", "1"]);
-  const other = screen.getByRole("region", {
-    name: `${translate("en", "editorTitle")} · Other building`,
-  });
-  fireEvent.click(within(other).getByRole("button", { name: "Cancel" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(counts()).toEqual(["2", "2", "1"]);
 });
 it("keeps all selected building drafts visible without a search field", () => {
@@ -377,10 +375,7 @@ it("updates one shared validation panel when a building draft becomes invalid", 
   fireEvent.keyDown(input, { key: "Enter" });
   expect(screen.getAllByRole("heading", { name: translate("en", "editorChecks") })).toHaveLength(1);
   expect(screen.getByRole("alert").textContent).toBe(translate("en", "editorInvalid"));
-  const first = screen.getByRole("region", {
-    name: `${translate("en", "editorTitle")} · Building`,
-  });
-  expect(within(first).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
 });
 it("opens in view mode with browsing tools and no editing or creation controls", () => {
   const initial = state();

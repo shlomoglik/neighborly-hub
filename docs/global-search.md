@@ -30,3 +30,15 @@ Validation covers anonymous/forged identities, input limits, uncached responses,
 submission and session expiry. The existing PostgreSQL directory integration suite also
 exercises cross-project grants, hidden contact inference, normalized phones, email case,
 children, pending and inactive households, revoked assignments, and global pagination.
+
+The neighborhood directory links to this search beside its local name/household/apartment
+search. Its empty state shows the selected project/building scope and any query, with
+filter clearing that restores all authorized buildings and page 1 in the same project.
+Clearing returns keyboard focus to the local search input. An unfiltered empty page uses
+only the authorized scope, without claiming that the whole community is empty or that
+access is missing. Existing HE/EN/RU strings are reused without shared dictionary edits.
+
+This focused PR-02 slice addresses audit G3. Audit G4's physical-device measurements and
+vertical movement during periodic refresh remain follow-up work; private rows continue
+to be discarded on revalidation. Component tests check search focus through two refresh
+cycles, but do not establish scroll stability or physical-device readiness.

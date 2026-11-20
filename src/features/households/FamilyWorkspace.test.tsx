@@ -19,6 +19,7 @@ const props = (): FamilyWorkspaceProps => ({
   onInvitationPage: vi.fn(),
   onMutate: vi.fn().mockResolvedValue(true),
   onInvite: vi.fn().mockResolvedValue(true),
+  onRenew: async () => true,
   onRevoke: vi.fn().mockResolvedValue(true),
   data: {
     family: {

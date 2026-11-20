@@ -1,9 +1,7 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/session";
-import { MyJoinRequests } from "@/features/invitations/LiveJoin";
+import { requireCurrentUser } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 export default async function JoinPage() {
-  if (!(await getCurrentUser(await headers()))) redirect("/auth?next=%2Fjoin");
-  return <MyJoinRequests />;
+  await requireCurrentUser();
+  redirect("/account#join-requests");
 }

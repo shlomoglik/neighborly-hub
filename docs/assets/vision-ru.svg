@@ -1,0 +1,37 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="196"
+  height="68"
+  viewBox="0 0 196 68"
+  role="img"
+  aria-labelledby="title desc"
+  lang="ru"
+>
+  <title id="title">Наше видение — Русский</title>
+  <desc id="desc">Neighborly Hub</desc>
+  <rect
+    x="1"
+    y="1"
+    width="194"
+    height="66"
+    rx="16"
+    fill="#244c3e"
+    stroke="#8aa887"
+    stroke-width="2"
+  />
+  <g
+    transform="translate(29 34)"
+    fill="none"
+    stroke="#d9e8bf"
+    stroke-width="1.6"
+    aria-hidden="true"
+  >
+    <circle r="12" />
+    <ellipse rx="5" ry="12" />
+    <path d="M-12 0h24M-10-6h20M-10 6h20" />
+  </g>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <text x="117" y="30" font-size="21" font-weight="700" fill="#fffaf0">Русский</text>
+    <text x="117" y="50" font-size="12" fill="#d9e8bf">Наше видение</text>
+  </g>
+</svg>

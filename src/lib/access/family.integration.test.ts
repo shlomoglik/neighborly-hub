@@ -18,6 +18,7 @@ vi.mock("@/lib/db/client", () => ({
 }));
 import { GET as family, PATCH as mutate } from "@/app/api/households/[id]/members/route";
 import { GET as invitations, POST as invite } from "@/app/api/households/[id]/invitations/route";
+import { createFamilyInvitation, renewFamilyInvitation } from "./family-invitations";
 import { DELETE as revoke } from "@/app/api/households/[id]/invitations/[invitationId]/route";
 import { GET as context, POST as submit } from "@/app/api/join/[token]/route";
 import { POST as review } from "@/app/api/management/projects/[projectId]/join-requests/[requestId]/route";
@@ -215,6 +216,18 @@ describe.skipIf(!url)("Private family profiles and reviewed existing-household i
     } finally {
       await fixture.client.end();
     }
+  });
+  it("allows only a current representative to rotate a household invitation", async () => {
+    const invite = await createFamilyInvitation(fixture.db, rep, home, { expiresInDays: 7 });
+    await expect(
+      renewFamilyInvitation(fixture.db, outsider, home, invite.id),
+    ).rejects.toMatchObject({ status: 404 });
+    const renewed = await renewFamilyInvitation(fixture.db, rep, home, invite.id);
+    expect(renewed.id).toBe(invite.id);
+    expect(renewed.token).not.toBe(invite.token);
+    expect((await context(await request("GET", applicant), tctx(invite.token))).status).toBe(404);
+    expect((await context(await request("GET", applicant), tctx(renewed.token))).status).toBe(200);
+    await fixture.client`DELETE FROM invitations WHERE id=${invite.id}`;
   });
   it("limits private family reads and mutations to the current verified adult representative", async () => {
     for (const [user, status] of [

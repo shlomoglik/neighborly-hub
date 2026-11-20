@@ -1,17 +1,19 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
 import { InvitationWorkspace, type InvitationWorkspaceProps } from "./InvitationWorkspace";
 import { JoinInvitation, type JoinInvitationProps } from "./JoinInvitation";
+import { RequestList } from "./RequestList";
+import type { RequestItem } from "@/lib/access/invitation-contracts";
 import { InvitationShare } from "./InvitationShare";
 afterEach(cleanup);
 const projectId = "c44c9aec-f8e4-46b3-9957-12ceba088994";
 const buildingId = "27e8d799-5714-4f4f-831d-715a0cced685";
 const apartmentId = "94864538-67d1-4f89-8ea5-3b4a707e9a32";
-function localized(node: React.ReactNode, lang: Lang = "en") {
-  return render(
+function localizedView(node: React.ReactNode, lang: Lang = "en") {
+  return (
     <I18nContext.Provider
       value={{
         lang,
@@ -21,8 +23,11 @@ function localized(node: React.ReactNode, lang: Lang = "en") {
       }}
     >
       {node}
-    </I18nContext.Provider>,
+    </I18nContext.Provider>
   );
+}
+function localized(node: React.ReactNode, lang: Lang = "en") {
+  return render(localizedView(node, lang));
 }
 function workspace(overrides: Partial<InvitationWorkspaceProps> = {}, lang: Lang = "en") {
   const props: InvitationWorkspaceProps = {
@@ -49,6 +54,8 @@ function workspace(overrides: Partial<InvitationWorkspaceProps> = {}, lang: Lang
       invitations: { invitations: [], canInviteStaff: false, page: 1, hasNext: false },
       requests: { requests: [], page: 1, hasNext: false },
     },
+    onRenew: vi.fn(),
+    onInspectRecipient: vi.fn().mockResolvedValue({ account: "existing", role: "available" }),
     onCreate: vi.fn().mockResolvedValue(true),
     onRevoke: vi.fn(),
     onReview: vi.fn(),
@@ -64,6 +71,9 @@ it.each(["he", "en", "ru"] as const)(
   "localizes manager scope and submits exact invitation scope in %s",
   async (lang) => {
     const p = workspace({}, lang);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByLabelText(translate(lang, "inviteRecipientEmail"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "inviteCreate") }));
     expect(screen.queryByRole("option", { name: translate(lang, "project_manager") })).toBeNull();
     expect(screen.queryByRole("option", { name: translate(lang, "building_manager") })).toBeNull();
     fireEvent.change(screen.getByLabelText(translate(lang, "building")), {
@@ -89,6 +99,7 @@ it("shows staff invitations only with server capability", () => {
   workspace({
     data: { ...p.data!, invitations: { ...p.data!.invitations, canInviteStaff: true } },
   });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
   expect(screen.getByRole("option", { name: translate("en", "project_manager") })).toBeTruthy();
 });
 it.each(["loading", "error", "unavailable", "expired"] as const)(
@@ -128,14 +139,16 @@ function join(overrides: Partial<JoinInvitationProps> = {}, lang: Lang = "en") {
   return props;
 }
 it.each(["he", "en", "ru"] as const)(
-  "requests membership without granting it optimistically in %s",
+  "lets a solo resident request a household without adding relatives in %s",
   async (lang) => {
     const p = join({}, lang);
+    expect(screen.getByText(translate(lang, "joinFirstResident"))).toBeTruthy();
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
     fireEvent.change(screen.getByLabelText(translate(lang, "fullName")), {
-      target: { value: "New name" },
+      target: { value: "Dana" },
     });
     fireEvent.change(screen.getByLabelText(translate(lang, "familyName")), {
-      target: { value: "New home" },
+      target: { value: "Dana" },
     });
     fireEvent.submit(
       screen.getByRole("button", { name: translate(lang, "inviteSubmit") }).closest("form")!,
@@ -143,8 +156,8 @@ it.each(["he", "en", "ru"] as const)(
     await waitFor(() =>
       expect(p.onSubmit).toHaveBeenCalledWith({
         apartmentId,
-        fullName: "New name",
-        householdName: "New home",
+        fullName: "Dana",
+        householdName: "Dana",
       }),
     );
     expect(screen.queryByText(translate(lang, "inviteApproved"))).toBeNull();
@@ -155,6 +168,7 @@ it("shows saved pending status and never offers duplicate submission", () => {
   cleanup();
   join({ data: { ...p.data!, request: { id: "r", status: "pending" } } });
   expect(screen.getByRole("status").textContent).toBe(translate("en", "invitePending"));
+  expect(screen.getByText(translate("en", "joinPendingNext"))).toBeTruthy();
   expect(screen.queryByRole("button", { name: translate("en", "inviteSubmit") })).toBeNull();
 });
 it("creates a local printable/downloadable QR and targeted WhatsApp/mailto links", async () => {
@@ -197,3 +211,264 @@ it.each(["he", "en", "ru"] as const)(
     await waitFor(() => expect(p.onSubmit).toHaveBeenCalledWith({ fullName: "Adult member" }));
   },
 );
+
+it("keeps the invitation draft open on failure and cancels without creating a link", async () => {
+  const p = workspace({ onCreate: vi.fn().mockResolvedValue(false) });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  const dialog = screen.getByRole("dialog", { name: translate("en", "inviteCreate") });
+  fireEvent.change(within(dialog).getByLabelText(translate("en", "building")), {
+    target: { value: buildingId },
+  });
+  fireEvent.change(within(dialog).getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "new@example.test" },
+  });
+  fireEvent.submit(
+    within(dialog)
+      .getByRole("button", { name: translate("en", "inviteCreate") })
+      .closest("form")!,
+  );
+  await waitFor(() => expect(p.onCreate).toHaveBeenCalledOnce());
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.getByLabelText(translate("en", "inviteRecipientEmail"))).toHaveProperty(
+    "value",
+    "new@example.test",
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: translate("en", "cancel") }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(p.onCreate).toHaveBeenCalledOnce();
+});
+
+it("keeps creation open through revalidation and clears it when access is lost", async () => {
+  const p = workspace();
+  cleanup();
+  const rendered = localized(<InvitationWorkspace {...p} />);
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "draft@example.test" },
+  });
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} status="loading" data={null} />));
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.queryByLabelText(translate("en", "inviteRecipientEmail"))).toBeNull();
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} />));
+  expect(screen.getByLabelText(translate("en", "inviteRecipientEmail"))).toHaveProperty(
+    "value",
+    "draft@example.test",
+  );
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} status="unavailable" data={null} />));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  rendered.rerender(localizedView(<InvitationWorkspace {...p} />));
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+it("blocks an already-covered role and permits a verified building-to-project upgrade choice", async () => {
+  const p = workspace({
+    onInspectRecipient: vi.fn<InvitationWorkspaceProps["onInspectRecipient"]>(async (input) => ({
+      account: "existing",
+      role: input.role === "project_manager" ? "upgrade" : "assigned",
+    })),
+  });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  // Non-admin capabilities cannot be overridden by the form.
+  cleanup();
+  const data = { ...p.data!, invitations: { ...p.data!.invitations, canInviteStaff: true } };
+  const value = workspace({ ...p, data });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "building_manager" },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "building")), {
+    target: { value: buildingId },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "manager@example.test" },
+  });
+  await screen.findByText(translate("en", "staffAlreadyHasRole"));
+  expect(screen.getByRole("button", { name: translate("en", "inviteCreate") })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "project_manager" },
+  });
+  await screen.findByText(translate("en", "staffUpgradeHint"));
+  fireEvent.submit(
+    screen.getByRole("button", { name: translate("en", "inviteCreate") }).closest("form")!,
+  );
+  await waitFor(() =>
+    expect(value.onCreate).toHaveBeenCalledWith({
+      kind: "project_manager",
+      recipientEmail: "manager@example.test",
+      expiresInDays: 7,
+    }),
+  );
+});
+it("explains account creation for a new email and renews invitations directly from the list", async () => {
+  const base = workspace();
+  cleanup();
+  const p = workspace({
+    onInspectRecipient: vi.fn().mockResolvedValue({ account: "new", role: "available" }),
+    data: {
+      ...base.data!,
+      invitations: {
+        ...base.data!.invitations,
+        canInviteStaff: true,
+        invitations: [
+          {
+            id: "old",
+            kind: "project_manager",
+            buildingId: null,
+            apartmentId: null,
+            recipientEmail: "new@example.test",
+            expiresAt: new Date(0).toISOString(),
+            revoked: false,
+            consumed: false,
+          },
+        ],
+      },
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteRenew") }));
+  expect(p.onRenew).toHaveBeenCalledWith("old");
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteKind")), {
+    target: { value: "project_manager" },
+  });
+  fireEvent.change(screen.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "new@example.test" },
+  });
+  await screen.findByText(translate("en", "inviteNewAccount"));
+});
+
+it.each(["he", "en", "ru"] as const)(
+  "guides residents through saved request states in %s",
+  (lang) => {
+    const base = join({}, lang);
+    for (const status of ["pending", "approved", "rejected"] as const) {
+      cleanup();
+      join({ data: { ...base.data!, request: { id: "r", status }, active: false } }, lang);
+      expect(screen.queryByRole("button", { name: translate(lang, "inviteSubmit") })).toBeNull();
+      expect(
+        screen.getByText(
+          translate(
+            lang,
+            status === "pending"
+              ? "joinInactiveNext"
+              : status === "approved"
+                ? "joinApprovedNext"
+                : "joinRejectedNext",
+          ),
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByRole("link", { name: translate(lang, "openBook") })?.getAttribute("href") ??
+          null,
+      ).toBe(status === "approved" ? "/directory" : null);
+      expect(
+        screen
+          .queryByRole("link", { name: translate(lang, "homeMyContacts") })
+          ?.getAttribute("href") ?? null,
+      ).toBe(status === "approved" ? "/household" : null);
+    }
+  },
+);
+it.each(["he", "en", "ru"] as const)(
+  "discloses reciprocal participation and privacy before either resident flow in %s",
+  (lang) => {
+    const base = join({}, lang);
+    for (const kind of ["resident", "household_member"] as const) {
+      cleanup();
+      join({ data: { ...base.data!, kind } }, lang);
+      const notice = screen.getByRole("complementary", {
+        name: translate(lang, "joinParticipation"),
+      });
+      for (const key of [
+        "joinListingScope",
+        "joinContactPrivacy",
+        "joinChildrenPrivacy",
+        "joinParticipationNotice",
+      ] as const) {
+        expect(within(notice).getByText(translate(lang, key))).toBeTruthy();
+      }
+      const submit = screen.getByRole("button", { name: translate(lang, "inviteSubmit") });
+      expect(notice.closest("form")).toBe(submit.closest("form"));
+      expect(
+        notice.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByRole("checkbox")).toBeNull();
+    }
+  },
+);
+it.each(["ready", "unavailable"] as const)(
+  "offers recovery without a join form for an inactive invitation (%s)",
+  (status) => {
+    const base = join();
+    cleanup();
+    const p = join({ status, data: { ...base.data!, active: false } });
+    expect(screen.getByText(translate("en", "joinInactiveNext"))).toBeTruthy();
+    expect(screen.queryByLabelText(translate("en", "fullName"))).toBeNull();
+    expect(screen.queryByRole("button", { name: translate("en", "inviteSubmit") })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: translate("en", "inviteMyRequests") }).getAttribute("href"),
+    ).toBe("/account#join-requests");
+    expect(p.onSubmit).not.toHaveBeenCalled();
+  },
+);
+
+const savedRequest: RequestItem = {
+  id: "r",
+  kind: "resident",
+  projectId,
+  projectName: "Pilot",
+  buildingName: "A",
+  apartmentNumber: "2",
+  fullName: "Resident",
+  householdName: "Home",
+  status: "approved",
+  accountName: "Resident",
+  accountEmail: "resident@example.test",
+  invitationActive: false,
+  canReview: false,
+};
+it.each(["resident", "household_member", "project_manager", "building_manager"] as const)(
+  "preserves approved %s destinations in account history",
+  (kind) => {
+    localized(
+      <RequestList
+        data={{ requests: [{ ...savedRequest, kind }], page: 1, hasNext: false }}
+        busy={false}
+        onPage={vi.fn()}
+      />,
+    );
+    const resident = kind === "resident" || kind === "household_member";
+    expect(
+      screen
+        .getByRole("link", {
+          name: translate("en", resident ? "openBook" : "openProjectManagement"),
+        })
+        .getAttribute("href"),
+    ).toBe(resident ? "/directory" : `/manage/project/${projectId}`);
+    if (resident)
+      expect(
+        screen.getByRole("link", { name: translate("en", "homeMyContacts") }).getAttribute("href"),
+      ).toBe("/household");
+  },
+);
+it("keeps applicant guidance out of management review", () => {
+  localized(
+    <RequestList
+      data={{
+        requests: [{ ...savedRequest, status: "pending", canReview: true }],
+        page: 1,
+        hasNext: false,
+      }}
+      busy={false}
+      onPage={vi.fn()}
+      onReview={vi.fn()}
+    />,
+  );
+  expect(screen.getByText(translate("en", "inviteInactive"))).toBeTruthy();
+  expect(screen.queryByText(translate("en", "joinInactiveNext"))).toBeNull();
+  expect(screen.getByRole("button", { name: translate("en", "inviteApprove") })).toHaveProperty(
+    "disabled",
+    true,
+  );
+});

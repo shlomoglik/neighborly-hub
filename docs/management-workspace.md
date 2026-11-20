@@ -2,7 +2,11 @@
 
 `/manage` requires a verified Better Auth database session and lists authorized project cards. Opening a card navigates to `/manage/project/<uuid>`, with a management → project breadcrumb. Legacy `/manage?project=<uuid>` links redirect to that page. The setup wizard, invitations and staff links use the same project URL. Direct project links remain independent of discovery pagination.
 
-The project page uses one shared wizard `ProjectStructureEditor` inline through `ManagedStructureEditor`, showing all authorized buildings by default, or a locally filtered selection of one or more buildings. Search, type filters, comparison, live summary, section preview and validation appear once for the selected buildings and reflect their current drafts. The building chips use checkboxes; “All buildings” clears the filter, and deselecting the last building restores all buildings. Each visible building has its own draft and Save/Cancel actions. Saving or canceling one building preserves drafts in the others. The duplicate floor/apartment tile forms and layout-mode buttons are removed from this flow. Users edit floor levels, names, types and units with the same controls as setup, then explicitly save that building using the existing atomic, version-checked PUT endpoint. Adding a building retains the independently authorized structural create endpoint. Switching buildings or explicitly refreshing with unsaved changes requires confirmation; Cancel resets the current draft.
+The project page uses one shared wizard `ProjectStructureEditor` inline through `ManagedStructureEditor`, showing all authorized buildings by default, or a locally filtered selection of one or more buildings. Search, type filters, comparison, live summary, section preview and validation appear once for the selected buildings and reflect their current drafts. The building chips use checkboxes; “All buildings” clears the filter, and deselecting the last building restores all buildings. All authorized buildings share one draft session and one sticky Save/Cancel bar above the mobile navigation. The unsaved indicator includes drafts hidden by building filters. Changing the filter preserves drafts; Save submits only changed buildings, including hidden ones. Cancel resets the entire project draft. Users edit floor levels, names, types and units with the same controls as setup.
+
+`PUT /api/management/projects/:projectId/structure` accepts `{ action: "saveProjectStructure", buildings: [...] }`, where each changed building carries its full visual snapshot and `expectedVersion`. All submitted buildings are authorized and locked in ID order, then written in one transaction. Any stale version, linked-unit deletion, duplicate or unauthorized target rolls back every change. Existing single-building and count-layout PUT payloads remain supported. Saves disable editing and wait for fresh authorized hierarchy data before another save; conflicts keep drafts visible and require explicit reload. The payload is limited to 100 buildings, 1,000 floors, 10,000 units and 12 MiB.
+
+Adding a building retains the independently authorized structural create endpoint. Explicit refresh, opening the add-building dialog or returning to view asks before discarding unsaved changes.
 
 ## Read API and authorization
 
@@ -38,3 +42,14 @@ Project management includes a link to [scoped invitations and join request revie
 Project pages open in view mode. Building selection, search, type filtering and collapsing remain available, while names, floor levels, addresses and unit types render as plain values. Structural additions, drag/move controls and Save/Cancel actions appear only after choosing **Edit structure**. Returning to view confirms discarding unsaved drafts; saves and revalidation block the transition. Fresh server data drives view mode, without generating placeholder floors for empty buildings.
 
 The editor has explicit `view`, `edit` and `create` modes. Project creation remains in the separate setup wizard. The detailed summary, section preview and preflight checks are creation/editing aids; view mode omits them. Summary and section preview are desktop-only (`xl`); successful preflight feedback is also desktop-only, while validation errors remain visible on mobile.
+
+### Persistent project navigation
+
+The `/manage/(project)` route group shares one `ProjectManagementLayout` across
+structure, staff and invitation pages without changing their public URLs. The
+layout owns the authenticated project hierarchy, project heading, navigation and
+breadcrumb (`Management / Project / Tab`). Route loading boundaries replace only
+the tab content. Structure edits refresh the same shared hierarchy and counts.
+The management index and setup wizard retain their separate page shells. Hidden
+pages, project changes and authorization failures clear metadata through the
+existing `useManagement` lifecycle; project data is not stored in a global cache.

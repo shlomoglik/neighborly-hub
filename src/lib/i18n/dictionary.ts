@@ -6,6 +6,168 @@ export const isLang = (value: unknown): value is Lang =>
 export const directionFor = (lang: Lang): "rtl" | "ltr" => (lang === "he" ? "rtl" : "ltr");
 
 export const dict = {
+  productFeedbackTitle: {
+    he: "משוב על Neighborly Hub",
+    en: "Feedback about Neighborly Hub",
+    ru: "Отзыв о Neighborly Hub",
+  },
+  productFeedbackPrivacy: {
+    he: "המשוב נשלח לצוות המוצר של Neighborly Hub ומשויך לחשבון שלך. הוא לא מתפרסם לשכנים.",
+    en: "Your feedback goes to the Neighborly Hub product team and is linked to your account. It is not published to neighbors.",
+    ru: "Ваш отзыв отправляется команде продукта Neighborly Hub и связан с вашей учётной записью. Он не публикуется для соседей.",
+  },
+  productFeedbackMessage: {
+    he: "מה נוכל לשפר?",
+    en: "What could we improve?",
+    ru: "Что мы можем улучшить?",
+  },
+  productFeedbackHint: {
+    he: "עד 2,000 תווים. נשמח לשמוע מה עבד טוב ומה היה חסר.",
+    en: "Up to 2,000 characters. Tell us what worked well and what was missing.",
+    ru: "До 2 000 символов. Расскажите, что понравилось и чего не хватало.",
+  },
+  productFeedbackSend: {
+    he: "שליחת משוב",
+    en: "Send feedback",
+    ru: "Отправить отзыв",
+  },
+  productFeedbackSending: {
+    he: "שולחים את המשוב…",
+    en: "Sending feedback…",
+    ru: "Отправляем отзыв…",
+  },
+  productFeedbackRetry: {
+    he: "ניסיון חוזר",
+    en: "Retry",
+    ru: "Повторить",
+  },
+  productFeedbackSuccess: {
+    he: "תודה! המשוב נשמר ונשלח לצוות המוצר.",
+    en: "Thank you! Your feedback has been saved for the product team.",
+    ru: "Спасибо! Ваш отзыв сохранён для команды продукта.",
+  },
+  productFeedbackNew: {
+    he: "שליחת משוב נוסף",
+    en: "Send more feedback",
+    ru: "Отправить ещё один отзыв",
+  },
+  productFeedbackInvalid: {
+    he: "יש להזין הודעה תקינה באורך 1–2,000 תווים.",
+    en: "Enter a valid message of 1–2,000 characters.",
+    ru: "Введите корректное сообщение длиной от 1 до 2 000 символов.",
+  },
+  productFeedbackFailed: {
+    he: "לא ניתן לאשר שהמשוב נשמר. הטקסט נשמר ללא שינוי לניסיון חוזר בטוח.",
+    en: "We could not confirm your feedback was saved. Your text is kept unchanged for a safe retry.",
+    ru: "Не удалось подтвердить сохранение отзыва. Текст сохранён без изменений для безопасной повторной отправки.",
+  },
+  productFeedbackAuth: {
+    he: "יש להתחבר שוב ואז לנסות לשלוח את אותו משוב. הטקסט שלך נשמר כאן.",
+    en: "Sign in again, then retry the same feedback. Your text is kept here.",
+    ru: "Войдите снова, затем повторите отправку того же отзыва. Ваш текст сохранён здесь.",
+  },
+  productFeedbackSignIn: {
+    he: "התחברות בלשונית חדשה",
+    en: "Sign in in a new tab",
+    ru: "Войти в новой вкладке",
+  },
+  visionTitle: { he: "החזון שלנו", en: "Our Vision", ru: "Наше видение" },
+  visionHero: {
+    he: "הופכים שכנות לקהילה",
+    en: "Turning neighbors into a community",
+    ru: "Превращаем соседство в сообщество",
+  },
+  visionIntro: {
+    he: "Neighborly Hub נולדה מתוך רעיון פשוט: האנשים שגרים קרוב אלינו יכולים להיות הרבה יותר משכנים שחולפים זה על פני זה.",
+    en: "Neighborly Hub grew from a simple idea: the people living nearby can be much more than neighbors who pass each other by.",
+    ru: "Neighborly Hub появилась из простой идеи: люди, живущие рядом, могут быть гораздо ближе, чем соседи, проходящие мимо друг друга.",
+  },
+  visionDirectoryTitle: {
+    he: "מתחילים בהיכרות",
+    en: "It starts with getting to know each other",
+    ru: "Начинаем со знакомства",
+  },
+  visionDirectoryBody: {
+    he: "הצעד הראשון הוא ספר שכנים דיגיטלי: פרופילים אישיים ומשפחתיים, חיפוש נוח ושליטה מלאה במה שבוחרים לשתף.",
+    en: "The first step is a digital neighborhood directory: individual and family profiles, easy search and full control over what you choose to share.",
+    ru: "Первый шаг — цифровой справочник соседей: личные и семейные профили, удобный поиск и полный контроль над тем, чем вы решаете поделиться.",
+  },
+  visionGrowthTitle: {
+    he: "צומחים עם הקהילה",
+    en: "Growing with the community",
+    ru: "Растём вместе с сообществом",
+  },
+  visionGrowthBody: {
+    he: "בהמשך נרצה לאפשר פעילויות, אירועים, קבוצות עניין, עזרה הדדית, שיתוף משאבים ומאגר ידע קהילתי. השירותים ייבנו בהתאם לצרכים שיעלו מהקהילה עצמה. אלה כיוונים לעתיד, ולא יכולות שכבר זמינות היום.",
+    en: "In the future, we hope to support activities, events, interest groups, mutual help, shared resources and a community knowledge base. These services will grow from the community’s own needs. These are future directions, not features available today.",
+    ru: "В будущем мы хотим добавить встречи, события, группы по интересам, взаимопомощь, обмен ресурсами и базу знаний сообщества. Эти сервисы будут развиваться исходя из потребностей самого сообщества. Это планы на будущее, а не уже доступные возможности.",
+  },
+  visionValuesTitle: {
+    he: "הקהילה במרכז",
+    en: "Community at the center",
+    ru: "Сообщество в центре внимания",
+  },
+  visionPrivacyTitle: {
+    he: "פרטיות ואמון",
+    en: "Privacy and trust",
+    ru: "Конфиденциальность и доверие",
+  },
+  visionPrivacyBody: {
+    he: "המידע שלכם נשאר בשליטתכם.",
+    en: "Your information stays under your control.",
+    ru: "Ваши данные остаются под вашим контролем.",
+  },
+  visionPeopleTitle: {
+    he: "קשרים, לא פרסומות",
+    en: "Connections, not advertising",
+    ru: "Общение, а не реклама",
+  },
+  visionPeopleBody: {
+    he: "המערכת לא נועדה למכור את תשומת הלב של השכנים.",
+    en: "The platform is not here to sell neighbors’ attention.",
+    ru: "Платформа не предназначена для продажи внимания соседей.",
+  },
+  visionIndependenceTitle: {
+    he: "עצמאות קהילתית",
+    en: "Community independence",
+    ru: "Независимость сообщества",
+  },
+  visionIndependenceBody: {
+    he: "הקהילה שייכת לחבריה, גם כשספקי השירות מתחלפים.",
+    en: "The community belongs to its members, even when service providers change.",
+    ru: "Сообщество принадлежит его участникам, даже когда поставщики услуг меняются.",
+  },
+  visionSimplicityTitle: {
+    he: "פשטות ונגישות",
+    en: "Simplicity and accessibility",
+    ru: "Простота и доступность",
+  },
+  visionSimplicityBody: {
+    he: "טכנולוגיה שמסייעת לקשרים בעולם האמיתי.",
+    en: "Technology that supports connections in the real world.",
+    ru: "Технология, которая помогает общаться в реальной жизни.",
+  },
+  visionPilotTitle: {
+    he: "עזרו לנו לבנות את ההמשך",
+    en: "Help us build what comes next",
+    ru: "Помогите нам определить следующие шаги",
+  },
+  visionPilotBody: {
+    he: "אנחנו מתחילים בפיילוט בקומפלקס מגורים חדש. נשמח לשמוע מה עוזר לכם להכיר את השכנים, מה חסר ומה הייתם רוצים לראות בהמשך. המשובים והסקרים של חברי הקהילה יעזרו לנו לבחור את הצעדים הבאים. איסוף משוב וסקרים הם חלק מיעדי הפיילוט, ולא כלים שזמינים בעמוד הזה.",
+    en: "We are starting with a pilot in a new residential complex. We would love to learn what helps you get to know your neighbors, what is missing and what you would like to see next. Members’ feedback and surveys will help us choose our next steps. Feedback collection and surveys are pilot goals, not tools available on this page.",
+    ru: "Мы начинаем с пилота в новом жилом комплексе. Нам важно узнать, что помогает вам знакомиться с соседями, чего не хватает и что вы хотели бы увидеть дальше. Отзывы и опросы участников помогут выбрать следующие шаги. Сбор отзывов и опросы — цели пилота, а не инструменты, доступные на этой странице.",
+  },
+  visionClosing: {
+    he: "Neighborly Hub — הופכים שכנות לקהילה.",
+    en: "Neighborly Hub — turning neighbors into a community.",
+    ru: "Neighborly Hub — превращаем соседство в сообщество.",
+  },
+  visionHomeBody: {
+    he: "אנחנו בונים בית דיגיטלי לקהילות מגורים — מקום להכיר אנשים ומשפחות, לגלות תחומי עניין משותפים, לעזור זה לזה וליצור הזדמנויות חדשות.",
+    en: "We are building a digital home for residential communities: a place to meet people and families, discover shared interests, help each other and create new opportunities.",
+    ru: "Мы создаём цифровой дом для жилых сообществ: место, где можно знакомиться с людьми и семьями, находить общие интересы, помогать друг другу и открывать новые возможности.",
+  },
+
   editorTitle: { he: "מבנה ויחידות", en: "Structure and units", ru: "Структура и помещения" },
   editorTypes: { he: "סוגי יחידות ומפרט", en: "Unit types and details", ru: "Типы и сведения" },
   editorReview: { he: "סקירה ויצירה", en: "Review and create", ru: "Проверка и создание" },
@@ -158,19 +320,19 @@ export const dict = {
     ru: "Введите минимум два символа для поиска",
   },
   household_member: {
-    he: "בן משפחה מבוגר במשפחה קיימת",
+    he: "דייר/ת בגיר/ה במשק בית קיים",
     en: "Adult member of an existing household",
-    ru: "Взрослый член существующей семьи",
+    ru: "Взрослый участник существующего домохозяйства",
   },
   familyManage: {
-    he: "ניהול בני המשפחה",
-    en: "Manage family members",
-    ru: "Управление членами семьи",
+    he: "ניהול חברי משק הבית",
+    en: "Manage household members",
+    ru: "Управление участниками домохозяйства",
   },
   familyPrivateHint: {
-    he: "רק נציגי המשפחה יכולים לצפות במסך הזה ובפרטי הילדים. ילדים שנוספו כאן ניתנים לעריכה ומחיקה; מבוגרים מצטרפים בהזמנה ומנהלים את פרטי הקשר של עצמם.",
+    he: "רק נציגי משק הבית יכולים לצפות במסך הזה ובפרטי הילדים. ילדים שנוספו כאן ניתנים לעריכה ומחיקה; מבוגרים מצטרפים בהזמנה ומנהלים את פרטי הקשר של עצמם.",
     en: "Only household representatives can view this page and child details. Children added here can be edited or removed; adults join by invitation and manage their own contacts.",
-    ru: "Эта страница и сведения о детях доступны только представителям семьи. Детей, добавленных здесь, можно редактировать и удалять; взрослые присоединяются по приглашению и управляют своими контактами.",
+    ru: "Эта страница и сведения о детях доступны только представителям домохозяйства. Детей, добавленных здесь, можно редактировать и удалять; взрослые присоединяются по приглашению и управляют своими контактами.",
   },
   familyAddChild: { he: "הוספת ילד/ה", en: "Add a child", ru: "Добавить ребёнка" },
   familyChildEditor: {
@@ -186,19 +348,19 @@ export const dict = {
     ru: "Родство (необязательно)",
   },
   familyInviteAdult: {
-    he: "הזמנת בן משפחה מבוגר",
-    en: "Invite an adult family member",
-    ru: "Пригласить взрослого члена семьи",
+    he: "הזמנת דייר/ת בגיר/ה למשק הבית",
+    en: "Invite an adult household member",
+    ru: "Пригласить взрослого участника домохозяйства",
   },
   familyInviteHint: {
-    he: "הקישור מיועד למשפחה הזו בלבד. המצטרף מתחבר ומגיש בקשה; רק לאחר אימות ואישור מנהל הוא מקבל חברות במשפחה, ללא הרשאת נציג. אפשר להגביל את הקישור לאימייל מסוים.",
+    he: "הקישור מיועד למשק הבית הזה בלבד. המצטרף מתחבר ומגיש בקשה; רק לאחר אימות ואישור מנהל הוא מקבל חברות במשק הבית, ללא הרשאת נציג. אפשר להגביל את הקישור לאימייל מסוים.",
     en: "The link is bound to this household. The applicant signs in and submits a request; membership is granted only after manager verification and approval, without representative privileges. You can restrict the link to an email address.",
-    ru: "Ссылка привязана к этой семье. Заявитель входит в аккаунт и подаёт заявку; членство предоставляется только после проверки и одобрения управляющим, без прав представителя. Ссылку можно ограничить адресом email.",
+    ru: "Ссылка привязана к этому домохозяйству. Заявитель входит в аккаунт и подаёт заявку; членство предоставляется только после проверки и одобрения управляющим, без прав представителя. Ссылку можно ограничить адресом email.",
   },
   familyJoinHint: {
-    he: "זו בקשה להצטרף למשפחה קיימת, ולא ליצור משפחה חדשה. אישור מנהל נדרש, וההצטרפות אינה מקנה הרשאת נציג משפחה.",
+    he: "זו בקשה להצטרף למשק בית קיים, ולא ליצור משק בית חדש. אישור מנהל נדרש, וההצטרפות אינה מקנה הרשאת נציג משק בית.",
     en: "This requests membership in an existing household, without creating a new one. Manager approval is required and does not grant representative privileges.",
-    ru: "Это заявка на вступление в существующую семью, без создания новой. Требуется одобрение управляющего; права представителя не предоставляются.",
+    ru: "Это заявка на вступление в существующее домохозяйство, без создания нового. Требуется одобрение управляющего; права представителя не предоставляются.",
   },
   familyInviteUsed: {
     he: "הוגשה בקשה דרך הקישור. יש לבדוק את סטטוס הבקשה מול המנהל.",
@@ -221,14 +383,14 @@ export const dict = {
     ru: "Данные изменились. Обновите страницу и откройте форму заново перед сохранением.",
   },
   familyLimit: {
-    he: "אפשר לצרף עד 50 בני משפחה. יש לפנות למנהל אם נדרש שינוי.",
+    he: "אפשר לצרף עד 50 חברי משק בית. יש לפנות למנהל אם נדרש שינוי.",
     en: "A household can have up to 50 members. Contact a manager if a change is needed.",
-    ru: "В семье может быть до 50 участников. Если нужно изменение, обратитесь к управляющему.",
+    ru: "В домохозяйстве может быть до 50 участников. Если нужно изменение, обратитесь к управляющему.",
   },
   familyInviteLimit: {
-    he: "יש כבר 20 הזמנות בתוקף למשפחה. יש לבטל הזמנה קיימת לפני יצירת נוספת.",
+    he: "יש כבר 20 הזמנות בתוקף למשק הבית. יש לבטל הזמנה קיימת לפני יצירת נוספת.",
     en: "This household already has 20 unexpired invitations. Revoke an existing invitation before creating another.",
-    ru: "У этой семьи уже 20 действующих приглашений. Отзовите одно из них перед созданием нового.",
+    ru: "У этого домохозяйства уже 20 действующих приглашений. Отзовите одно из них перед созданием нового.",
   },
   familyRemoveTitle: {
     he: "למחוק את פרופיל הילד/ה?",
@@ -236,9 +398,9 @@ export const dict = {
     ru: "Удалить профиль ребёнка?",
   },
   familyRemoveHint: {
-    he: "פרטי הפרופיל שנוסף למשפחה יימחקו. פעולה זו אינה מסירה מבוגרים או חשבונות משתמש.",
+    he: "פרטי הפרופיל שנוסף למשק הבית יימחקו. פעולה זו אינה מסירה מבוגרים או חשבונות משתמש.",
     en: "The child profile added to this household will be deleted. This does not remove adult members or user accounts.",
-    ru: "Добавленный в эту семью профиль ребёнка будет удалён. Взрослые участники и аккаунты не удаляются.",
+    ru: "Добавленный в это домохозяйство профиль ребёнка будет удалён. Взрослые участники и аккаунты не удаляются.",
   },
 
   homeDuplicate: {
@@ -246,28 +408,37 @@ export const dict = {
     en: "This contact already exists. Refresh and edit it instead of adding it again.",
     ru: "Этот контакт уже существует. Обновите страницу и отредактируйте его вместо повторного добавления.",
   },
-  homeMine: { he: "המשפחה שלי", en: "My households", ru: "Мои семьи" },
+  householdSections: {
+    he: "מדורי משק הבית",
+    en: "Household sections",
+    ru: "Разделы домохозяйства",
+  },
+  homeMine: { he: "משקי הבית שלי", en: "My households", ru: "Мои домохозяйства" },
   homeOpen: {
-    he: "פתיחת פרטי המשפחה",
+    he: "פתיחת פרטי משק הבית",
     en: "Open household details",
-    ru: "Открыть сведения о семье",
+    ru: "Открыть сведения о домохозяйстве",
   },
   homeUnavailable: {
-    he: "המשפחה אינה זמינה או שהגישה השתנתה.",
+    he: "משק הבית אינו זמין או שהגישה השתנתה.",
     en: "The household is unavailable or your access has changed.",
-    ru: "Семья недоступна или ваши права доступа изменились.",
+    ru: "Домохозяйство недоступно или ваши права доступа изменились.",
   },
   homeNone: {
-    he: "אין משפחות מאושרות המשויכות לחשבון. אפשר לבדוק את בקשות ההצטרפות או לפנות למנהל.",
+    he: "אין משקי בית מאושרים המשויכים לחשבון. אפשר לבדוק את בקשות ההצטרפות או לפנות למנהל.",
     en: "No approved households are linked to your account. Check your join requests or contact a manager.",
-    ru: "К вашему аккаунту не привязаны одобренные семьи. Проверьте заявки или обратитесь к управляющему.",
+    ru: "К вашему аккаунту не привязаны одобренные домохозяйства. Проверьте заявки или обратитесь к управляющему.",
   },
   homeAdultsOnly: {
-    he: "כאן מוצגים בני משפחה מבוגרים בלבד.",
-    en: "Only adult household members are shown here.",
-    ru: "Здесь показаны только взрослые члены семьи.",
+    he: "כאן מוצגים רק החברים הבגירים במשק הבית. משק בית יכול לכלול אדם אחד, שותפים או משפחה.",
+    en: "Only adult household members are shown here. A household can be one person, roommates or a family.",
+    ru: "Здесь показаны только взрослые участники домохозяйства. Это может быть один человек, соседи по квартире или семья.",
   },
-  homeRename: { he: "עריכת שם המשפחה", en: "Edit household name", ru: "Изменить название семьи" },
+  homeRename: {
+    he: "עריכת שם משק הבית",
+    en: "Edit household name",
+    ru: "Изменить название домохозяйства",
+  },
   homeMyContacts: { he: "פרטי הקשר שלי", en: "My contact details", ru: "Мои контактные данные" },
   homeGlobalContacts: {
     he: "פרטי הקשר והגדרות החשיפה משויכים אליך ומשפיעים על כל הפרויקטים שבהם את/ה מופיע/ה. כל אדם עורך את פרטי הקשר של עצמו. ניתן לשמור עד 10 פרטי קשר.",
@@ -321,17 +492,66 @@ export const dict = {
     ru: "Контакт будет удалён из всех проектов, где вы состоите.",
   },
   homeMembersPages: {
-    he: "עמודי בני המשפחה",
+    he: "עמודי חברי משק הבית",
     en: "Household member pages",
-    ru: "Страницы членов семьи",
+    ru: "Страницы участников домохозяйства",
   },
-  homePages: { he: "עמודי המשפחות שלי", en: "My household pages", ru: "Страницы моих семей" },
+  homePages: {
+    he: "עמודי משקי הבית שלי",
+    en: "My household pages",
+    ru: "Страницы моих домохозяйств",
+  },
 
   confirm: { he: "אישור", en: "Confirm", ru: "Подтвердить" },
   inviteManagement: {
     he: "הזמנות ובקשות הצטרפות",
     en: "Invitations and join requests",
     ru: "Приглашения и заявки",
+  },
+  inviteRenew: {
+    he: "חידוש ושיתוף הזמנה",
+    en: "Renew and share invitation",
+    ru: "Обновить и отправить приглашение",
+  },
+  inviteRenewHint: {
+    he: "נוצר קישור חדש ל־7 ימים שמבטל את הקודם. הרשאה שכבר ניתנה אינה משתנה.",
+    en: "Creates a new 7-day link and invalidates the old link. Existing access is unchanged.",
+    ru: "Новая ссылка действует 7 дней и заменяет старую. Выданные права не изменяются.",
+  },
+  inviteStaffEmailRequired: {
+    he: "הזמנה לתפקיד ניהול מחייבת כתובת אימייל של הנמען.",
+    en: "Management invitations require the recipient's email.",
+    ru: "Для приглашения управляющего необходим email получателя.",
+  },
+  staffAlreadyHasRole: {
+    he: "למשתמש כבר יש הרשאה זו או הרשאה רחבה יותר בפרויקט. אפשר לבחור שדרוג או היקף אחר.",
+    en: "This account already has this access or broader project access. Choose an upgrade or a different scope.",
+    ru: "У аккаунта уже есть эти или более широкие права. Выберите повышение или другую область.",
+  },
+  staffUpgradeHint: {
+    he: "זהו שדרוג ממנהל בניין למנהל פרויקט. ההרשאה הרחבה תינתן רק לאחר אישור הבקשה.",
+    en: "This upgrades a building manager to project manager after the request is approved.",
+    ru: "Это повышение управляющего домом до управляющего проектом после одобрения заявки.",
+  },
+  inviteExistingAccount: {
+    he: "לנמען כבר יש חשבון. הוא יתחבר לחשבון הקיים ויבקש את התפקיד בפרויקט.",
+    en: "This recipient has an account. They sign in to that account and request the project role.",
+    ru: "У получателя есть аккаунт. Он войдёт в него и запросит роль в проекте.",
+  },
+  inviteNewAccount: {
+    he: "לנמען עדיין אין חשבון. עליו ליצור חשבון עם כתובת זו ולאמת אותה, ואז לקבל את ההזמנה ולבקש תפקיד.",
+    en: "This recipient needs to create and verify an account with this email, then accept the invitation and request the role.",
+    ru: "Получателю нужно создать и подтвердить аккаунт с этим email, затем принять приглашение и запросить роль.",
+  },
+  recipientCheckHint: {
+    he: "הזינו אימייל ובחרו תפקיד והיקף כדי לבדוק את החשבון וההרשאות.",
+    en: "Enter an email and choose a role and scope to check the account and access.",
+    ru: "Введите email, выберите роль и область для проверки аккаунта и прав.",
+  },
+  recipientCheckFailed: {
+    he: "בדיקת החשבון נכשלה. שנו את הכתובת כדי לנסות שוב.",
+    en: "Account inspection failed. Edit the email to retry.",
+    ru: "Не удалось проверить аккаунт. Измените email, чтобы повторить.",
   },
   inviteCreate: { he: "יצירת הזמנה", en: "Create invitation", ru: "Создать приглашение" },
   inviteResident: {
@@ -404,6 +624,56 @@ export const dict = {
   },
   inviteApproved: { he: "הבקשה אושרה", en: "Request approved", ru: "Заявка одобрена" },
   inviteRejected: { he: "הבקשה נדחתה", en: "Request rejected", ru: "Заявка отклонена" },
+  joinPendingNext: {
+    he: "הבקשה נשלחה לבדיקה אצל מנהל מורשה. אין צורך לשלוח שוב. אפשר לחזור לבקשות ההצטרפות בחשבון כדי לבדוק את הסטטוס. אם ההמתנה נמשכת, פנו למי ששלח את ההזמנה.",
+    en: "An authorized manager will review your request. You do not need to submit again. Check its status in your account’s join requests. If you are still waiting, contact the person who sent the invitation.",
+    ru: "Заявку рассмотрит уполномоченный управляющий. Не нужно подавать её повторно. Проверяйте статус в заявках вашего аккаунта. Если ожидание затянулось, свяжитесь с отправителем приглашения.",
+  },
+  joinInactiveNext: {
+    he: "אי אפשר להצטרף דרך ההזמנה הזו כעת. אם כבר הגשתם בקשה, בדקו את הסטטוס בחשבון. פנו לשולח ההזמנה כדי לחדש אותה או לקבל קישור מתאים.",
+    en: "You cannot join through this invitation now. If you already submitted a request, check its status in your account. Ask the sender to renew the invitation or provide a suitable link.",
+    ru: "Сейчас вступить по этому приглашению нельзя. Если заявка уже подана, проверьте её статус в аккаунте. Попросите отправителя продлить приглашение или предоставить подходящую ссылку.",
+  },
+  joinRejectedNext: {
+    he: "הבקשה הזו לא העניקה גישה. פנו לשולח ההזמנה לבירור ולקבלת הזמנה חדשה במידת הצורך.",
+    en: "This request did not grant access. Contact the invitation sender to clarify and request a new invitation if needed.",
+    ru: "Эта заявка не предоставила доступ. Свяжитесь с отправителем для уточнения и при необходимости попросите новое приглашение.",
+  },
+  joinApprovedNext: {
+    he: "אפשר כעת להכיר את השכנים בספר ולעדכן את פרטי הקשר והחשיפה במסך משקי הבית שלי.",
+    en: "You can now discover your neighbors in the directory and update your contact details and visibility in My household.",
+    ru: "Теперь можно знакомиться с соседями в справочнике и обновить контакты и их видимость в разделе «Мои домохозяйства».",
+  },
+  joinFirstResident: {
+    he: "ההזמנה הזו מיועדת לתושב הראשון במשק הבית בדירה. אם כבר יש משק בית מאושר, בקשו מנציג משק הבית הזמנה להצטרפות אליו במקום להגיש כאן בקשה נוספת. גם אדם שגר לבד או עם שותפים יוצר משק בית. אפשר לבחור שם לתצוגה כמו ״דנה״ או ״השותפים בדירה 12״; אין צורך להוסיף קרובי משפחה.",
+    en: "This invitation is for the first resident of a household in the apartment. If a household is already approved, ask its representative for a household-member invitation instead of submitting another request here. A solo resident or roommates can create a household. Choose a display name such as “Dana” or “Apartment 12 roommates”; no relatives need to be added.",
+    ru: "Это приглашение для первого жильца домохозяйства в квартире. Если домохозяйство уже одобрено, попросите его представителя пригласить вас как участника вместо подачи новой заявки здесь. Один жилец или соседи по квартире тоже могут создать домохозяйство. Выберите название, например «Дана» или «Соседи из квартиры 12»; добавлять родственников не нужно.",
+  },
+  joinParticipation: {
+    he: "מכירים את השכנים ומשתתפים בספר",
+    en: "Get to know neighbors and take part",
+    ru: "Знакомьтесь с соседями и участвуйте",
+  },
+  joinListingScope: {
+    he: "אחרי האישור, השם שלכם ופרטי משק הבית, הבניין והדירה יופיעו לשכנים המורשים לפי הגדרות הקהילה. ההשתתפות הדדית: אפשר להכיר אחרים, וגם הם יוכלו להכיר אתכם.",
+    en: "After approval, your name and household, building and apartment details will be visible to authorized neighbors according to community settings. Participation is reciprocal: you can discover others, and they can discover you.",
+    ru: "После одобрения ваше имя, домохозяйство, дом и квартира будут видны соседям с доступом по настройкам сообщества. Участие взаимное: вы знакомитесь с другими, а они — с вами.",
+  },
+  joinContactPrivacy: {
+    he: "טלפון ואימייל הם פרטים לבחירה, עם הגדרות חשיפה נפרדות. פרטי קשר חדשים גלויים למנהלים בלבד כברירת מחדל. כיום שינוי בפרטי הקשר או בחשיפה חל בכל הפרויקטים שלכם.",
+    en: "Phone and email are optional, with separate privacy controls. New contacts default to managers only. Currently, changes to contacts or their visibility apply across all your projects.",
+    ru: "Телефон и email необязательны и имеют отдельные настройки видимости. Новые контакты по умолчанию видны только управляющим. Сейчас изменения контактов и их видимости действуют во всех ваших проектах.",
+  },
+  joinChildrenPrivacy: {
+    he: "פרטי ילדים נשארים מוגנים ואינם מופיעים בספר השכנים.",
+    en: "Children’s information stays protected and is excluded from the neighborhood directory.",
+    ru: "Данные детей остаются защищёнными и не отображаются в справочнике соседей.",
+  },
+  joinParticipationNotice: {
+    he: "בהגשת הבקשה אתם מסכימים להופיע בספר כחלק מההצטרפות לקהילה. אי אפשר להסתיר את פרטי הזהות הבסיסיים ולהמשיך לצפות באחרים. הגישה לספר תיפתח רק לאחר אישור הבקשה.",
+    en: "By submitting, you agree to appear in the directory as part of joining the community. You cannot hide your basic identity while keeping access to others. Directory access starts only after your request is approved.",
+    ru: "Подавая заявку, вы соглашаетесь появиться в справочнике как участник сообщества. Нельзя скрыть основные данные о себе, сохранив доступ к другим. Доступ откроется только после одобрения заявки.",
+  },
   inviteApprove: { he: "אישור בקשה", en: "Approve request", ru: "Одобрить заявку" },
   inviteReject: { he: "דחיית בקשה", en: "Reject request", ru: "Отклонить заявку" },
   inviteReviewConfirm: {
@@ -614,9 +884,9 @@ export const dict = {
   staffAdd: { he: "הוספת מינוי", en: "Add assignment", ru: "Добавить назначение" },
   staffAssignments: { he: "מינויים קיימים", en: "Current assignments", ru: "Текущие назначения" },
   staffRegisteredHint: {
-    he: "הזינו כתובת אימייל מדויקת של משתמש שכבר נרשם. המינוי מעניק גישה בהיקף שנבחר, ואינו משייך דייר או מעניק הרשאת מנהל מערכת.",
-    en: "Enter the exact email of an existing registered user. The assignment grants the selected scope; it does not link a resident or grant system administration.",
-    ru: "Введите точный email уже зарегистрированного пользователя. Назначение предоставляет доступ в выбранных пределах, без привязки жильца и без прав администратора системы.",
+    he: "הזינו כתובת אימייל מדויקת של משתמש שכבר נרשם. המינוי מעניק מיד גישה בהיקף שנבחר, ואינו משייך דייר או מעניק הרשאת מנהל מערכת.",
+    en: "Enter the exact email of an existing registered user. The assignment immediately grants the selected scope; it does not link a resident or grant system administration.",
+    ru: "Введите точный email уже зарегистрированного пользователя. Назначение сразу предоставляет доступ в выбранных пределах, без привязки жильца и без прав администратора системы.",
   },
   staffAdminOnly: {
     he: "ניהול מינויים זמין למנהלי מערכת בלבד.",
@@ -712,9 +982,14 @@ export const dict = {
   },
   managementViewStructure: { he: "חזרה לתצוגה", en: "Back to view", ru: "Вернуться к просмотру" },
   managementStructureHint: {
-    he: "ערכו את מבנה הבניינים ושמרו את השינויים בכל בניין בנפרד.",
-    en: "Edit the building structures and save each building separately.",
-    ru: "Измените структуру зданий и сохраните изменения для каждого здания отдельно.",
+    he: "ערכו את מבנה הבניינים ושמרו את כל שינויי הפרויקט יחד.",
+    en: "Edit building structures and save all project changes together.",
+    ru: "Измените структуру зданий и сохраните все изменения проекта вместе.",
+  },
+  managementStructureUnsaved: {
+    he: "שינויים שלא נשמרו ב־{count} בניינים, כולל בניינים מוסתרים בסינון.",
+    en: "Unsaved changes in {count} buildings, including buildings hidden by filters.",
+    ru: "Несохранённые изменения в {count} зданиях, включая скрытые фильтрами.",
   },
   managementSections: {
     he: "אזורים בניהול הפרויקט",
@@ -916,7 +1191,7 @@ export const dict = {
   call: { he: "חיוג", en: "Call", ru: "Звонок" },
   whatsapp: { he: "וואטסאפ", en: "WhatsApp", ru: "WhatsApp" },
   mail: { he: "מייל", en: "Email", ru: "Почта" },
-  family: { he: "בני המשפחה", en: "Family members", ru: "Члены семьи" },
+  family: { he: "חברי משק הבית", en: "Household members", ru: "Участники домохозяйства" },
   primary: { he: "איש קשר ראשי", en: "Primary contact", ru: "Основной контакт" },
   child: { he: "ילד/ה", en: "Child", ru: "Ребёнок" },
   relation: { he: "קרבה", en: "Relation", ru: "Родство" },
@@ -938,7 +1213,11 @@ export const dict = {
     en: "Fill in your details. The committee will approve you.",
     ru: "Заполните данные. Комитет одобрит заявку.",
   },
-  familyName: { he: "שם המשפחה לתצוגה", en: "Family display name", ru: "Название семьи" },
+  familyName: {
+    he: "שם משק הבית לתצוגה",
+    en: "Household display name",
+    ru: "Название домохозяйства",
+  },
   ownershipQ: { he: "סוג החזקה", en: "Ownership type", ru: "Тип владения" },
   photo: { he: "תמונה משפחתית", en: "Family photo", ru: "Фото семьи" },
   choosePhoto: { he: "בחירת תמונה", en: "Choose photo", ru: "Выбрать фото" },

@@ -44,3 +44,5 @@ Migration `0006_household_members.sql` adds private child-profile provenance/ret
 Migration `0007_building_addresses.sql` adds the optional building address without altering existing names, IDs or relationships. Apply it before deploying the flexible layout editor.
 
 Migration `0008_structure_editor.sql` adds unit/floor types, floor display names and unit positions; it preserves existing IDs and business labels. See [visual structure editor](../docs/visual-structure-editor.md).
+
+Migration `0010_global_admin_self_verification.sql` permits identity self-verification and resident/management request self-review only for a current Global Admin, using write-time role checks with shared locks. The request audit completeness CHECK remains enforced; household-member self-review remains prohibited. Apply all authoritative migrations in filename order with `pnpm db:migrate`.

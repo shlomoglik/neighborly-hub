@@ -2,6 +2,16 @@
 
 אפליקציה קהילתית לניהול ספר שכנים, פרטי קשר וימי הולדת של דיירים בבניינים ובמתחמים.
 
+<p align="center">
+  <a href="https://neighborly-hub.vercel.app/vision?lang=he"><img src="docs/assets/vision-he.svg" alt="קריאת החזון בעברית" width="160" height="56"></a>
+  <a href="https://neighborly-hub.vercel.app/vision?lang=en"><img src="docs/assets/vision-en.svg" alt="Read our vision in English" width="160" height="56"></a>
+  <a href="https://neighborly-hub.vercel.app/vision?lang=ru"><img src="docs/assets/vision-ru.svg" alt="Читать наше видение на русском" width="160" height="56"></a>
+</p>
+
+Read the canonical [product vision](docs/product-vision.md) for product decisions and
+long-term direction. The public vision page supports Hebrew, English and Russian.
+The vision describes product direction, not a list of delivered features.
+
 ## Current status
 
 The project uses **Next.js 15 App Router**, PostgreSQL and Drizzle. Google sign-in, database sessions, explicit resident identity links and server-side directory privacy are implemented. `/directory` reads authorized live data after sign-in; management and invitation onboarding use separately authorized live data; household profiles and self-service contacts now use authorized live data. Configure [authentication](docs/authentication.md), apply migrations 0001–0006 and provision approved memberships before testing the live directory. The legacy Lovable/TanStack runtime has been removed.
@@ -23,6 +33,7 @@ Open http://localhost:3000. `/directory` requires configured authentication; com
 ## Routes
 
 - `/` — landing page
+- `/vision` — public product vision in Hebrew, English and Russian
 - `/directory` — protected live directory, authorized project/building selection, server search and pagination
 - `/api/directory/projects` — authorized project/building metadata
 - `/api/projects/:projectId/directory` — private paginated adult resident DTOs
@@ -84,6 +95,12 @@ The planned PostgreSQL schema is defined in [Drizzle schema](drizzle/schema.ts),
 
 ```mermaid
 erDiagram
+    projects ||--o{ community_surveys : scopes
+    app_users |o--o{ community_surveys : created_by
+    community_surveys ||--|{ community_survey_options : offers
+    community_surveys ||--o{ community_survey_responses : receives
+    community_survey_options ||--o{ community_survey_responses : selected_in_survey
+    app_users ||--o{ community_survey_responses : answers
     projects ||--o{ buildings : contains
     buildings ||--o{ floors : contains
     floors ||--o{ apartments : contains
@@ -276,3 +293,19 @@ See [pilot environment](docs/pilot-environment.md) for a separate local PostgreS
 ### Storybook runtime verification
 
 Storybook uses `@storybook/nextjs-vite` with App Router support and a compatible Vite 7 development dependency, providing the official Next.js link and navigation mocks. Do not alias Next.js modules to custom components or polyfill `process` globally. CI builds Storybook and runs `scripts/check-storybook.mjs` against every indexed story in Chromium; a successful static build alone does not guarantee that stories render. Browser tooling is installed in an isolated temporary directory. Screenshot capture remains opt-in.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, privacy expectations,
+verification commands and the pull request workflow. Start with the
+[product vision](docs/product-vision.md) when proposing product changes.
+
+## License
+
+Neighborly Hub source code and documentation are licensed under the
+[MIT License](LICENSE). Use, modification, redistribution and commercial use are
+permitted subject to its terms, including retaining the copyright and license
+notice. The software is provided without warranty.
+
+Third-party dependencies and bundled assets retain their own licenses; see their
+package notices and the font license files in [public/fonts](public/fonts).

@@ -215,6 +215,14 @@ export function SignIn({
           )}
           <p className="text-sm text-muted-foreground">{t("authAccessNotice")}</p>
         </section>
+        <footer className="mt-6 text-center text-sm text-muted-foreground">
+          <Link
+            href="/vision"
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+          >
+            {t("visionTitle")}
+          </Link>
+        </footer>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookUser, Search, CircleUserRound, Settings2, UserPlus, Users } from "lucide-react";
+import { BookUser, Search, CircleUserRound, Settings2, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LangSwitcher } from "./LangSwitcher";
@@ -10,17 +10,19 @@ export function AppShell({
   children,
   title,
   wide = false,
+  activePath,
 }: {
   children: ReactNode;
   title?: string;
   wide?: boolean;
+  activePath?: string;
 }) {
   const { t } = useI18n();
   const pathname = usePathname();
+  const navigationPath = activePath ?? pathname;
   const nav = [
     { to: "/directory", label: t("directory"), icon: BookUser },
     { to: "/household", label: t("homeMine"), icon: Users },
-    { to: "/join", label: t("join"), icon: UserPlus },
     { to: "/manage", label: t("manage"), icon: Settings2 },
   ];
   return (
@@ -55,7 +57,7 @@ export function AppShell({
               <Link
                 key={n.to}
                 href={n.to}
-                className={`whitespace-nowrap rounded-full px-2 py-1.5 text-sm font-medium ${pathname === n.to || pathname?.startsWith(`${n.to}/`) ? "bg-secondary text-foreground" : "text-muted-foreground"}`}
+                className={`whitespace-nowrap rounded-full px-2 py-1.5 text-sm font-medium ${navigationPath === n.to || navigationPath?.startsWith(`${n.to}/`) ? "bg-secondary text-foreground" : "text-muted-foreground"}`}
               >
                 {n.label}
               </Link>
@@ -84,6 +86,14 @@ export function AppShell({
       <main className={`mx-auto min-w-0 px-4 py-4 ${wide ? "max-w-7xl" : "max-w-3xl"}`}>
         {children}
       </main>
+      <footer className="mx-auto max-w-3xl px-4 py-4 text-center text-sm text-muted-foreground">
+        <Link
+          href="/vision"
+          className="inline-flex min-h-11 items-center underline underline-offset-4"
+        >
+          {t("visionTitle")}
+        </Link>
+      </footer>
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -93,7 +103,7 @@ export function AppShell({
             <Link
               key={n.to}
               href={n.to}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${pathname === n.to || pathname?.startsWith(`${n.to}/`) ? "text-primary" : "text-muted-foreground"}`}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${navigationPath === n.to || navigationPath?.startsWith(`${n.to}/`) ? "text-primary" : "text-muted-foreground"}`}
             >
               <n.icon className="h-5 w-5" />
               {n.label}

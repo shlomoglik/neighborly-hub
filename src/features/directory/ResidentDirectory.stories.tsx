@@ -76,7 +76,10 @@ export const Interactive: Story = {
     await expect(canvas.getByText(translate(lang, "directoryPage", { n: 2 }))).toBeVisible();
     await userEvent.type(canvas.getByRole("textbox"), "999");
     await expect(canvas.getByText(translate(lang, "noResults"))).toBeVisible();
-    await userEvent.clear(canvas.getByRole("textbox"));
+    await userEvent.click(
+      canvas.getAllByRole("button", { name: translate(lang, "clear") }).at(-1)!,
+    );
+    await expect(canvas.getByRole("textbox")).toHaveFocus();
     await expect(canvas.getAllByRole("article")).toHaveLength(3);
   },
 };

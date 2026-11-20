@@ -48,10 +48,10 @@ export function MyJoinRequests() {
     invitationApi.mine(page, signal),
   );
   return (
-    <AppShell>
+    <section id="join-requests" className="scroll-mt-20">
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{t("inviteMyRequests")}</h1>
+          <h2 className="text-2xl font-bold">{t("inviteMyRequests")}</h2>
           <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
             <RefreshButton
               disabled={resource.status === "loading"}
@@ -66,6 +66,6 @@ export function MyJoinRequests() {
           <RequestList data={resource.data} busy={false} onPage={setPage} />
         )}
       </div>
-    </AppShell>
+    </section>
   );
 }

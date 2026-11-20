@@ -1,5 +1,13 @@
 "use client";
 import Link from "next/link";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { useI18n } from "@/lib/i18n";
 import { managementHref, type ManagementHierarchy } from "@/lib/access/management-contracts";
 import { invitationAdminHref } from "@/lib/access/invitation-contracts";
@@ -12,13 +20,11 @@ export function ManageProjectHeader({
   active,
   canManageStaff,
   pendingCount,
-  showProjectsBack = false,
 }: {
   project: Pick<ManagementHierarchy, "id" | "name" | "city" | "counts">;
   active: ManageProjectTab;
   canManageStaff: boolean;
   pendingCount?: number;
-  showProjectsBack?: boolean;
 }) {
   const { t } = useI18n();
   const tabs = [
@@ -34,14 +40,27 @@ export function ManageProjectHeader({
   ];
   return (
     <div className="min-w-0 space-y-3">
-      {showProjectsBack && (
-        <Link
-          href="/manage"
-          className="inline-flex text-sm text-muted-foreground hover:text-foreground"
-        >
-          {t("projectsBreadcrumb")} <span aria-hidden>›</span>
-        </Link>
-      )}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/manage">{t("manage")}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>\</BreadcrumbSeparator>
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbLink asChild>
+              <Link href={managementHref(project.id)} className="wrap-break-word">
+                <bdi>{project.name}</bdi>
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>\</BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <BreadcrumbPage>{tabs.find((tab) => tab.id === active)?.label}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <header className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <h1 tabIndex={-1} className="font-heading text-2xl font-normal sm:text-3xl">

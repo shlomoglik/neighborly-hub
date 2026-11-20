@@ -1,6 +1,6 @@
 # Pull request size guard
 
-The `PR Size Check (Effective LOC)` workflow measures changed lines from GitHub's PR files API. It adds one report comment and updates that comment after subsequent pushes or PR edits. The report includes raw additions/deletions by category and the five files with the highest weighted contribution.
+The `PR Size Check (Effective LOC)` workflow measures changed lines from GitHub's PR files API. It adds one report comment and updates that comment after subsequent pushes or PR edits. The report includes raw additions/deletions by category and the five files with the highest weighted contribution. Both tables use a separate `+-` marker column (green above red). Changes and category weights follow the same order: additions on the first line, deletions on the second.
 
 | Category                                       | Addition weight | Deletion weight |
 | ---------------------------------------------- | --------------: | --------------: |

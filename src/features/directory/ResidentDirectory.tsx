@@ -1,7 +1,7 @@
 "use client";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useI18n } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,14 @@ export type ResidentDirectoryProps = {
 export function ResidentDirectory(props: ResidentDirectoryProps) {
   const { t } = useI18n();
   const { status, projects, query, data } = props;
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchHintId = useId();
+  const hasFilters = Boolean(query.query || query.buildingId);
+  const clearFilters = () => {
+    props.onQueryChange("");
+    props.onBuildingChange("");
+    searchInput.current?.focus();
+  };
   const heading = useRef<HTMLHeadingElement>(null);
   const focusAfterPage = useRef(false);
   useEffect(() => {
@@ -40,7 +48,7 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
   };
   const selected = projects.find((p) => p.id === props.selectedProjectId);
   return (
-    <section className="space-y-5" aria-label={t("directory")}>
+    <section className="min-w-0 space-y-5" aria-label={t("directory")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold">
           {t("directory")}
@@ -56,10 +64,10 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
       {projects.length > 0 && (
         <div className="community-enter space-y-3 rounded-2xl border bg-card p-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium">
+            <label className="min-w-0 space-y-2 text-sm font-medium">
               <span>{t("project")}</span>
               <select
-                className="min-h-11 w-full rounded-xl border bg-card px-3"
+                className="min-h-11 w-full min-w-0 max-w-full rounded-xl border bg-card px-3"
                 value={selected?.id ?? ""}
                 onChange={(e) => props.onProjectChange(e.target.value)}
               >
@@ -73,10 +81,10 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
                 ))}
               </select>
             </label>
-            <label className="space-y-2 text-sm font-medium">
+            <label className="min-w-0 space-y-2 text-sm font-medium">
               <span>{t("filterBuilding")}</span>
               <select
-                className="min-h-11 w-full rounded-xl border bg-card px-3"
+                className="min-h-11 w-full min-w-0 max-w-full rounded-xl border bg-card px-3"
                 value={query.buildingId}
                 onChange={(e) => props.onBuildingChange(e.target.value)}
                 disabled={!selected}
@@ -93,6 +101,8 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
           <label className="block space-y-2 text-sm font-medium">
             <span>{t("search")}</span>
             <Input
+              ref={searchInput}
+              aria-describedby={searchHintId}
               maxLength={100}
               className="min-h-11"
               value={query.query}
@@ -100,6 +110,18 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
               onChange={(e) => props.onQueryChange(e.target.value)}
             />
           </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <p id={searchHintId} className="min-w-0 flex-1 basis-60 text-sm text-muted-foreground">
+              <Link href="/search" className="text-primary underline">
+                {t("globalSearch")}
+              </Link>
+              {" · "}
+              {t("globalSearchHint")}
+            </p>
+            <Button variant="outline" disabled={!hasFilters} onClick={clearFilters}>
+              {t("clear")}
+            </Button>
+          </div>
         </div>
       )}
       {status === "loading" && <CommunitySkeleton variant="directory" />}
@@ -128,7 +150,30 @@ export function ResidentDirectory(props: ResidentDirectoryProps) {
             {t("directoryPage", { n: data.page })}
           </p>
           {data.residents.length === 0 ? (
-            <SystemFeedback kind="empty" />
+            <div className="space-y-3">
+              <SystemFeedback kind="empty" />
+              <p className="break-words text-center text-sm text-muted-foreground">
+                <bdi>{selected?.name}</bdi>
+                {" · "}
+                <bdi>
+                  {selected?.buildings.find((b) => b.id === query.buildingId)?.name ??
+                    t("allBuildings")}
+                </bdi>
+                {query.query && (
+                  <>
+                    {" "}
+                    · <bdi>{query.query}</bdi>
+                  </>
+                )}
+              </p>
+              {hasFilters && (
+                <div className="flex justify-center">
+                  <Button variant="outline" onClick={clearFilters}>
+                    {t("clear")}
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : (
             <ul className="space-y-3" aria-label={t("directory")}>
               {data.residents.map((resident) => (

@@ -1,6 +1,6 @@
 # Administrator-managed staff assignments
 
-A global administrator can open a saved project in `/manage`, select **Manage staff**, and open `/manage/staff/:projectId`. The administrator enters the exact email of an existing registered account and chooses either project manager (all buildings in this project) or building manager (one explicitly selected building). Existing assignments can be revoked through a confirmation dialog naming the account and scope.
+A global administrator can open a saved project in `/manage`, select **Manage staff**, and open `/manage/staff/:projectId`. Click **Add assignment** to open the creation dialog (a bottom sheet on mobile). The administrator enters the exact email of an existing registered account and chooses either project manager (all buildings in this project) or building manager (one explicitly selected building). Existing assignments can be revoked through a confirmation dialog naming the account and scope.
 
 This manages existing `staff_assignments` rows only. It does not grant global administrator roles, create accounts, send invitations, create resident identity links, approve households or change structural data. Staff provisioning is separate from residency and ownership.
 
@@ -29,3 +29,16 @@ Discovery pages use the existing 20-row, maximum 10000-page convention and deter
 The responsive form, confirmation dialog, keyboard controls, loading skeletons and feedback use existing components and typed Hebrew, English and Russian strings. Storybook exercises only synthetic props and callbacks; it never mounts authenticated API adapters. Screenshots remain on demand.
 
 `staff.integration.test.ts` runs in the existing disposable migrated PostgreSQL CI job. It covers real authenticated API lifecycle, anonymous/non-admin access and forged claims, project/building scope, grant composition and revocation, cross-project deletion protection, duplicate/concurrent writes, pagination, expired sessions, revoked admin rights and write-origin checks. Unit/client tests cover strict/bounded HTTP contracts, cache/error boundaries, page protection, localization, capability-based navigation, confirmation, duplicate submission suppression and obsolete reads/writes after navigation.
+
+## Direct assignment versus invitation
+
+Both paths ultimately create the same `staff_assignments` grant. Direct assignment
+requires an existing account and grants access immediately, without recipient
+acceptance. An invitation creates a shareable link for a project or building role;
+the recipient signs in and submits a pending request. A global administrator must
+approve that request before the grant exists. Only global administrators can issue,
+approve or directly assign management roles.
+
+Creating an invitation does not send email automatically. The share actions open
+WhatsApp or the user's email client; sending is a separate user action. `/join`
+is the account's request history/status page, not a project discovery screen.

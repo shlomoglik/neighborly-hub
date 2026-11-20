@@ -46,6 +46,9 @@ it.each(["he", "en", "ru"] as const)(
   (lang) => {
     render(localized(false, lang));
     expect(
+      screen.getByRole("link", { name: translate(lang, "visionTitle") }).getAttribute("href"),
+    ).toBe("/vision");
+    expect(
       screen.getByRole("button", { name: translate(lang, "google") }).hasAttribute("disabled"),
     ).toBe(true);
     expect(screen.getByRole("status").textContent).toBe(translate(lang, "authUnavailable"));

@@ -1,4 +1,5 @@
-import { revokeInvitation } from "@/lib/access/invitations";
+import { readAuthConfig } from "@/lib/auth/config";
+import { renewInvitation, revokeInvitation } from "@/lib/access/invitations";
 import {
   invitationRoute,
   invitationResponse as respond,
@@ -21,4 +22,23 @@ export const DELETE = (
         invitationUuid(params.invitationId),
       ),
     );
+  });
+
+export const POST = (
+  request: Request,
+  context: { params: Promise<{ projectId: string; invitationId: string }> },
+) =>
+  invitationRoute(request, true, async (userId) => {
+    const p = await context.params;
+    const { db } = await import("@/lib/db/client");
+    const result = await renewInvitation(
+      db,
+      userId,
+      invitationUuid(p.projectId),
+      invitationUuid(p.invitationId),
+    );
+    return respond({
+      id: result.id,
+      url: `${readAuthConfig(process.env)!.baseURL}/join/${result.token}`,
+    });
   });
