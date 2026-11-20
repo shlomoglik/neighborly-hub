@@ -1,0 +1,26 @@
+name: Production promotion gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  staging-only:
+    name: Require staging source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure main receives changes only from staging
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [[ "$HEAD_REF" != "staging" || "$HEAD_REPO" != "$BASE_REPO" ]]; then
+            echo "::error::Pull requests into main must originate from the staging branch in this repository."
+            exit 1
+          fi
+          echo "Promotion from staging verified."
