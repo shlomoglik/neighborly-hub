@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { authReturnPath } from "./return-path";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -218,9 +219,12 @@ export function SignIn({
         <footer className="mt-6 text-center text-sm text-muted-foreground">
           <Link
             href="/vision"
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-1.5 underline underline-offset-4"
           >
             {t("visionTitle")}
+            <ExternalLink className="size-3.5" aria-hidden="true" />
           </Link>
         </footer>
       </div>
