@@ -357,46 +357,54 @@ try {
       );
     },
   );
-  await check(
-    "mobile: accept a personal apartment invitation and reload the approved result",
-    async () => {
-      await adminPage.bringToFront();
-      await button(adminPage, "inviteCreate").click();
-      const dialog = adminPage.getByRole("dialog", { name: t.inviteCreate, exact: true });
-      await dialog
-        .locator("label")
-        .filter({ has: adminPage.getByText(t.building, { exact: true }) })
-        .locator("select")
-        .selectOption({ label: "Pilot A" });
-      await dialog
-        .locator("label")
-        .filter({ has: adminPage.getByText(t.apartment, { exact: true }) })
-        .locator("select")
-        .selectOption({ label: `${t.floor} 0 · ${t.apartment} 2` });
-      await dialog
-        .getByLabel(t.inviteRecipientEmail, { exact: true })
-        .fill(identities.outsider.email);
-      const personalLink = await createLink(adminPage);
-      const outsider = passwordContexts.outsider;
-      const page = await outsider.newPage();
-      await page.bringToFront();
-      await page.goto(personalLink);
-      await page.getByText(t.joinPersonalNotice, { exact: true }).waitFor();
-      const before = await (await outsider.request.get(`${origin}/api/households`)).json();
-      assert.deepEqual(before.households, []);
-      await page.getByLabel(t.fullName, { exact: true }).fill("Pilot Apartment Resident");
-      await page.getByLabel(t.familyName, { exact: true }).fill("Pilot Apartment Household");
-      await button(page, "joinPersonalAccept").click();
-      await page.getByText(t.inviteApproved, { exact: true }).waitFor();
-      await page.reload();
-      await page.getByText(t.inviteApproved, { exact: true }).waitFor();
-      await page.getByRole("link", { name: t.homeMyContacts, exact: true }).waitFor();
-      await page.getByRole("link", { name: t.openBook, exact: true }).waitFor();
-      const after = await (await outsider.request.get(`${origin}/api/households`)).json();
-      assert.equal(after.households.length, 1);
-      assert.notEqual(after.households[0].id, householdId);
-    },
-  );
+  await check("mobile: accept residency and a committee role using one link", async () => {
+    await adminPage.bringToFront();
+    await button(adminPage, "inviteCreate").click();
+    const dialog = adminPage.getByRole("dialog", { name: t.inviteCreate, exact: true });
+    await dialog
+      .locator("label")
+      .filter({ has: adminPage.getByText(t.building, { exact: true }) })
+      .locator("select")
+      .selectOption({ label: "Pilot A" });
+    await dialog
+      .locator("label")
+      .filter({ has: adminPage.getByText(t.apartment, { exact: true }) })
+      .locator("select")
+      .selectOption({ label: `${t.floor} 0 · ${t.apartment} 2` });
+    await dialog
+      .getByLabel(t.inviteRecipientEmail, { exact: true })
+      .fill(identities.outsider.email);
+    await dialog
+      .locator("label")
+      .filter({ has: adminPage.getByText(t.inviteAdditionalStaff, { exact: true }) })
+      .locator("select")
+      .selectOption("building_manager");
+    const personalLink = await createLink(adminPage);
+    const outsider = passwordContexts.outsider;
+    const page = await outsider.newPage();
+    await page.bringToFront();
+    await page.goto(personalLink);
+    await page.getByText(t.joinPersonalNotice, { exact: true }).waitFor();
+    const before = await (await outsider.request.get(`${origin}/api/households`)).json();
+    assert.deepEqual(before.households, []);
+    await page.getByLabel(t.fullName, { exact: true }).fill("Pilot Apartment Resident");
+    await page.getByLabel(t.familyName, { exact: true }).fill("Pilot Apartment Household");
+    await page.getByText(t.building_manager, { exact: false }).waitFor();
+    await button(page, "joinCombinedAccept").click();
+    await page.getByText(t.inviteApproved, { exact: true }).waitFor();
+    await page.reload();
+    await page.getByText(t.inviteApproved, { exact: true }).waitFor();
+    await page.getByRole("link", { name: t.homeMyContacts, exact: true }).waitFor();
+    await page.getByRole("link", { name: t.openBook, exact: true }).waitFor();
+    await page.getByRole("link", { name: t.openProjectManagement, exact: true }).waitFor();
+    assert.equal(
+      (await outsider.request.get(`${origin}/api/management/projects/${projectId}`)).status(),
+      200,
+    );
+    const after = await (await outsider.request.get(`${origin}/api/households`)).json();
+    assert.equal(after.households.length, 1);
+    assert.notEqual(after.households[0].id, householdId);
+  });
   await check("no browser runtime errors in the full desktop/mobile journey", async () => {
     assert.deepEqual(runtimeErrors, []);
   });

@@ -36,6 +36,7 @@ import {
 import { POST as submit, GET as context } from "@/app/api/join/[token]/route";
 import { POST as review } from "@/app/api/management/projects/[projectId]/join-requests/[requestId]/route";
 import { assignProjectStaff, inspectStaffRecipient } from "./staff";
+import type { CombinedStaff } from "./invitation-contracts";
 import { GET as mine } from "@/app/api/join/requests/route";
 const config = {
   baseURL: "https://invite.test",
@@ -1011,7 +1012,7 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     expect(body).not.toContain('"userId"');
     expect(body).not.toContain('"tokenHash"');
   });
-  async function personal(unitNumber: string, email: string, actor = admin) {
+  async function personal(unitNumber: string, email: string, actor = admin, staff?: CombinedStaff) {
     const building = (await readManagementHierarchy(fixture.db, admin, a))!.buildings[0];
     const apartmentId = building.floors[0].apartments.find(
       (unit) => unit.number === unitNumber,
@@ -1021,6 +1022,7 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
       buildingId: building.id,
       apartmentId,
       recipientEmail: email,
+      staff,
       expiresInDays: 7,
     });
     return { ...invite, apartmentId };
@@ -1184,5 +1186,183 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     expect(await (await apply(renewed.token, applicant, apartmentSpare)).json()).toMatchObject({
       status: "pending",
     });
+  });
+  async function combinedRecipient() {
+    const id = crypto.randomUUID();
+    const email = `${id}@example.test`;
+    const test = (await fixture.auth.$context).test;
+    await test.saveUser(test.createUser({ id, email, emailVerified: true }));
+    users.push(id);
+    return { id, email };
+  }
+
+  it.each(["building_manager", "project_manager"] as const)(
+    "accepts residency with %s atomically and keeps the two memberships independent",
+    async (role) => {
+      const target = await combinedRecipient();
+      const staff = role === "building_manager" ? { role, buildingId: buildingOther } : { role };
+      const invitation = await personal(
+        role === "building_manager" ? "5" : "6",
+        target.email,
+        admin,
+        staff,
+      );
+      if (role === "project_manager") {
+        await fixture.db.insert(s.staffAssignments).values({
+          userId: target.id,
+          projectId: a,
+          role: "building_manager",
+          buildingId: buildingA,
+        });
+      }
+      const renewed = await renewInvitation(fixture.db, admin2, a, invitation.id);
+      check(await open(invitation.token, target.id), 404);
+      check(await open(renewed.token, stranger), 404);
+      const page = await open(renewed.token, target.id);
+      check(page, 200);
+      expect(await page.json()).toMatchObject({ staff, request: null });
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invitation.apartmentId)),
+      ).toHaveLength(0);
+      const responses = await Promise.all([
+        apply(renewed.token, target.id, invitation.apartmentId),
+        apply(renewed.token, target.id, invitation.apartmentId),
+      ]);
+      responses.forEach((response) => check(response, 201));
+      const [result, retry] = await Promise.all(responses.map((response) => response.json()));
+      expect(result).toMatchObject({ status: "approved", staff });
+      expect(retry).toEqual(result);
+      const rows = await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.userId, target.id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        role,
+        projectId: a,
+        buildingId: role === "building_manager" ? buildingOther : null,
+      });
+      const [record] = await fixture.db
+        .select()
+        .from(s.joinRequests)
+        .where(eq(s.joinRequests.id, result.id));
+      expect(record).toMatchObject({
+        authorizedBy: admin2,
+        userId: target.id,
+        acceptedAt: expect.any(Date),
+      });
+      expect((await listJoinRequests(fixture.db, target.id, null)).requests[0]).toMatchObject({
+        status: "approved",
+        staff,
+      });
+      check(
+        await revoke(await request("DELETE", admin), {
+          params: Promise.resolve({ projectId: a, invitationId: invitation.id }),
+        }),
+        200,
+      );
+      expect(await (await open(renewed.token, target.id)).json()).toMatchObject({
+        staff,
+        request: { status: "approved" },
+      });
+      const stillAssigned = await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.id, rows[0].id));
+      expect(stillAssigned).toHaveLength(1);
+      await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.id, rows[0].id));
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invitation.apartmentId)),
+      ).toMatchObject([{ createdBy: target.id, isActive: true }]);
+    },
+  );
+
+  it("rejects cross-project staff scope and refuses claims or renewal after authority is lost", async () => {
+    const target = await combinedRecipient();
+    await fixture.db
+      .insert(s.staffAssignments)
+      .values({ userId: pm, projectId: a, role: "project_manager" });
+    try {
+      await expect(
+        personal("7", target.email, pm, { role: "project_manager" }),
+      ).rejects.toMatchObject({ status: 404 });
+      const otherProjectBuilding = (await readManagementHierarchy(fixture.db, admin, b))!
+        .buildings[0].id;
+      await expect(
+        personal("7", target.email, admin, {
+          role: "building_manager",
+          buildingId: otherProjectBuilding,
+        }),
+      ).rejects.toMatchObject({ status: 404 });
+      const invitation = await personal("7", target.email, admin2, { role: "project_manager" });
+      await expect(renewInvitation(fixture.db, pm, a, invitation.id)).rejects.toMatchObject({
+        status: 404,
+      });
+      await fixture.db.delete(s.globalRoles).where(eq(s.globalRoles.userId, admin2));
+      try {
+        check(await apply(invitation.token, target.id, invitation.apartmentId), 404);
+        expect((await storedInvitation(invitation.id)).consumedAt).toBeNull();
+      } finally {
+        await fixture.db.insert(s.globalRoles).values({ userId: admin2, role: "admin" });
+      }
+    } finally {
+      await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.userId, pm));
+    }
+  });
+
+  it("rolls back a household when the combined staff grant cannot be written", async () => {
+    const target = await combinedRecipient();
+    const invite = await personal("8", target.email, admin, { role: "project_manager" });
+    await fixture.client.unsafe(`
+      CREATE FUNCTION skip_combined_grant_fixture() RETURNS trigger LANGUAGE plpgsql AS
+      $$ BEGIN RETURN NULL; END $$;
+      CREATE TRIGGER skip_combined_grant_fixture BEFORE INSERT ON staff_assignments
+      FOR EACH ROW WHEN (NEW.user_id = '${target.id}'::uuid)
+      EXECUTE FUNCTION skip_combined_grant_fixture();
+    `);
+    try {
+      const failed = await apply(invite.token, target.id, invite.apartmentId);
+      check(failed, 409);
+      expect(await failed.json()).toEqual({ error: "STAFF_GRANT_FAILED" });
+      expect((await storedInvitation(invite.id)).consumedAt).toBeNull();
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invite.apartmentId)),
+      ).toHaveLength(0);
+      expect(
+        await fixture.db
+          .select()
+          .from(s.userPersonLinks)
+          .where(eq(s.userPersonLinks.userId, target.id)),
+      ).toHaveLength(0);
+      expect((await listJoinRequests(fixture.db, target.id, null)).requests).toHaveLength(0);
+    } finally {
+      await fixture.client.unsafe(`DROP TRIGGER skip_combined_grant_fixture ON staff_assignments;
+        DROP FUNCTION skip_combined_grant_fixture();`);
+    }
+    await fixture.db
+      .insert(s.staffAssignments)
+      .values({ userId: target.id, projectId: a, role: "project_manager" });
+    check(await apply(invite.token, target.id, invite.apartmentId), 201);
+    const other = await combinedRecipient();
+    const occupied = await personal("8", other.email, admin, { role: "project_manager" });
+    const conflict = await apply(occupied.token, other.id, occupied.apartmentId);
+    check(conflict, 409);
+    expect(await conflict.json()).toEqual({ error: "APARTMENT_OCCUPIED" });
+    expect((await storedInvitation(occupied.id)).consumedAt).toBeNull();
+    expect(
+      await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.userId, other.id)),
+    ).toHaveLength(0);
   });
 });

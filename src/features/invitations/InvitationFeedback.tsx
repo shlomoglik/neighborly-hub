@@ -9,6 +9,7 @@ export const invitationErrorKey = (code: string): TKey =>
     ({
       ALREADY_ASSIGNED: "staffAlreadyHasRole",
       INVITE_EMAIL_REQUIRED: "inviteStaffEmailRequired",
+      STAFF_GRANT_FAILED: "inviteCombinedFailed",
       APARTMENT_OCCUPIED: "inviteOccupied",
       IDENTITY_UNAVAILABLE: "inviteIdentityUnavailable",
       REQUEST_REVIEWED: "inviteReviewed",

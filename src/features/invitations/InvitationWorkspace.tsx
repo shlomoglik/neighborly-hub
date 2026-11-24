@@ -12,6 +12,7 @@ import type { ManagementHierarchy } from "@/lib/access/management-contracts";
 import {
   invitationInput,
   type InvitationInput,
+  type CombinedStaff,
   type InvitationPage,
   type RequestPage,
 } from "@/lib/access/invitation-contracts";
@@ -36,6 +37,7 @@ export type InvitationWorkspaceProps = {
     email: string;
     kind: InvitationInput["kind"];
     buildingId: string | null;
+    combined?: boolean;
   } | null;
   contacts?: { name: string; phone: string }[];
   onInspectRecipient: (input: StaffInput, signal: AbortSignal) => Promise<StaffRecipient>;
@@ -60,6 +62,8 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
   const [kind, setKind] = useState<InvitationInput["kind"]>("resident");
   const [buildingId, setBuilding] = useState("");
   const [apartmentId, setApartment] = useState("");
+  const [staffRole, setStaffRole] = useState<CombinedStaff["role"] | "">("");
+  const [staffBuildingId, setStaffBuilding] = useState("");
   const [email, setEmail] = useState("");
   const [days, setDays] = useState(7);
   const [revoke, setRevoke] = useState<string | null>(null);
@@ -69,14 +73,31 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
       setEmail("");
       setBuilding("");
       setApartment("");
+      setStaffRole("");
+      setStaffBuilding("");
     }
   }, [p.status]);
   const hierarchy = p.data?.hierarchy;
   const selected = hierarchy?.buildings.find((b) => b.id === buildingId);
+  const selectedApartment = selected?.floors
+    .flatMap((floor) => floor.apartments)
+    .find((unit) => unit.id === apartmentId);
+  const canCombine =
+    kind === "resident" &&
+    !!p.data?.invitations.canInviteStaff &&
+    !!selectedApartment &&
+    (!selectedApartment.type || selectedApartment.type === "residential");
+  const staff =
+    staffRole === "project_manager"
+      ? { role: staffRole }
+      : staffRole === "building_manager"
+        ? { role: staffRole, buildingId: staffBuildingId }
+        : undefined;
   const input = invitationInput.safeParse({
     kind,
     ...(kind !== "project_manager" ? { buildingId } : {}),
     ...(kind === "resident" ? { apartmentId: apartmentId || null } : {}),
+    ...(staff ? { staff } : {}),
     ...(email.trim() ? { recipientEmail: email } : {}),
     expiresInDays: days,
   });
@@ -95,11 +116,15 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
     (kind === "resident" || (!!recipient.data && recipient.data.role !== "assigned")) &&
     (kind === "project_manager" ? !!p.data?.invitations.canInviteStaff : !!selected) &&
     (kind === "resident" || p.data?.invitations.canInviteStaff) &&
-    (!apartmentId || selected?.floors.some((f) => f.apartments.some((a) => a.id === apartmentId)));
+    (!apartmentId || !!selectedApartment) &&
+    (!staff ||
+      (canCombine &&
+        (staff.role !== "building_manager" ||
+          hierarchy?.buildings.some((b) => b.id === staffBuildingId))));
   const shareAllowed =
     !!p.created &&
     !!p.data &&
-    (p.created.kind === "resident"
+    (p.created.kind === "resident" && !p.created.combined
       ? p.data.hierarchy.buildings.some((b) => b.id === p.created!.buildingId)
       : p.data.invitations.canInviteStaff);
   return (
@@ -170,6 +195,8 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                         onChange={(e) => {
                           setKind(e.target.value as InvitationInput["kind"]);
                           setApartment("");
+                          setStaffRole("");
+                          setStaffBuilding("");
                         }}
                       >
                         <option value="resident">{t("inviteResident")}</option>
@@ -191,6 +218,8 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                           onChange={(e) => {
                             setBuilding(e.target.value);
                             setApartment("");
+                            setStaffRole("");
+                            setStaffBuilding("");
                           }}
                         >
                           <option value="">{t("filterBuilding")}</option>
@@ -208,7 +237,11 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                         <select
                           className="min-h-11 w-full rounded-xl border bg-card px-3"
                           value={apartmentId}
-                          onChange={(e) => setApartment(e.target.value)}
+                          onChange={(e) => {
+                            setApartment(e.target.value);
+                            setStaffRole("");
+                            setStaffBuilding("");
+                          }}
                         >
                           <option value="">{t("inviteWholeBuilding")}</option>
                           {selected?.floors.flatMap((f) =>
@@ -221,10 +254,54 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                         </select>
                       </label>
                     )}
+                    {canCombine && (
+                      <label className="block space-y-2">
+                        <span>{t("inviteAdditionalStaff")}</span>
+                        <select
+                          className="min-h-11 w-full rounded-xl border bg-card px-3"
+                          value={staffRole}
+                          onChange={(e) => {
+                            setStaffRole(e.target.value as typeof staffRole);
+                            setStaffBuilding(buildingId);
+                          }}
+                        >
+                          <option value="">{t("inviteResidentOnly")}</option>
+                          <option value="building_manager">{t("building_manager")}</option>
+                          <option value="project_manager">{t("project_manager")}</option>
+                        </select>
+                      </label>
+                    )}
+                    {canCombine && staffRole === "building_manager" && (
+                      <label className="block space-y-2">
+                        <span>{t("inviteStaffBuilding")}</span>
+                        <select
+                          className="min-h-11 w-full rounded-xl border bg-card px-3"
+                          value={staffBuildingId}
+                          onChange={(e) => setStaffBuilding(e.target.value)}
+                        >
+                          {hierarchy!.buildings.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {canCombine && staff && (
+                      <p className="text-sm">
+                        <bdi>{hierarchy?.name}</bdi> · <bdi>{selected?.name}</bdi> ·{" "}
+                        {t("apartment")} <bdi>{selectedApartment?.number}</bdi> + {t(staff.role)}{" "}
+                        <bdi>
+                          {staff.role === "building_manager"
+                            ? hierarchy?.buildings.find((b) => b.id === staff.buildingId)?.name
+                            : hierarchy?.name}
+                        </bdi>
+                      </p>
+                    )}
                     <label className="block space-y-2">
                       <span>{t("inviteRecipientEmail")}</span>
                       <Input
-                        required={kind !== "resident"}
+                        required={kind !== "resident" || !!staff}
                         type="email"
                         maxLength={254}
                         dir="ltr"
@@ -331,6 +408,20 @@ export function InvitationWorkspace(p: InvitationWorkspaceProps) {
                         hierarchy!.name}
                     </bdi>
                   </p>
+                  {i.staff && (
+                    <p>
+                      {t("apartment")}{" "}
+                      <bdi>
+                        {
+                          hierarchy?.buildings
+                            .find((b) => b.id === i.buildingId)
+                            ?.floors.flatMap((f) => f.apartments)
+                            .find((a) => a.id === i.apartmentId)?.number
+                        }
+                      </bdi>{" "}
+                      + {t(i.staff.role)} · <bdi>{i.staff.buildingName ?? hierarchy?.name}</bdi>
+                    </p>
+                  )}
                   <p>
                     <bdi>{i.recipientEmail}</bdi>
                   </p>

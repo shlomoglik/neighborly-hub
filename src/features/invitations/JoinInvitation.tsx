@@ -2,6 +2,7 @@
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useState } from "react";
 import Link from "next/link";
+import { managementHref } from "@/lib/access/management-contracts";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,11 @@ export function JoinInvitation(p: JoinInvitationProps) {
               {t("floor")} <bdi>{fixed.floor}</bdi> · {t("apartment")} <bdi>{fixed.number}</bdi>
             </p>
           )}
+          {data.staff && (
+            <p>
+              {t(data.staff.role)} · <bdi>{data.staff.buildingName ?? data.projectName}</bdi>
+            </p>
+          )}
           {data.request ? (
             <div className="space-y-3">
               <p role="status">
@@ -89,6 +95,14 @@ export function JoinInvitation(p: JoinInvitationProps) {
                 kind={data.kind}
                 active={data.active}
               />
+              {data.staff && data.projectId && data.request.status === "approved" && (
+                <Link
+                  href={managementHref(data.projectId)}
+                  className="block text-primary underline"
+                >
+                  {t("openProjectManagement")}
+                </Link>
+              )}
               <Link href="/account#join-requests" className="text-primary underline">
                 {t("inviteMyRequests")}
               </Link>
@@ -104,7 +118,11 @@ export function JoinInvitation(p: JoinInvitationProps) {
                   await p.onSubmit(input.data);
               }}
             >
-              <p>{t(direct ? "joinPersonalHint" : "inviteJoinHint")}</p>
+              <p>
+                {t(
+                  data.staff ? "joinCombinedHint" : direct ? "joinPersonalHint" : "inviteJoinHint",
+                )}
+              </p>
               {data.kind === "resident" && !direct && <p>{t("joinFirstResident")}</p>}
               {(data.kind === "resident" || data.kind === "household_member") && (
                 <aside
@@ -186,7 +204,13 @@ export function JoinInvitation(p: JoinInvitationProps) {
                   </>
                 )}
                 <Button type="submit" loading={p.busy} disabled={!valid || !!p.error}>
-                  {t(direct ? "joinPersonalAccept" : "inviteSubmit")}
+                  {t(
+                    data.staff
+                      ? "joinCombinedAccept"
+                      : direct
+                        ? "joinPersonalAccept"
+                        : "inviteSubmit",
+                  )}
                 </Button>
               </fieldset>
               {data.kind === "resident" && !data.fixedApartmentId && (
