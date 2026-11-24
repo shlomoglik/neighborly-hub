@@ -206,7 +206,7 @@ try {
     },
   );
   await check(
-    "desktop: issue a restricted resident invitation with local QR and share links",
+    "desktop: issue a recipient-bound building invitation with local QR and share links",
     async () => {
       await adminPage.bringToFront();
       // The create action opens a bottom sheet on mobile and a centered desktop dialog.
@@ -235,11 +235,6 @@ try {
         .locator("select")
         .selectOption({ label: "Pilot A" });
       await adminPage
-        .locator("label")
-        .filter({ has: adminPage.getByText(t.apartment, { exact: true }) })
-        .locator("select")
-        .selectOption({ label: `${t.floor} 0 · ${t.apartment} 1` });
-      await adminPage
         .getByLabel(t.inviteRecipientEmail, { exact: true })
         .fill(identities.resident.email);
       residentLink = await createLink(adminPage);
@@ -251,6 +246,9 @@ try {
     "mobile: claim invitation and remain unauthorized until manager approval",
     async () => {
       await residentPage.goto(residentLink);
+      await residentPage
+        .locator("select")
+        .selectOption({ label: `${t.floor} 0 · ${t.apartment} 1` });
       await residentPage.getByLabel(t.fullName, { exact: true }).fill("Pilot Resident");
       await residentPage.getByLabel(t.familyName, { exact: true }).fill("Pilot Household");
       await button(residentPage, "inviteSubmit").click();
@@ -357,6 +355,46 @@ try {
         ).status(),
         403,
       );
+    },
+  );
+  await check(
+    "mobile: accept a personal apartment invitation and reload the approved result",
+    async () => {
+      await adminPage.bringToFront();
+      await button(adminPage, "inviteCreate").click();
+      const dialog = adminPage.getByRole("dialog", { name: t.inviteCreate, exact: true });
+      await dialog
+        .locator("label")
+        .filter({ has: adminPage.getByText(t.building, { exact: true }) })
+        .locator("select")
+        .selectOption({ label: "Pilot A" });
+      await dialog
+        .locator("label")
+        .filter({ has: adminPage.getByText(t.apartment, { exact: true }) })
+        .locator("select")
+        .selectOption({ label: `${t.floor} 0 · ${t.apartment} 2` });
+      await dialog
+        .getByLabel(t.inviteRecipientEmail, { exact: true })
+        .fill(identities.outsider.email);
+      const personalLink = await createLink(adminPage);
+      const outsider = passwordContexts.outsider;
+      const page = await outsider.newPage();
+      await page.bringToFront();
+      await page.goto(personalLink);
+      await page.getByText(t.joinPersonalNotice, { exact: true }).waitFor();
+      const before = await (await outsider.request.get(`${origin}/api/households`)).json();
+      assert.deepEqual(before.households, []);
+      await page.getByLabel(t.fullName, { exact: true }).fill("Pilot Apartment Resident");
+      await page.getByLabel(t.familyName, { exact: true }).fill("Pilot Apartment Household");
+      await button(page, "joinPersonalAccept").click();
+      await page.getByText(t.inviteApproved, { exact: true }).waitFor();
+      await page.reload();
+      await page.getByText(t.inviteApproved, { exact: true }).waitFor();
+      await page.getByRole("link", { name: t.homeMyContacts, exact: true }).waitFor();
+      await page.getByRole("link", { name: t.openBook, exact: true }).waitFor();
+      const after = await (await outsider.request.get(`${origin}/api/households`)).json();
+      assert.equal(after.households.length, 1);
+      assert.notEqual(after.households[0].id, householdId);
     },
   );
   await check("no browser runtime errors in the full desktop/mobile journey", async () => {
