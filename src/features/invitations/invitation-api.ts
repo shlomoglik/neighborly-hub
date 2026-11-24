@@ -5,6 +5,7 @@ import type {
   RequestPage,
   JoinContext,
   JoinInput,
+  JoinResult,
 } from "@/lib/access/invitation-contracts";
 import { PrivateRequestError, privateRequest as read } from "@/features/shared/private-api";
 export { PrivateRequestError as InvitationRequestError };
@@ -33,7 +34,7 @@ export const invitationApi = {
   context: (token: string, page: number, signal: AbortSignal) =>
     read<JoinContext>(`/api/join/${encodeURIComponent(token)}?page=${page}`, signal),
   submit: (token: string, input: JoinInput, signal: AbortSignal) =>
-    read(`/api/join/${encodeURIComponent(token)}`, signal, "POST", input),
+    read<JoinResult>(`/api/join/${encodeURIComponent(token)}`, signal, "POST", input),
   mine: (page: number, signal: AbortSignal) =>
     read<RequestPage>(`/api/join/requests?page=${page}`, signal),
 };

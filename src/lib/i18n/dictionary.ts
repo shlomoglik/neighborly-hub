@@ -674,6 +674,26 @@ export const dict = {
     en: "By submitting, you agree to appear in the directory as part of joining the community. You cannot hide your basic identity while keeping access to others. Directory access starts only after your request is approved.",
     ru: "Подавая заявку, вы соглашаетесь появиться в справочнике как участник сообщества. Нельзя скрыть основные данные о себе, сохранив доступ к другим. Доступ откроется только после одобрения заявки.",
   },
+  joinPersonalHint: {
+    he: "זו הזמנה אישית לחשבון שלכם. אם הדירה פנויה, קבלת ההזמנה תיצור מיד משק בית ותפתח גישה לספר השכנים.",
+    en: "This invitation is for your account. If the apartment is vacant, accepting creates your household and opens the directory immediately.",
+    ru: "Это приглашение для вашего аккаунта. Если квартира свободна, принятие сразу создаст ваше домохозяйство и откроет доступ к справочнику.",
+  },
+  joinPersonalNotice: {
+    he: "בקבלת ההזמנה אתם מסכימים להופיע בספר כחלק מההצטרפות לקהילה. הגישה לספר כוללת חשיפה של פרטי הזהות הבסיסיים שלכם לפי הגדרות הקהילה.",
+    en: "By accepting, you agree to appear in the directory as part of joining the community. Directory access includes sharing your basic identity according to community settings.",
+    ru: "Принимая приглашение, вы соглашаетесь появиться в справочнике как участник сообщества. Доступ к справочнику подразумевает видимость ваших основных данных по настройкам сообщества.",
+  },
+  joinPersonalAccept: {
+    he: "קבלת ההזמנה ויצירת משק בית",
+    en: "Accept invitation and create household",
+    ru: "Принять приглашение и создать домохозяйство",
+  },
+  joinPersonalOccupied: {
+    he: "כבר קיים משק בית פעיל בדירה. פנו לנציג משק הבית כדי לקבל הזמנת הצטרפות, או לשולח ההזמנה כדי לבדוק את פרטי הדירה.",
+    en: "This apartment already has an active household. Ask its representative for a household-member invitation, or contact the sender to check the apartment details.",
+    ru: "В квартире уже есть активное домохозяйство. Попросите его представителя пригласить вас как участника или уточните данные квартиры у отправителя.",
+  },
   inviteApprove: { he: "אישור בקשה", en: "Approve request", ru: "Одобрить заявку" },
   inviteReject: { he: "דחיית בקשה", en: "Reject request", ru: "Отклонить заявку" },
   inviteReviewConfirm: {

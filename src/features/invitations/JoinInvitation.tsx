@@ -25,6 +25,8 @@ export function JoinInvitation(p: JoinInvitationProps) {
   const [family, setFamily] = useState("");
   const [apartmentId, setApartment] = useState("");
   const data = p.data;
+  const direct = data?.acceptancePolicy === "direct_acceptance";
+  const fixed = direct ? data.apartments[0] : undefined;
   const selected = data?.fixedApartmentId ?? apartmentId;
   const input = joinInput.safeParse(
     data?.kind === "resident"
@@ -45,7 +47,13 @@ export function JoinInvitation(p: JoinInvitationProps) {
       {p.status === "unavailable" && <p>{t("joinInactiveNext")}</p>}
       {p.error && (
         <div role="alert" className="space-y-2">
-          <p>{t(invitationErrorKey(p.error))}</p>
+          <p>
+            {t(
+              direct && p.error === "APARTMENT_OCCUPIED"
+                ? "joinPersonalOccupied"
+                : invitationErrorKey(p.error),
+            )}
+          </p>
           <div className="flex justify-end">
             <RefreshButton disabled={p.busy} onClick={p.onRefresh} label={t("refreshManagement")} />
           </div>
@@ -60,6 +68,11 @@ export function JoinInvitation(p: JoinInvitationProps) {
             <bdi>{data.buildingName}</bdi> ·{" "}
             {t(data.kind === "resident" ? "inviteResident" : data.kind)}
           </p>
+          {fixed && (
+            <p>
+              {t("floor")} <bdi>{fixed.floor}</bdi> · {t("apartment")} <bdi>{fixed.number}</bdi>
+            </p>
+          )}
           {data.request ? (
             <div className="space-y-3">
               <p role="status">
@@ -91,8 +104,8 @@ export function JoinInvitation(p: JoinInvitationProps) {
                   await p.onSubmit(input.data);
               }}
             >
-              <p>{t("inviteJoinHint")}</p>
-              {data.kind === "resident" && <p>{t("joinFirstResident")}</p>}
+              <p>{t(direct ? "joinPersonalHint" : "inviteJoinHint")}</p>
+              {data.kind === "resident" && !direct && <p>{t("joinFirstResident")}</p>}
               {(data.kind === "resident" || data.kind === "household_member") && (
                 <aside
                   aria-labelledby="join-participation"
@@ -104,7 +117,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
                   <p>{t("joinListingScope")}</p>
                   <p>{t("joinContactPrivacy")}</p>
                   <p>{t("joinChildrenPrivacy")}</p>
-                  <p>{t("joinParticipationNotice")}</p>
+                  <p>{t(direct ? "joinPersonalNotice" : "joinParticipationNotice")}</p>
                 </aside>
               )}
               <fieldset className="space-y-3" disabled={p.busy || !data.active}>
@@ -131,23 +144,25 @@ export function JoinInvitation(p: JoinInvitationProps) {
                 )}
                 {data.kind === "resident" && (
                   <>
-                    <label className="block space-y-2">
-                      <span>{t("apartment")}</span>
-                      <select
-                        className="min-h-11 w-full rounded-xl border bg-card px-3"
-                        required
-                        value={selected}
-                        disabled={!!data.fixedApartmentId}
-                        onChange={(e) => setApartment(e.target.value)}
-                      >
-                        <option value="">{t("inviteChooseApartment")}</option>
-                        {data.apartments.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {t("floor")} {a.floor} · {t("apartment")} {a.number}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {!direct && (
+                      <label className="block space-y-2">
+                        <span>{t("apartment")}</span>
+                        <select
+                          className="min-h-11 w-full rounded-xl border bg-card px-3"
+                          required
+                          value={selected}
+                          disabled={!!data.fixedApartmentId}
+                          onChange={(e) => setApartment(e.target.value)}
+                        >
+                          <option value="">{t("inviteChooseApartment")}</option>
+                          {data.apartments.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {t("floor")} {a.floor} · {t("apartment")} {a.number}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <label className="block space-y-2">
                       <span>{t("fullName")}</span>
                       <Input
@@ -171,7 +186,7 @@ export function JoinInvitation(p: JoinInvitationProps) {
                   </>
                 )}
                 <Button type="submit" loading={p.busy} disabled={!valid || !!p.error}>
-                  {t("inviteSubmit")}
+                  {t(direct ? "joinPersonalAccept" : "inviteSubmit")}
                 </Button>
               </fieldset>
               {data.kind === "resident" && !data.fixedApartmentId && (

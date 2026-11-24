@@ -121,7 +121,14 @@ export const ExpiredSession: Story = { args: { status: "expired" } };
 export const NetworkError: Story = { args: { status: "error" } };
 export const ResidentJoin: Story = { render: () => <JoinExample /> };
 export const PendingRequest: Story = { render: () => <JoinExample pending /> };
-function JoinExample({ pending = false }: { pending?: boolean }) {
+export const PersonalApartmentAcceptance: Story = { render: () => <JoinExample personal /> };
+function JoinExample({
+  pending = false,
+  personal = false,
+}: {
+  pending?: boolean;
+  personal?: boolean;
+}) {
   const { t } = useI18n();
   return (
     <JoinInvitation
@@ -129,6 +136,7 @@ function JoinExample({ pending = false }: { pending?: boolean }) {
       busy={false}
       error={null}
       data={{
+        acceptancePolicy: personal ? "direct_acceptance" : "manual_review",
         projectName: t("demoProject"),
         buildingName: t("demoBuilding"),
         kind: "resident",
