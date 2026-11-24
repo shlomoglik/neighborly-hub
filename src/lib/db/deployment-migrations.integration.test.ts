@@ -35,6 +35,59 @@ describe.skipIf(!url)("deployment migration runner against real PostgreSQL", () 
     const [row] = await sql`select count(*)::int as count from neighborly_migrations.history`;
     expect(row.count).toBe(migrations.length);
   });
+  it("preserves a pending personal apartment request when adding direct acceptance", async () => {
+    const migrations = await loadMigrations();
+    await runMigrations(
+      sql,
+      migrations.filter((m) => m.name < "0012"),
+    );
+    const [issuer, recipient] = await sql`
+      insert into app_users(email) values ('issuer@example.test'), ('recipient@example.test')
+      returning id
+    `;
+    const [project] = await sql`insert into projects(name) values ('Upgrade fixture') returning id`;
+    const [building] = await sql`
+      insert into buildings(project_id, name) values (${project.id}, 'A') returning id
+    `;
+    const [floor] = await sql`
+      insert into floors(building_id, number) values (${building.id}, 0) returning id
+    `;
+    const [apartment] = await sql`
+      insert into apartments(building_id, floor_id, number)
+      values (${building.id}, ${floor.id}, '1') returning id
+    `;
+    const [invite] = await sql`
+      insert into invitations(kind, project_id, building_id, apartment_id, recipient_email,
+        recipient_user_id, token_hash, created_by, expires_at, consumed_at)
+      values ('resident', ${project.id}, ${building.id}, ${apartment.id}, 'recipient@example.test',
+        ${recipient.id}, ${"a".repeat(64)}, ${issuer.id}, now() + interval '1 day', now())
+      returning id
+    `;
+    const [request] = await sql`
+      insert into join_requests(invitation_id, user_id, apartment_id, full_name, household_name)
+      values (${invite.id}, ${recipient.id}, ${apartment.id}, 'Resident', 'Household')
+      returning id
+    `;
+
+    await runMigrations(sql, migrations);
+
+    const [saved] = await sql`
+      select acceptance_policy, status, authorized_by, accepted_at
+      from invitations join join_requests on invitations.id = invitation_id
+      where join_requests.id = ${request.id}
+    `;
+    expect(saved).toEqual({
+      acceptance_policy: "manual_review",
+      status: "pending",
+      authorized_by: null,
+      accepted_at: null,
+    });
+    const [review] = await sql`
+      update join_requests set status = 'approved', reviewed_by = ${issuer.id}, reviewed_at = now()
+      where id = ${request.id} returning reviewed_by
+    `;
+    expect(review.reviewed_by).toBe(issuer.id);
+  });
   it("rolls back DDL and history together and allows a corrected pending migration", async () => {
     const migrations = await loadMigrations();
     await runMigrations(sql, migrations);
