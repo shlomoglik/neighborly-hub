@@ -85,7 +85,10 @@ export type InvitationPage = {
   canInviteStaff: boolean;
 };
 export type RequestPage = { requests: RequestItem[]; page: number; hasNext: boolean };
+export type InvitationAcceptancePolicy = "manual_review" | "direct_acceptance";
+export type JoinResult = { id: string; status: RequestItem["status"] };
 export type JoinContext = {
+  acceptancePolicy: InvitationAcceptancePolicy;
   projectName: string;
   kind: InvitationKind;
   buildingName: string | null;
@@ -93,7 +96,7 @@ export type JoinContext = {
   apartments: { id: string; number: string; floor: number }[];
   page: number;
   hasNext: boolean;
-  request: { id: string; status: RequestItem["status"] } | null;
+  request: JoinResult | null;
   active: boolean;
 };
 export const invitationAdminHref = (id: string) => `/manage/invitations/${encodeURIComponent(id)}`;

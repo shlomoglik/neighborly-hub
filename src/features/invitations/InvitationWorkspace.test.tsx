@@ -120,6 +120,7 @@ function join(overrides: Partial<JoinInvitationProps> = {}, lang: Lang = "en") {
     busy: false,
     error: null,
     data: {
+      acceptancePolicy: "manual_review",
       projectName: "Saved project",
       buildingName: "Scoped building",
       fixedApartmentId: apartmentId,
@@ -395,6 +396,52 @@ it.each(["he", "en", "ru"] as const)(
       ).toBeTruthy();
       expect(screen.queryByRole("checkbox")).toBeNull();
     }
+  },
+);
+it.each(["he", "en", "ru"] as const)(
+  "shows a fixed personal destination and requires explicit acceptance in %s",
+  async (lang) => {
+    const base = join({}, lang);
+    cleanup();
+    const data = { ...base.data!, acceptancePolicy: "direct_acceptance" as const };
+    const { onSubmit } = join({ data }, lang);
+    const notice = screen.getByRole("complementary", {
+      name: translate(lang, "joinParticipation"),
+    });
+    expect(within(notice).getByText(translate(lang, "joinPersonalNotice"))).toBeTruthy();
+    expect(within(notice).getByText(translate(lang, "joinContactPrivacy"))).toBeTruthy();
+    expect(screen.getByText("2", { selector: "bdi" })).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(translate(lang, "fullName")), {
+      target: { value: "Dana Resident" },
+    });
+    fireEvent.change(screen.getByLabelText(translate(lang, "familyName")), {
+      target: { value: "Dana's household" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "joinPersonalAccept") }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      apartmentId,
+      fullName: "Dana Resident",
+      householdName: "Dana's household",
+    });
+
+    cleanup();
+    join({ data, error: "APARTMENT_OCCUPIED" }, lang);
+    expect(screen.getByText(translate(lang, "joinPersonalOccupied"))).toBeTruthy();
+
+    cleanup();
+    join({ data: { ...data, request: { id: "saved", status: "approved" } } }, lang);
+    expect(screen.getByRole("status").textContent).toBe(translate(lang, "inviteApproved"));
+    expect(
+      screen.getByRole("link", { name: translate(lang, "openBook") }).getAttribute("href"),
+    ).toBe("/directory");
+    expect(
+      screen.getByRole("link", { name: translate(lang, "homeMyContacts") }).getAttribute("href"),
+    ).toBe("/household");
+    expect(
+      screen.queryByRole("button", { name: translate(lang, "joinPersonalAccept") }),
+    ).toBeNull();
   },
 );
 it.each(["ready", "unavailable"] as const)(
