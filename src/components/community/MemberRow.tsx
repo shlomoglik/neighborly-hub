@@ -5,6 +5,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import type { Visibility } from "./VisibilitySelector";
 import { ContactAction } from "./ContactAction";
+import { ContactCard, ContactCardDetails } from "./ContactCard";
 // Values must already be authorized by the caller. Hidden contacts never carry a value.
 export type ContactView = { kind: "phone" | "email" | "whatsapp" } & (
   { visible: false; value?: never } | { visible: true; value: string; visibility?: Visibility }
@@ -45,27 +46,15 @@ export function MemberRow({
           {member.relation && <bdi>{member.relation}</bdi>}
           {member.birthdayLabel && <bdi>{member.birthdayLabel}</bdi>}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {member.contacts.map((c, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2">
-              {c.visible && (
-                <bdi dir="ltr" className="break-all text-sm tabular-nums">
-                  {c.value}
-                </bdi>
+        <div className="min-w-0 space-y-2">
+          {member.contacts.map((contact, index) => (
+            <ContactCard key={index}>
+              {contact.visible ? (
+                <ContactCardDetails {...contact} />
+              ) : (
+                <ContactAction kind={contact.kind} visible={false} />
               )}
-              {c.visible && c.visibility && (
-                <Badge variant="outline">
-                  {t(
-                    c.visibility === "admins"
-                      ? "vis_managers"
-                      : c.visibility === "building"
-                        ? "vis_building"
-                        : "vis_project",
-                  )}
-                </Badge>
-              )}
-              <ContactAction {...c} />
-            </div>
+            </ContactCard>
           ))}
         </div>
       </div>
