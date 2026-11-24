@@ -61,6 +61,36 @@ the accepting account in `user_id`, and the time in `accepted_at`. Its review
 fields are empty. Manual decisions continue to record `reviewed_by` and
 `reviewed_at`.
 
+## Combined apartment and staff invitations
+
+A global admin can add one staff role when issuing a personal invitation for a
+fixed residential apartment. A project manager covers the whole project.
+A building committee role requires an explicit building in the same project,
+which may differ from the apartment's building. The issuer and recipient see
+both destinations before issuance or acceptance. Scoped managers cannot list,
+issue, renew or revoke combined invitations.
+
+The existing resident creation body accepts optional `staff` as
+`{ role: "project_manager" }` or
+`{ role: "building_manager", buildingId }`. This requires `recipientEmail`
+and a fixed residential apartment. The acceptance payload remains the ordinary
+resident payload. The server takes the staff role and scope from the invitation
+rather than the browser. Context, listings, and request history include the
+requested staff scope. Acceptance and its retries return the same approved
+request ID and staff scope.
+
+Both grants commit together with direct acceptance and link consumption.
+Existing coverage is reused. A project-manager upgrade replaces narrower
+building grants. The persisted invitation records the staff scope. The accepted
+request records the issuer, recipient, and acceptance timestamp for both
+memberships. A conflict or failed staff write rolls back the household and
+keeps the invitation unconsumed. Renewal requires an authorized global admin
+and preserves both scopes. Revocation blocks future acceptance. Staff removal
+uses the existing management flow and leaves the household membership intact.
+
+Migration 0013 adds optional staff scope columns. Older invitations default to
+having no additional staff role. Standalone staff invitations retain manual review.
+
 ## HTTP contracts
 
 All endpoints require a verified database session, return `Cache-Control: private, no-store`, `Vary: Cookie`, and `Referrer-Policy: no-referrer`. Anonymous requests receive 401; invalid/missing/unauthorized detail identifiers share generic 404. Writes require exact configured Origin and a bounded JSON body (4096 bytes). Unexpected errors return a generic 500. Typed input schemas reject extra identity/role parameters. Pages are 1–10000 with 20 items and `hasNext`, following repository conventions.

@@ -10,8 +10,8 @@ import { deploymentBuild, deploymentFailureMessage } from "../../../scripts/verc
 
 it("loads the authoritative SQL migrations and preserves function bodies", async () => {
   const migrations = await loadMigrations();
-  expect(migrations).toHaveLength(12);
-  expect(migrations.at(-1)?.name).toBe("0012_personal_apartment_acceptance.sql");
+  expect(migrations).toHaveLength(13);
+  expect(migrations.at(-1)?.name).toBe("0013_combined_apartment_invitations.sql");
   expect(migrations[1].body).toContain("BEGIN\n");
   expect(migrations[0].checksum).toMatch(/^[a-f0-9]{64}$/);
 });

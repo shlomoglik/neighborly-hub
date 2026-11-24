@@ -432,6 +432,8 @@ export const invitations = pgTable(
     acceptancePolicy: text("acceptance_policy", { enum: ["manual_review", "direct_acceptance"] })
       .notNull()
       .default("manual_review"),
+    staffRole: text("staff_role", { enum: ["project_manager", "building_manager"] }),
+    staffBuildingId: uuid("staff_building_id"),
     recipientEmail: text("recipient_email"),
     recipientUserId: uuid("recipient_user_id").references(() => appUsers.id, {
       onDelete: "restrict",
@@ -446,6 +448,27 @@ export const invitations = pgTable(
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
   },
   (t) => [
+    foreignKey({
+      name: "invitations_staff_building_project_fk",
+      columns: [t.staffBuildingId, t.projectId],
+      foreignColumns: [buildings.id, buildings.projectId],
+    }).onDelete("cascade"),
+    index("invitations_staff_building_project_idx")
+      .on(t.staffBuildingId, t.projectId)
+      .where(sql`${t.staffBuildingId} IS NOT NULL`),
+    check(
+      "invitations_staff_scope_check",
+      sql`
+      (${t.staffRole} IS NULL AND ${t.staffBuildingId} IS NULL)
+      OR (
+        ${t.staffRole} IS NOT NULL AND ${t.kind} = 'resident'
+        AND ${t.acceptancePolicy} = 'direct_acceptance'
+        AND ${t.apartmentId} IS NOT NULL AND ${t.recipientEmail} IS NOT NULL
+        AND ((${t.staffRole} = 'project_manager' AND ${t.staffBuildingId} IS NULL)
+          OR (${t.staffRole} = 'building_manager' AND ${t.staffBuildingId} IS NOT NULL))
+      )
+    `,
+    ),
     index("invitations_scope_idx").on(t.projectId, t.buildingId, t.createdAt, t.id),
     check(
       "invitations_acceptance_policy_check",
