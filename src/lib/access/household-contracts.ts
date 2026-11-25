@@ -68,6 +68,15 @@ export const householdMutation = z.discriminatedUnion("action", [
 export const householdBodyLimit = 288 * 1024;
 export type ContactChange = z.input<typeof contactChange>;
 export type ContactFields = z.infer<typeof contactFields>;
+export function sameContact(
+  a: { kind: string; value: string; label: string | null; visibility: string },
+  b: ContactFields,
+) {
+  return (
+    a.kind === b.kind && a.value === b.value && a.label === b.label && a.visibility === b.visibility
+  );
+}
+
 export type SavedContact = { id: string } & ContactFields;
 export type HouseholdMutation = z.infer<typeof householdMutation>;
 export type HouseholdSummary = {

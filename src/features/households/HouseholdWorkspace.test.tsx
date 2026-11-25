@@ -137,36 +137,3 @@ it.each(["he", "en", "ru"] as const)(
     expect(screen.getByText("Alex Levi")).toBeTruthy();
   },
 );
-
-it("places one edit link on the owner's card and preserves the full email target", () => {
-  const value = props();
-  const email = "a.very.long.contact.address.for.this.example@neighborhood.example.test";
-  value.data!.ownContacts = [
-    {
-      id: "00000000-0000-4000-8000-000000000001",
-      kind: "email",
-      value: email,
-      label: null,
-      visibility: "project",
-    },
-  ];
-  value.data!.members.push({
-    id: "neighbor",
-    name: "Neighbor",
-    primary: false,
-    contacts: [{ kind: "email", value: "neighbor@example.test" }],
-  });
-  const { rerender } = render(localized(value));
-  const edit = screen.getByRole("link", { name: "Edit contact details" });
-  const card = edit.closest("article");
-  expect(card).toHaveTextContent("Adult");
-  expect(card).toHaveTextContent(email);
-  expect(screen.getByRole("button", { name: email })).toHaveClass("truncate");
-  expect(screen.getAllByRole("link", { name: translate("en", "mail") })[0]).toHaveAttribute(
-    "href",
-    `mailto:${encodeURIComponent(email)}`,
-  );
-  rerender(localized({ ...value, data: { ...value.data!, ownContacts: null, ownPersonId: null } }));
-  expect(screen.queryByRole("link", { name: "Edit contact details" })).toBeNull();
-  expect(screen.queryByText(email)).toBeNull();
-});

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { isLang, translate } from "@/lib/i18n/dictionary";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
+import { ContactEditorForm } from "./HouseholdContactEditor";
 
 const meta = {
   title: "Features/Households/HouseholdWorkspace",
@@ -121,3 +122,17 @@ export const LongContactOnMobile: Story = {
 };
 
 export const LongContactOnMobileLtr: Story = { ...LongContactOnMobile, globals: { locale: "en" } };
+
+export const BulkEdit: Story = {
+  render: () => (
+    <ContactEditorForm
+      contacts={[...meta.args.data.ownContacts, longContact]}
+      busy={false}
+      error={null}
+      backHref="/household/fictional-home"
+      onSave={async () => {}}
+      onRefresh={meta.args.onRefresh}
+      onClearError={meta.args.onRefresh}
+    />
+  ),
+};

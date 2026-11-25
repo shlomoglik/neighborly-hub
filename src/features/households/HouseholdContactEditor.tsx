@@ -5,18 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { usePrivateAction } from "@/features/shared/use-private-action";
 import {
   householdMutation,
+  sameContact,
   type ContactChange,
   type ContactFields,
   type HouseholdMutation,
@@ -40,12 +32,6 @@ const emptyContact: ContactFields = {
   label: null,
   visibility: "managers",
 };
-
-function sameContact(a: ContactFields, b: ContactFields) {
-  return (
-    a.kind === b.kind && a.value === b.value && a.label === b.label && a.visibility === b.visibility
-  );
-}
 
 function toDraft({ id, ...value }: SavedContact): ContactDraft {
   return { key: id, value, original: { id, ...value } };
@@ -128,14 +114,9 @@ export function ContactEditorForm({
 }) {
   const { t } = useI18n();
   const [drafts, setDrafts] = useState<ContactDraft[] | null>(() => contacts?.map(toDraft) ?? null);
-  const [pendingRemoval, setPendingRemoval] = useState<ContactDraft | null>(null);
   useEffect(() => {
-    if (contacts === null) {
-      setDrafts(null);
-      setPendingRemoval(null);
-    } else if (contacts && drafts === null) {
-      setDrafts(contacts.map(toDraft));
-    }
+    if (contacts === null) setDrafts(null);
+    else if (contacts && drafts === null) setDrafts(contacts.map(toDraft));
   }, [contacts, drafts]);
   if (!contacts || !drafts) return null;
 
@@ -149,115 +130,86 @@ export function ContactEditorForm({
       const saved = contacts[index];
       return original.id !== saved.id || !sameContact(original, saved);
     });
-  const activeCount = drafts.filter((draft) => !draft.removed).length;
-  const remove = (key: string) => {
+  const activeDrafts = drafts.filter((draft) => !draft.removed);
+  const remove = ({ key, original }: ContactDraft) => {
+    if (original && !window.confirm(t("homeDeleteHint"))) return;
     setDrafts(
-      (current) =>
-        current?.flatMap((draft) => {
-          if (draft.key !== key) return [draft];
-          return draft.original ? [{ ...draft, removed: true }] : [];
-        }) ?? null,
+      original
+        ? drafts.map((draft) => (draft.key === key ? { ...draft, removed: true } : draft))
+        : drafts.filter((draft) => draft.key !== key),
     );
-    onClearError();
+    if (!stale) onClearError();
   };
 
   return (
-    <>
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!disabled && !busy && !stale && input.success && input.data.action === "saveContacts")
-            void onSave(input.data);
-        }}
-      >
-        <fieldset disabled={busy} className="min-w-0 space-y-4">
-          <p className="text-sm text-muted-foreground">{t("homeGlobalContacts")}</p>
-          {activeCount === 0 && <p>{t("homeNoContacts")}</p>}
-          {drafts
-            .filter((draft) => !draft.removed)
-            .map((draft) => (
-              <ContactFieldsEditor
-                key={draft.key}
-                value={draft.value}
-                adding={!draft.original}
-                onChange={(patch) => {
-                  setDrafts(
-                    (current) =>
-                      current?.map((entry) =>
-                        entry.key === draft.key
-                          ? { ...entry, value: { ...entry.value, ...patch } }
-                          : entry,
-                      ) ?? null,
-                  );
-                  if (!stale) onClearError();
-                }}
-              >
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-label={
-                    draft.value.value
-                      ? t("homeDeleteContact", { value: draft.value.value })
-                      : undefined
-                  }
-                  onClick={() => (draft.original ? setPendingRemoval(draft) : remove(draft.key))}
-                >
-                  {t("delete")}
-                </Button>
-              </ContactFieldsEditor>
-            ))}
-          {(stale || error) && (
-            <p role="alert" className="text-sm text-destructive">
-              {t(stale ? "homeStale" : (failureMessages[error ?? ""] ?? "homeUncertain"))}
-            </p>
-          )}
-          {stale && (
-            <Button type="button" variant="outline" onClick={onRefresh}>
-              {t("refreshDirectory")}
-            </Button>
-          )}
-          <div className="flex flex-wrap gap-2">
+    <form
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!disabled && !busy && !stale && input.success && input.data.action === "saveContacts")
+          void onSave(input.data);
+      }}
+    >
+      <fieldset disabled={busy} className="min-w-0 space-y-4">
+        <p className="text-sm text-muted-foreground">{t("homeGlobalContacts")}</p>
+        {activeDrafts.length === 0 && <p>{t("homeNoContacts")}</p>}
+        {activeDrafts.map((draft) => (
+          <ContactFieldsEditor
+            key={draft.key}
+            value={draft.value}
+            adding={!draft.original}
+            onChange={(patch) => {
+              setDrafts(
+                drafts.map((entry) =>
+                  entry.key === draft.key
+                    ? { ...entry, value: { ...entry.value, ...patch } }
+                    : entry,
+                ),
+              );
+              if (!stale) onClearError();
+            }}
+          >
             <Button
               type="button"
               variant="outline"
-              disabled={activeCount >= 10}
-              onClick={() =>
-                setDrafts([...drafts, { key: crypto.randomUUID(), value: emptyContact }])
+              aria-label={
+                draft.value.value ? t("homeDeleteContact", { value: draft.value.value }) : undefined
               }
+              onClick={() => remove(draft)}
             >
-              {t("homeAddContact")}
-            </Button>
-            <Button type="submit" disabled={disabled || !input.success || stale}>
-              {t(busy ? "saving" : "save")}
-            </Button>
-            {busy ? (
-              <Button type="button" variant="outline" disabled>
-                {t("cancel")}
-              </Button>
-            ) : (
-              <Button variant="outline" asChild>
-                <Link href={backHref}>{t("cancel")}</Link>
-              </Button>
-            )}
-          </div>
-        </fieldset>
-      </form>
-      <AlertDialog
-        open={!!pendingRemoval}
-        onOpenChange={(open) => !open && setPendingRemoval(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogTitle>{t("homeDeleteTitle")}</AlertDialogTitle>
-          <AlertDialogDescription>{t("homeDeleteHint")}</AlertDialogDescription>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => pendingRemoval && remove(pendingRemoval.key)}>
               {t("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+            </Button>
+          </ContactFieldsEditor>
+        ))}
+        {(stale || error) && (
+          <p role="alert" className="text-sm text-destructive">
+            {t(stale ? "homeStale" : (failureMessages[error ?? ""] ?? "homeUncertain"))}
+          </p>
+        )}
+        {stale && (
+          <Button type="button" variant="outline" onClick={onRefresh}>
+            {t("refreshDirectory")}
+          </Button>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={activeDrafts.length >= 10}
+            onClick={() =>
+              setDrafts([...drafts, { key: crypto.randomUUID(), value: emptyContact }])
+            }
+          >
+            {t("homeAddContact")}
+          </Button>
+          <Button type="submit" disabled={disabled || !input.success || stale}>
+            {t(busy ? "saving" : "save")}
+          </Button>
+          <Button variant="outline" loading={busy} asChild>
+            <Link href={backHref}>{t("cancel")}</Link>
+          </Button>
+        </div>
+      </fieldset>
+    </form>
   );
 }

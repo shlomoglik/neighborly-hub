@@ -5,7 +5,9 @@ import * as s from "../../../drizzle/schema";
 import { loadGrants, scopeFor } from "./grants";
 import {
   householdMutation,
+  sameContact,
   type ContactChange,
+  type ContactFields,
   type HouseholdDetail,
   type HouseholdList,
   type HouseholdMutation,
@@ -231,13 +233,7 @@ export async function updateHousehold(
         .where(and(eq(s.contactMethods.id, input.id), eq(s.contactMethods.partyId, self.personId)))
         .for("update");
       if (!current) throw unavailable();
-      if (
-        current.kind !== input.expected.kind ||
-        current.value !== input.expected.value ||
-        current.label !== input.expected.label ||
-        current.visibility !== input.expected.visibility
-      )
-        throw new HouseholdError(409, "STALE_HOUSEHOLD");
+      if (!sameContact(current, input.expected)) throw new HouseholdError(409, "STALE_HOUSEHOLD");
       if (input.action === "deleteContact")
         await tx.delete(s.contactMethods).where(eq(s.contactMethods.id, current.id));
       else
@@ -262,43 +258,35 @@ async function saveContacts(
     .orderBy(s.contactMethods.id)
     .for("update");
   const previous = new Map(rows.map((row) => [row.id, row]));
-  const changed = new Set<string>();
-  const next = new Map(previous);
-  const additions = [];
+  const touched = new Set<string>();
+  const replaced = new Set<string>();
+  const additions: ContactFields[] = [];
+  const newValues: ContactFields[] = [];
+  let removed = 0;
+  const keyOf = ({ kind, value }: { kind: string; value: string }) => JSON.stringify([kind, value]);
   for (const change of changes) {
     if (change.action === "addContact") {
       additions.push(change.contact);
+      newValues.push(change.contact);
       continue;
     }
-    const { id, expected } = change;
-    const current = previous.get(id);
-    if (
-      !current ||
-      current.kind !== expected.kind ||
-      current.value !== expected.value ||
-      current.label !== expected.label ||
-      current.visibility !== expected.visibility
-    )
+    const current = previous.get(change.id);
+    if (!current || !sameContact(current, change.expected))
       throw new HouseholdError(409, "STALE_HOUSEHOLD");
-    if (changed.has(id)) throw new HouseholdError(400, "INVALID_INPUT");
-    changed.add(id);
-    if (change.action === "deleteContact") next.delete(id);
-    else next.set(id, { ...current, ...change.contact });
+    if (touched.has(change.id)) throw new HouseholdError(400, "INVALID_INPUT");
+    touched.add(change.id);
+    if (change.action === "deleteContact") {
+      replaced.add(change.id);
+      removed++;
+    } else if (keyOf(change.contact) !== keyOf(current)) {
+      replaced.add(change.id);
+      newValues.push(change.contact);
+    }
   }
 
-  if (additions.length && next.size + additions.length > 10)
+  if (additions.length && rows.length - removed + additions.length > 10)
     throw new HouseholdError(409, "CONTACT_LIMIT");
-  const keys = new Set<string>();
-  const keyOf = (contact: { kind: string; value: string }) =>
-    JSON.stringify([contact.kind, contact.value]);
-  for (const [id, current] of next) {
-    const original = previous.get(id)!;
-    if (keyOf(current) === keyOf(original)) keys.add(keyOf(current));
-  }
-  const newValues = [
-    ...additions,
-    ...[...next.values()].filter((row) => keyOf(row) !== keyOf(previous.get(row.id)!)),
-  ];
+  const keys = new Set(rows.filter((row) => !replaced.has(row.id)).map(keyOf));
   for (const contact of newValues) {
     const key = keyOf(contact);
     if (keys.has(key)) throw new HouseholdError(409, "DUPLICATE_CONTACT");

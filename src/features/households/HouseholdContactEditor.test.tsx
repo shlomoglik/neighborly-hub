@@ -46,7 +46,10 @@ function localized(props: Parameters<typeof ContactEditorForm>[0]) {
     </I18nContext.Provider>
   );
 }
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 const save = () => screen.getByRole("button", { name: "Save" });
 
 it("edits phone and email together with one Save and the original values for conflict detection", async () => {
@@ -84,8 +87,12 @@ it("defaults new details to managers, rejects invalid values and stages removals
   fireEvent.change(screen.getByLabelText(translate("en", "phone")), {
     target: { value: "0501234567" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Delete self@example.test" }));
-  fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Delete" }));
+  const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  const remove = screen.getByRole("button", { name: "Delete self@example.test" });
+  fireEvent.click(remove);
+  expect(screen.getByDisplayValue(contacts[0].value)).toBeVisible();
+  fireEvent.click(remove);
+  expect(confirm).toHaveBeenCalledTimes(2);
   expect(props.onSave).not.toHaveBeenCalled();
   fireEvent.click(save());
   const { id, ...expected } = contacts[0];
