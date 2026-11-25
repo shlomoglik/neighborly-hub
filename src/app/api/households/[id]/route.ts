@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { readHousehold, updateHousehold } from "@/lib/access/households";
-import { householdMutation } from "@/lib/access/household-contracts";
+import { householdBodyLimit, householdMutation } from "@/lib/access/household-contracts";
 import { householdRoute, readHouseholdBody } from "@/lib/access/household-http";
 import { managementResponse as respond } from "@/lib/access/management-response";
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ export async function GET(request: Request, context: Context) {
 export async function PATCH(request: Request, context: Context) {
   const { id } = await context.params;
   return householdRoute(request, id, true, async (userId) => {
-    const input = householdMutation.safeParse(await readHouseholdBody(request));
+    const input = householdMutation.safeParse(await readHouseholdBody(request, householdBodyLimit));
     if (!input.success) return respond({ error: "INVALID_INPUT" }, 400);
     const { db } = await import("@/lib/db/client");
     return respond(await updateHousehold(db, userId, id, input.data));

@@ -28,7 +28,7 @@ export async function householdRoute(
       : respond({ error: "INTERNAL_ERROR" }, 500);
   }
 }
-export async function readHouseholdBody(request: Request): Promise<unknown> {
+export async function readHouseholdBody(request: Request, maxBytes = 4096): Promise<unknown> {
   if (
     request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
   )
@@ -42,7 +42,7 @@ export async function readHouseholdBody(request: Request): Promise<unknown> {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 4096) {
+      if (size > maxBytes) {
         await reader.cancel();
         throw new HouseholdError(413, "PAYLOAD_TOO_LARGE");
       }

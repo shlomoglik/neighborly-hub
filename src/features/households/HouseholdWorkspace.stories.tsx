@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { useState } from "react";
-import { isLang, translate } from "@/lib/i18n/dictionary";
+import { translate } from "@/lib/i18n/dictionary";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
-import type { HouseholdDetail } from "@/lib/access/household-contracts";
+import { ContactEditorForm } from "./HouseholdContactEditor";
+
 const meta = {
   title: "Features/Households/HouseholdWorkspace",
   component: HouseholdWorkspace,
@@ -22,6 +22,7 @@ const meta = {
       apartment: "12",
       floor: 2,
       canRename: true,
+      ownPersonId: "fictional-person",
       ownContacts: [
         {
           id: "00000000-0000-4000-8000-000000000001",
@@ -52,6 +53,7 @@ export const Neighbor: Story = {
     data: {
       ...meta.args.data,
       canRename: false,
+      ownPersonId: null,
       ownContacts: null,
       members: [{ id: "fictional-person", name: "Dana Cohen", primary: true, contacts: [] }],
     },
@@ -87,59 +89,65 @@ const longContact = {
   visibility: "project",
 } as const;
 
-function EditableContacts() {
-  const [contacts, setContacts] = useState<NonNullable<HouseholdDetail["ownContacts"]>>([
-    meta.args.data.ownContacts[0],
-    longContact,
-  ]);
-  return (
-    <div className="mx-auto max-w-xs">
-      <HouseholdWorkspace
-        {...meta.args}
-        data={{
-          ...meta.args.data,
-          ownContacts: contacts,
-          members: [
-            {
-              ...meta.args.data.members[0],
-              contacts: [{ kind: "email", value: longEmail }],
-            },
-          ],
-        }}
-        onSave={async (input) => {
-          if (input.action !== "updateContact") return false;
-          setContacts((saved) =>
-            saved.map((contact) =>
-              contact.id === input.id ? { id: contact.id, ...input.contact } : contact,
-            ),
-          );
-          return true;
-        }}
-      />
+export const LongContactOnMobile: Story = {
+  args: {
+    data: {
+      ...meta.args.data,
+      ownContacts: [...meta.args.data.ownContacts, longContact],
+    },
+  },
+  render: (args) => (
+    <div className="mx-auto w-full max-w-[280px]">
+      <HouseholdWorkspace {...args} />
     </div>
-  );
-}
-
-export const InlineContacts: Story = {
-  render: () => <EditableContacts />,
-  play: async ({ canvasElement, globals }) => {
+  ),
+  play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const lang = isLang(globals.locale) ? globals.locale : "he";
-    const edit = translate(lang, "homeEditContact", { value: longEmail });
-    const label = translate(lang, "homeContactLabel");
-
-    await userEvent.click(canvas.getByRole("button", { name: edit }));
-    await userEvent.clear(canvas.getByLabelText(label));
-    await userEvent.type(canvas.getByLabelText(label), "Discard this label");
-    await userEvent.click(canvas.getByRole("button", { name: translate(lang, "cancel") }));
-    await expect(canvas.getByRole("button", { name: edit })).toHaveFocus();
-
-    await userEvent.click(canvas.getByRole("button", { name: edit }));
-    await userEvent.clear(canvas.getByLabelText(label));
-    await userEvent.type(canvas.getByLabelText(label), "Saved label");
-    await userEvent.click(canvas.getByRole("radio", { name: translate(lang, "vis_building") }));
-    await userEvent.click(canvas.getByRole("button", { name: translate(lang, "save") }));
-    await expect(canvas.getByText("Saved label")).toBeVisible();
+    const address = canvas.getByRole("button", { name: longEmail });
+    await expect(address.scrollWidth).toBeGreaterThan(address.clientWidth);
+    await userEvent.click(address);
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("tooltip"),
+    ).toHaveTextContent(longEmail);
   },
 };
-export const InlineContactsLtr: Story = { ...InlineContacts, globals: { locale: "en" } };
+
+export const LongContactOnMobileLtr: Story = { ...LongContactOnMobile, globals: { locale: "en" } };
+
+export const BulkEdit: Story = {
+  globals: { locale: "he" },
+  render: () => (
+    <div className="mx-auto w-full max-w-[280px]">
+      <ContactEditorForm
+        contacts={[...meta.args.data.ownContacts, longContact]}
+        busy={false}
+        error={null}
+        backHref="/household/fictional-home"
+        onSave={async () => {}}
+        onRefresh={meta.args.onRefresh}
+        onClearError={meta.args.onRefresh}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement, globals }) => {
+    const lang = globals.locale === "en" ? "en" : "he";
+    const [firstCard] = within(canvasElement).getAllByRole("group", {
+      name: translate(lang, "homeContactEditor"),
+    });
+    const card = within(firstCard);
+    const remove = card.getByRole("button", {
+      name: translate(lang, "homeDeleteContact", { value: meta.args.data.ownContacts[0].value }),
+    });
+    const action = remove.getBoundingClientRect();
+    const bounds = firstCard.getBoundingClientRect();
+    const fields = card.getByRole("combobox").getBoundingClientRect();
+    await expect(action.bottom).toBeLessThan(fields.top);
+    await expect(action.left).toBeGreaterThanOrEqual(bounds.left);
+    await expect(action.right).toBeLessThanOrEqual(bounds.right);
+    const middle = bounds.left + bounds.width / 2;
+    if (lang === "he") await expect(action.right).toBeLessThan(middle);
+    else await expect(action.left).toBeGreaterThan(middle);
+  },
+};
+
+export const BulkEditLtr: Story = { ...BulkEdit, globals: { locale: "en" } };

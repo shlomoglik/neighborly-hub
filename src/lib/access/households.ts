@@ -5,6 +5,9 @@ import * as s from "../../../drizzle/schema";
 import { loadGrants, scopeFor } from "./grants";
 import {
   householdMutation,
+  sameContact,
+  type ContactChange,
+  type ContactFields,
   type HouseholdDetail,
   type HouseholdList,
   type HouseholdMutation,
@@ -154,6 +157,7 @@ export async function readHousehold(
         apartment: home.apartment,
         floor: home.floor,
         canRename: !!self?.primary,
+        ownPersonId: self?.personId ?? null,
         ownContacts:
           ownContacts?.map((c) => ({
             ...c,
@@ -207,6 +211,8 @@ export async function updateHousehold(
       if (!self.primary) throw unavailable();
       if (self.name !== input.expected) throw new HouseholdError(409, "STALE_HOUSEHOLD");
       await tx.update(s.households).set({ displayName: input.name }).where(eq(s.households.id, id));
+    } else if (input.action === "saveContacts") {
+      await saveContacts(tx, self.personId, input.changes);
     } else if (input.action === "addContact") {
       const contacts = await tx
         .select({
@@ -227,13 +233,7 @@ export async function updateHousehold(
         .where(and(eq(s.contactMethods.id, input.id), eq(s.contactMethods.partyId, self.personId)))
         .for("update");
       if (!current) throw unavailable();
-      if (
-        current.kind !== input.expected.kind ||
-        current.value !== input.expected.value ||
-        current.label !== input.expected.label ||
-        current.visibility !== input.expected.visibility
-      )
-        throw new HouseholdError(409, "STALE_HOUSEHOLD");
+      if (!sameContact(current, input.expected)) throw new HouseholdError(409, "STALE_HOUSEHOLD");
       if (input.action === "deleteContact")
         await tx.delete(s.contactMethods).where(eq(s.contactMethods.id, current.id));
       else
@@ -244,4 +244,63 @@ export async function updateHousehold(
     }
     return { id };
   });
+}
+
+async function saveContacts(
+  tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  personId: string,
+  changes: ContactChange[],
+) {
+  const rows = await tx
+    .select()
+    .from(s.contactMethods)
+    .where(eq(s.contactMethods.partyId, personId))
+    .orderBy(s.contactMethods.id)
+    .for("update");
+  const previous = new Map(rows.map((row) => [row.id, row]));
+  const touched = new Set<string>();
+  const replaced = new Set<string>();
+  const additions: ContactFields[] = [];
+  const newValues: ContactFields[] = [];
+  let removed = 0;
+  const keyOf = ({ kind, value }: { kind: string; value: string }) => JSON.stringify([kind, value]);
+  for (const change of changes) {
+    if (change.action === "addContact") {
+      additions.push(change.contact);
+      newValues.push(change.contact);
+      continue;
+    }
+    const current = previous.get(change.id);
+    if (!current || !sameContact(current, change.expected))
+      throw new HouseholdError(409, "STALE_HOUSEHOLD");
+    if (touched.has(change.id)) throw new HouseholdError(400, "INVALID_INPUT");
+    touched.add(change.id);
+    if (change.action === "deleteContact") {
+      replaced.add(change.id);
+      removed++;
+    } else if (keyOf(change.contact) !== keyOf(current)) {
+      replaced.add(change.id);
+      newValues.push(change.contact);
+    }
+  }
+
+  if (additions.length && rows.length - removed + additions.length > 10)
+    throw new HouseholdError(409, "CONTACT_LIMIT");
+  const keys = new Set(rows.filter((row) => !replaced.has(row.id)).map(keyOf));
+  for (const contact of newValues) {
+    const key = keyOf(contact);
+    if (keys.has(key)) throw new HouseholdError(409, "DUPLICATE_CONTACT");
+    keys.add(key);
+  }
+
+  for (const change of changes) {
+    if (change.action === "addContact") continue;
+    const target = and(eq(s.contactMethods.id, change.id), eq(s.contactMethods.partyId, personId));
+    if (change.action === "deleteContact") await tx.delete(s.contactMethods).where(target);
+    else await tx.update(s.contactMethods).set(change.contact).where(target);
+  }
+  if (additions.length)
+    await tx
+      .insert(s.contactMethods)
+      .values(additions.map((contact) => ({ ...contact, partyId: personId })));
 }

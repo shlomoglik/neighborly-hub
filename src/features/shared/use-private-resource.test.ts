@@ -17,17 +17,19 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 it.each([false, true])(
-  "same-key refresh retains data only when opted in (%s)",
+  "uses a background refresh only when opted in (%s)",
   async (keepDataOnRefresh) => {
     const next = deferred<string>();
     const loader = vi.fn().mockResolvedValueOnce("Household").mockReturnValue(next.promise);
     const { result } = renderHook(() => usePrivateResource("one", loader, { keepDataOnRefresh }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     act(() => result.current.refresh());
-    expect(result.current.status).toBe("loading");
+    expect(result.current.status).toBe(keepDataOnRefresh ? "ready" : "loading");
+    expect(result.current.refreshing).toBe(keepDataOnRefresh);
     expect(result.current.data).toBe(keepDataOnRefresh ? "Household" : null);
     await act(async () => next.resolve("Updated household"));
     expect(result.current.data).toBe("Updated household");
+    expect(result.current.refreshing).toBe(false);
   },
 );
 it("clears retained data immediately when the household changes and ignores stale responses", async () => {

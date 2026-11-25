@@ -3,49 +3,24 @@ import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { TKey } from "@/lib/i18n/dictionary";
 import { HouseholdDetailsContent } from "@/components/community/HouseholdPanel";
-import { ContactCard, ContactCardDetails } from "@/components/community/ContactCard";
-import { ContactForm, toVisibility } from "./ContactForm";
+import { toVisibility } from "./ContactForm";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
 import type { ResourceStatus } from "@/features/shared/use-private-resource";
 import {
   householdMutation,
   type HouseholdDetail,
   type HouseholdMutation,
-  type ContactFields,
 } from "@/lib/access/household-contracts";
 
-type Editor =
-  | { type: "name"; value: string; expected: string }
-  | { type: "contact"; id?: string; value: ContactFields; expected?: ContactFields }
-  | { type: "delete"; id: string; expected: ContactFields };
-const emptyContact: ContactFields = {
-  kind: "phone",
-  value: "",
-  label: null,
-  visibility: "managers",
-};
-function sameContact(a: ContactFields, b: ContactFields) {
-  return (
-    a.kind === b.kind && a.value === b.value && a.label === b.label && a.visibility === b.visibility
-  );
-}
-const failureMessages: Partial<Record<string, TKey>> = {
+type Editor = { value: string; expected: string };
+export const failureMessages: Partial<Record<string, TKey>> = {
   STALE_HOUSEHOLD: "homeStale",
   DUPLICATE_CONTACT: "homeDuplicate",
   CONTACT_LIMIT: "homeContactLimit",
@@ -78,6 +53,7 @@ export type HouseholdWorkspaceProps = {
   status: ResourceStatus;
   data: HouseholdDetail | null;
   busy: boolean;
+  refreshing?: boolean;
   error: string | null;
   onRefresh: () => void;
   onClearError?: () => void;
@@ -88,6 +64,7 @@ export function HouseholdWorkspace({
   status,
   data,
   busy,
+  refreshing = false,
   error,
   onRefresh,
   onClearError,
@@ -102,136 +79,42 @@ export function HouseholdWorkspace({
   const [saved, setSaved] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const restoreFocus = useRef(false);
-  const contactsHeading = useRef<HTMLHeadingElement>(null);
-  const addButton = useRef<HTMLButtonElement>(null);
-  const editButtons = useRef(new Map<string, HTMLButtonElement>());
-  const deleteButtons = useRef(new Map<string, HTMLButtonElement>());
-  const contactFocus = useRef<{ kind: "add" | "edit" | "delete"; id?: string } | null>(null);
   useEffect(() => {
     if (status === "expired" || status === "unavailable") {
       setEditor(null);
       setSaved(false);
-      contactFocus.current = null;
     }
-    if (status === "ready" && restoreFocus.current) {
+    if (status === "ready" && !refreshing && restoreFocus.current) {
       heading.current?.focus();
       restoreFocus.current = false;
     }
-  }, [status]);
+  }, [status, refreshing]);
   useEffect(() => {
-    if (
-      status === "ready" &&
-      data &&
-      editor &&
-      (editor.type === "name" ? !data.canRename : data.ownContacts === null)
-    )
-      setEditor(null);
-  }, [status, data, editor]);
-  useEffect(() => {
-    const target = contactFocus.current;
-    if (status !== "ready" || editor || busy || !target) return;
-    const button =
-      target.kind === "add"
-        ? addButton.current
-        : target.id &&
-          (target.kind === "edit" ? editButtons : deleteButtons).current.get(target.id);
-    (button && !button.disabled ? button : contactsHeading.current)?.focus();
-    contactFocus.current = null;
-  }, [status, editor, busy]);
+    if (data && !data.canRename) setEditor(null);
+  }, [data]);
 
-  const contactDraft = editor?.type === "contact" ? editor : null;
-  const contactDirty =
-    !!contactDraft && !sameContact(contactDraft.value, contactDraft.expected ?? emptyContact);
-  const savedContact = data?.ownContacts?.find((contact) => contact.id === contactDraft?.id);
-  const contactStale =
-    !!contactDraft &&
-    (error === "STALE_HOUSEHOLD" ||
-      (!!contactDraft.expected &&
-        (!savedContact || !sameContact(savedContact, contactDraft.expected))));
-  const open = (value: Editor) => {
-    onClearError?.();
-    setEditor(value);
-    setInvalid(false);
-    setSaved(false);
-  };
-  const closeEditor = (completed = false) => {
-    if (editor?.type === "contact") {
-      contactFocus.current = editor.id ? { kind: "edit", id: editor.id } : { kind: "add" };
-    } else if (editor?.type === "delete") {
-      contactFocus.current = completed ? { kind: "add" } : { kind: "delete", id: editor.id };
-    }
+  const closeEditor = () => {
     onClearError?.();
     setEditor(null);
   };
   const submit = async () => {
-    if (!editor || busy || (editor.type === "contact" && (!contactDirty || contactStale))) return;
-    const input =
-      editor.type === "name"
-        ? { action: "rename", name: editor.value, expected: editor.expected }
-        : editor.type === "delete"
-          ? { action: "deleteContact", id: editor.id, expected: editor.expected }
-          : editor.id
-            ? {
-                action: "updateContact",
-                id: editor.id,
-                contact: editor.value,
-                expected: editor.expected,
-              }
-            : { action: "addContact", contact: editor.value };
-    const result = householdMutation.safeParse(input);
+    if (!editor || busy) return;
+    const result = householdMutation.safeParse({
+      action: "rename",
+      expected: editor.expected,
+      name: editor.value,
+    });
     if (!result.success) {
       setInvalid(true);
       return;
     }
     if (await onSave(result.data)) {
-      closeEditor(true);
+      closeEditor();
       setSaved(true);
-      if (editor.type === "name") restoreFocus.current = true;
+      restoreFocus.current = true;
     }
   };
-  const changeContact = (value: Partial<ContactFields>) =>
-    setEditor((e) => (e?.type === "contact" ? { ...e, value: { ...e.value, ...value } } : e));
-  const feedback = (code: string) => (
-    <p role="alert" className="text-sm text-destructive">
-      {t(failureMessages[code] ?? "homeUncertain")}
-    </p>
-  );
-  const contactForm = contactDraft && (
-    <ContactForm
-      value={contactDraft.value}
-      adding={!contactDraft.id}
-      busy={busy}
-      canSave={
-        contactDirty &&
-        !contactStale &&
-        householdMutation.safeParse(
-          contactDraft.id
-            ? {
-                action: "updateContact",
-                id: contactDraft.id,
-                contact: contactDraft.value,
-                expected: contactDraft.expected,
-              }
-            : { action: "addContact", contact: contactDraft.value },
-        ).success
-      }
-      feedback={
-        contactStale ? (
-          <>
-            {feedback("STALE_HOUSEHOLD")}
-            <Button type="button" variant="outline" onClick={onRefresh}>
-              {t("refreshDirectory")}
-            </Button>
-          </>
-        ) : error ? (
-          feedback(error)
-        ) : null
-      }
-      onChange={changeContact}
-      onSubmit={() => void submit()}
-      onCancel={() => closeEditor()}
-    />
-  );
+  const editHref = data && `/household/${data.id}/contacts/edit`;
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -241,7 +124,7 @@ export function HouseholdWorkspace({
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             onClick={onRefresh}
-            disabled={busy || status === "loading"}
+            disabled={busy || refreshing || status === "loading"}
             label={t("refreshDirectory")}
           />
         </div>
@@ -268,10 +151,22 @@ export function HouseholdWorkspace({
             building={data.building}
             apartment={data.apartment}
             floor={String(data.floor)}
-            members={data.members.map((m) => ({
-              ...m,
-              contacts: m.contacts.map((c) => ({ ...c, visible: true as const })),
-            }))}
+            members={data.members.map((member) => {
+              const own = member.id === data.ownPersonId ? data.ownContacts : null;
+              return {
+                ...member,
+                contactEditHref: own && editHref ? editHref : undefined,
+                contacts: own
+                  ? own.map(({ kind, value, label, visibility }) => ({
+                      kind,
+                      value,
+                      label,
+                      visibility: toVisibility(visibility),
+                      visible: true as const,
+                    }))
+                  : member.contacts.map((contact) => ({ ...contact, visible: true as const })),
+              };
+            })}
           />
           <p className="text-sm text-muted-foreground">{t("homeAdultsOnly")}</p>
           <nav
@@ -280,7 +175,7 @@ export function HouseholdWorkspace({
           >
             <Button
               variant="outline"
-              disabled={busy || data.page <= 1}
+              disabled={busy || refreshing || data.page <= 1}
               onClick={() => {
                 restoreFocus.current = true;
                 onPage(data.page - 1);
@@ -291,7 +186,7 @@ export function HouseholdWorkspace({
             <span>{t("directoryPage", { n: data.page })}</span>
             <Button
               variant="outline"
-              disabled={busy || !data.hasNext}
+              disabled={busy || refreshing || !data.hasNext}
               onClick={() => {
                 restoreFocus.current = true;
                 onPage(data.page + 1);
@@ -305,82 +200,31 @@ export function HouseholdWorkspace({
               <Link href={`/household/${data.id}/members`}>{t("familyManage")}</Link>
             </Button>
           )}
+          {editHref &&
+            data.ownContacts &&
+            !data.members.some((member) => member.id === data.ownPersonId) && (
+              <Button variant="outline" asChild>
+                <Link href={editHref}>
+                  <Pencil aria-hidden="true" />
+                  {t("homeEditContacts")}
+                </Link>
+              </Button>
+            )}
           {data.canRename && (
             <Button
               variant="outline"
-              disabled={busy || contactDirty}
-              onClick={() => open({ type: "name", value: data.name, expected: data.name })}
+              disabled={busy}
+              onClick={() => {
+                onClearError?.();
+                setInvalid(false);
+                setSaved(false);
+                setEditor({ value: data.name, expected: data.name });
+              }}
             >
               {t("homeRename")}
             </Button>
           )}
-          {data.ownContacts !== null && (
-            <section className="min-w-0 space-y-3 rounded-2xl border bg-card p-4">
-              <h2 ref={contactsHeading} tabIndex={-1} className="text-xl font-semibold">
-                {t("homeMyContacts")}
-              </h2>
-              <p className="text-sm text-muted-foreground">{t("homeGlobalContacts")}</p>
-              {data.ownContacts.length === 0 && !contactDraft && <p>{t("homeNoContacts")}</p>}
-              {data.ownContacts.map(({ id, ...contact }) => (
-                <ContactCard key={id}>
-                  {contactDraft?.id === id ? (
-                    contactForm
-                  ) : (
-                    <ContactCardDetails
-                      {...contact}
-                      visibility={toVisibility(contact.visibility)}
-                      actions={
-                        <>
-                          <Button
-                            ref={(node) => {
-                              if (node) editButtons.current.set(id, node);
-                              else editButtons.current.delete(id);
-                            }}
-                            variant="outline"
-                            size="icon"
-                            disabled={busy || contactDirty}
-                            aria-label={t("homeEditContact", { value: contact.value })}
-                            onClick={() =>
-                              open({ type: "contact", id, value: contact, expected: contact })
-                            }
-                          >
-                            <Pencil aria-hidden="true" />
-                          </Button>
-                          <Button
-                            ref={(node) => {
-                              if (node) deleteButtons.current.set(id, node);
-                              else deleteButtons.current.delete(id);
-                            }}
-                            variant="ghost"
-                            size="icon"
-                            disabled={busy || contactDirty}
-                            aria-label={t("homeDeleteContact", { value: contact.value })}
-                            onClick={() => open({ type: "delete", id, expected: contact })}
-                          >
-                            <Trash2 aria-hidden="true" />
-                          </Button>
-                        </>
-                      }
-                    />
-                  )}
-                </ContactCard>
-              ))}
-              {contactDraft && !savedContact && <ContactCard>{contactForm}</ContactCard>}
-              <Button
-                ref={addButton}
-                disabled={
-                  busy ||
-                  contactDirty ||
-                  !!(contactDraft && !contactDraft.id) ||
-                  data.ownContacts.length >= 10
-                }
-                onClick={() => open({ type: "contact", value: emptyContact })}
-              >
-                {t("homeAddContact")}
-              </Button>
-            </section>
-          )}
-          {editor?.type === "name" && (
+          {editor && (
             <form
               className="community-enter space-y-4 rounded-2xl border bg-card p-4"
               onSubmit={(e) => {
@@ -410,32 +254,12 @@ export function HouseholdWorkspace({
               </fieldset>
             </form>
           )}
-          {error && (!editor || editor.type === "name") && feedback(error)}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {t(failureMessages[error] ?? "homeUncertain")}
+            </p>
+          )}
           {saved && <p role="status">{t("homeSaved")}</p>}
-          <AlertDialog
-            open={editor?.type === "delete"}
-            onOpenChange={(open) => {
-              if (!open && !busy) closeEditor();
-            }}
-          >
-            <AlertDialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
-              <AlertDialogTitle>{t("homeDeleteTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("homeDeleteHint")}</AlertDialogDescription>
-              {error && editor?.type === "delete" && feedback(error)}
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction
-                  disabled={busy}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    void submit();
-                  }}
-                >
-                  {t("delete")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       )}
     </section>
