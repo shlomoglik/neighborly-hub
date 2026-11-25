@@ -275,7 +275,46 @@ try {
     await residentPage.goto(`${origin}/household/${householdId}`);
     await residentPage.getByRole("link", { name: t.homeEditContacts, exact: true }).click();
     await button(residentPage, "homeAddContact").click();
-    await residentPage.getByLabel(t.phone, { exact: true }).fill("0501234567");
+    const phone = residentPage.getByLabel(t.phone, { exact: true });
+    await phone.fill("0501234567");
+
+    const refresh = await residentPage.evaluateHandle((detailPath) => {
+      const originalFetch = window.fetch;
+      let release;
+      const paused = new Promise((resolve) => {
+        release = resolve;
+      });
+      const state = {
+        started: false,
+        resume() {
+          window.fetch = originalFetch;
+          release();
+        },
+      };
+      window.fetch = async (input, options) => {
+        if (
+          typeof input === "string" &&
+          new URL(input, window.location.href).pathname === detailPath &&
+          options?.method === "GET"
+        ) {
+          state.started = true;
+          await paused;
+        }
+        return originalFetch(input, options);
+      };
+      return state;
+    }, `/api/households/${householdId}`);
+    try {
+      await residentPage.evaluate(() => window.dispatchEvent(new Event("focus")));
+      await residentPage.waitForFunction((state) => state.started, refresh);
+      assert.equal(await phone.isVisible(), true);
+      assert.equal(await phone.inputValue(), "0501234567");
+      assert.equal(await phone.evaluate((input) => input === document.activeElement), true);
+    } finally {
+      await refresh.evaluate((state) => state.resume());
+      await refresh.dispose();
+    }
+
     await residentPage
       .locator("label")
       .filter({ has: residentPage.getByRole("radio", { name: t.vis_project, exact: true }) })

@@ -30,14 +30,13 @@ function LiveHousehold({
   workspace: ReturnType<typeof useHouseholdWorkspace>;
 }) {
   const { resource, onPage } = workspace;
-  const action = usePrivateAction(
-    `${resource.key}:${resource.status === "expired" || resource.status === "unavailable" ? resource.status : ""}`,
-  );
+  const action = usePrivateAction(`${id}:${resource.status}`);
   return (
     <HouseholdWorkspace
       status={resource.status}
       data={resource.data}
       busy={action.busy}
+      refreshing={resource.refreshing}
       error={action.error}
       onPage={onPage}
       onRefresh={resource.refresh}

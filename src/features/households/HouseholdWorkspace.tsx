@@ -53,6 +53,7 @@ export type HouseholdWorkspaceProps = {
   status: ResourceStatus;
   data: HouseholdDetail | null;
   busy: boolean;
+  refreshing?: boolean;
   error: string | null;
   onRefresh: () => void;
   onClearError?: () => void;
@@ -63,6 +64,7 @@ export function HouseholdWorkspace({
   status,
   data,
   busy,
+  refreshing = false,
   error,
   onRefresh,
   onClearError,
@@ -82,11 +84,11 @@ export function HouseholdWorkspace({
       setEditor(null);
       setSaved(false);
     }
-    if (status === "ready" && restoreFocus.current) {
+    if (status === "ready" && !refreshing && restoreFocus.current) {
       heading.current?.focus();
       restoreFocus.current = false;
     }
-  }, [status]);
+  }, [status, refreshing]);
   useEffect(() => {
     if (data && !data.canRename) setEditor(null);
   }, [data]);
@@ -122,7 +124,7 @@ export function HouseholdWorkspace({
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
             onClick={onRefresh}
-            disabled={busy || status === "loading"}
+            disabled={busy || refreshing || status === "loading"}
             label={t("refreshDirectory")}
           />
         </div>
@@ -173,7 +175,7 @@ export function HouseholdWorkspace({
           >
             <Button
               variant="outline"
-              disabled={busy || data.page <= 1}
+              disabled={busy || refreshing || data.page <= 1}
               onClick={() => {
                 restoreFocus.current = true;
                 onPage(data.page - 1);
@@ -184,7 +186,7 @@ export function HouseholdWorkspace({
             <span>{t("directoryPage", { n: data.page })}</span>
             <Button
               variant="outline"
-              disabled={busy || !data.hasNext}
+              disabled={busy || refreshing || !data.hasNext}
               onClick={() => {
                 restoreFocus.current = true;
                 onPage(data.page + 1);

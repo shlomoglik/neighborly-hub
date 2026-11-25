@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Suspense, type ReactNode } from "react";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { I18nContext } from "@/lib/i18n/context";
 import { translate, directionFor, type Lang } from "@/lib/i18n/dictionary";
@@ -18,6 +18,7 @@ vi.mock("@/components/AppShell", () => ({
 }));
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 const home: HouseholdDetail = {
@@ -132,4 +133,58 @@ it("shares the detail read and updates the persistent heading after a successful
     expect.any(AbortSignal),
   );
   expect(householdApi.detail).toHaveBeenCalledTimes(2);
+});
+
+it("keeps the editor and its focus through polling and window focus refreshes", async () => {
+  vi.useFakeTimers();
+  vi.mocked(householdApi.detail)
+    .mockResolvedValueOnce(home)
+    .mockImplementation(() => new Promise(() => {}));
+  route.path = "/household/one";
+  await act(async () => {
+    render(view(<HouseholdDetails id="one" />));
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit household name" }));
+  const input = screen.getByRole<HTMLInputElement>("textbox");
+  input.focus();
+  fireEvent.change(input, { target: { value: "Unsaved family name" } });
+
+  act(() => vi.advanceTimersByTime(30_000));
+  expect(householdApi.detail).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("textbox")).toBe(input);
+  expect(document.activeElement).toBe(input);
+
+  fireEvent.focus(window);
+  expect(householdApi.detail).toHaveBeenCalledTimes(3);
+  expect(screen.getByRole("textbox")).toBe(input);
+  expect(input.value).toBe("Unsaved family name");
+  expect(screen.queryByText(translate("en", "loading"))).toBeNull();
+});
+
+it("does not cancel a pending rename when the window refocuses", async () => {
+  let completeRename!: (value: { id: string }) => void;
+  const rename = new Promise<{ id: string }>((resolve) => {
+    completeRename = resolve;
+  });
+  vi.mocked(householdApi.detail)
+    .mockResolvedValueOnce(home)
+    .mockResolvedValueOnce(home)
+    .mockResolvedValue({ ...home, name: "Updated family" });
+  vi.mocked(householdApi.update).mockReturnValue(rename);
+  route.path = "/household/one";
+  render(view(<HouseholdDetails id="one" />));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit household name" }));
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "Updated family" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  await act(async () => {
+    fireEvent.focus(window);
+  });
+  expect(householdApi.detail).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(householdApi.update).mock.calls[0][2]?.aborted).toBe(false);
+
+  await act(async () => completeRename({ id: home.id }));
+  expect(screen.getByRole("heading", { name: "Updated family", level: 1 })).toBeTruthy();
+  expect(screen.queryByRole("textbox")).toBeNull();
 });
