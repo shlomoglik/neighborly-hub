@@ -3,6 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { usePrivateAction } from "@/features/shared/use-private-action";
@@ -153,6 +154,22 @@ export function ContactEditorForm({
             key={draft.key}
             value={draft.value}
             adding={!draft.original}
+            headerAction={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-destructive hover:text-destructive"
+                aria-label={
+                  draft.value.value
+                    ? t("homeDeleteContact", { value: draft.value.value })
+                    : t("delete")
+                }
+                onClick={() => remove(draft)}
+              >
+                <Trash2 aria-hidden="true" />
+              </Button>
+            }
             onChange={(patch) => {
               setDrafts(
                 drafts.map((entry) =>
@@ -163,18 +180,7 @@ export function ContactEditorForm({
               );
               if (!stale) onClearError();
             }}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              aria-label={
-                draft.value.value ? t("homeDeleteContact", { value: draft.value.value }) : undefined
-              }
-              onClick={() => remove(draft)}
-            >
-              {t("delete")}
-            </Button>
-          </ContactFieldsEditor>
+          />
         ))}
         {(stale || error) && (
           <p role="alert" className="text-sm text-destructive">

@@ -3,6 +3,7 @@
 - This is a Next.js App Router project; use Node 24 and pnpm (see `.nvmrc` and `package.json`).
 - Work on feature branches based on `main`; submit focused pull requests for review.
 - Do not reintroduce Lovable, TanStack Start, Vite or Supabase runtime dependencies.
+- For UI changes, follow [DESIGN.md](DESIGN.md) and review the relevant Storybook examples.
 - Keep server-only secrets out of Git and out of `NEXT_PUBLIC_` environment variables.
 - Run `pnpm typecheck`, `pnpm lint`, and `pnpm build` before merging.
 - The directory and management workspace use authenticated live data; other UI previews remain synthetic. Do not expose real resident information without authentication, authorization and privacy enforcement.

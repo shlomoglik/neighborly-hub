@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { translate } from "@/lib/i18n/dictionary";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
 import { ContactEditorForm } from "./HouseholdContactEditor";
 
@@ -114,15 +115,39 @@ export const LongContactOnMobile: Story = {
 export const LongContactOnMobileLtr: Story = { ...LongContactOnMobile, globals: { locale: "en" } };
 
 export const BulkEdit: Story = {
+  globals: { locale: "he" },
   render: () => (
-    <ContactEditorForm
-      contacts={[...meta.args.data.ownContacts, longContact]}
-      busy={false}
-      error={null}
-      backHref="/household/fictional-home"
-      onSave={async () => {}}
-      onRefresh={meta.args.onRefresh}
-      onClearError={meta.args.onRefresh}
-    />
+    <div className="mx-auto w-full max-w-[280px]">
+      <ContactEditorForm
+        contacts={[...meta.args.data.ownContacts, longContact]}
+        busy={false}
+        error={null}
+        backHref="/household/fictional-home"
+        onSave={async () => {}}
+        onRefresh={meta.args.onRefresh}
+        onClearError={meta.args.onRefresh}
+      />
+    </div>
   ),
+  play: async ({ canvasElement, globals }) => {
+    const lang = globals.locale === "en" ? "en" : "he";
+    const [firstCard] = within(canvasElement).getAllByRole("group", {
+      name: translate(lang, "homeContactEditor"),
+    });
+    const card = within(firstCard);
+    const remove = card.getByRole("button", {
+      name: translate(lang, "homeDeleteContact", { value: meta.args.data.ownContacts[0].value }),
+    });
+    const action = remove.getBoundingClientRect();
+    const bounds = firstCard.getBoundingClientRect();
+    const fields = card.getByRole("combobox").getBoundingClientRect();
+    await expect(action.bottom).toBeLessThan(fields.top);
+    await expect(action.left).toBeGreaterThanOrEqual(bounds.left);
+    await expect(action.right).toBeLessThanOrEqual(bounds.right);
+    const middle = bounds.left + bounds.width / 2;
+    if (lang === "he") await expect(action.right).toBeLessThan(middle);
+    else await expect(action.left).toBeGreaterThan(middle);
+  },
 };
+
+export const BulkEditLtr: Story = { ...BulkEdit, globals: { locale: "en" } };
