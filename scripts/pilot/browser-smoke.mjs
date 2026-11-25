@@ -277,28 +277,41 @@ try {
     const phone = residentPage.getByLabel(t.phone, { exact: true });
     await phone.fill("0501234567");
 
-    const isHouseholdDetail = (url) =>
-      url.origin === origin && url.pathname === `/api/households/${householdId}`;
-    let releaseRefresh;
-    const pausedRefresh = new Promise((resolve) => {
-      releaseRefresh = resolve;
-    });
-    await residentPage.route(isHouseholdDetail, async (route) => {
-      if (route.request().method() === "GET") await pausedRefresh;
-      await route.continue();
-    });
+    const refresh = await residentPage.evaluateHandle((detailPath) => {
+      const originalFetch = window.fetch;
+      let release;
+      const paused = new Promise((resolve) => {
+        release = resolve;
+      });
+      const state = {
+        started: false,
+        resume() {
+          window.fetch = originalFetch;
+          release();
+        },
+      };
+      window.fetch = async (input, options) => {
+        if (
+          typeof input === "string" &&
+          new URL(input, window.location.href).pathname === detailPath &&
+          options?.method === "GET"
+        ) {
+          state.started = true;
+          await paused;
+        }
+        return originalFetch(input, options);
+      };
+      return state;
+    }, `/api/households/${householdId}`);
     try {
-      const refreshing = residentPage.waitForRequest(
-        (request) => request.method() === "GET" && isHouseholdDetail(new URL(request.url())),
-      );
       await residentPage.evaluate(() => window.dispatchEvent(new Event("focus")));
-      await refreshing;
+      await residentPage.waitForFunction((state) => state.started, refresh);
       assert.equal(await phone.isVisible(), true);
       assert.equal(await phone.inputValue(), "0501234567");
       assert.equal(await phone.evaluate((input) => input === document.activeElement), true);
     } finally {
-      releaseRefresh();
-      await residentPage.unroute(isHouseholdDetail);
+      await refresh.evaluate((state) => state.resume());
+      await refresh.dispose();
     }
 
     await residentPage
