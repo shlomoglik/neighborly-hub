@@ -26,12 +26,12 @@ type ContactDraft = {
   original?: SavedContact;
   removed?: boolean;
 };
-const emptyContact: ContactFields = {
+const emptyContact = {
   kind: "phone",
   value: "",
   label: null,
   visibility: "managers",
-};
+} satisfies ContactFields;
 
 function toDraft({ id, ...value }: SavedContact): ContactDraft {
   return { key: id, value, original: { id, ...value } };
@@ -81,14 +81,7 @@ export function HouseholdContactEditor({ id }: { id: string }) {
           router.replace(backHref);
         }}
       />
-      {!contacts && (
-        <>
-          <HouseholdFeedback status={status} onRefresh={resource.refresh} />
-          <Button variant="outline" asChild>
-            <Link href={backHref}>{t("back")}</Link>
-          </Button>
-        </>
-      )}
+      {!contacts && <HouseholdFeedback status={status} onRefresh={resource.refresh} />}
     </section>
   );
 }
@@ -120,8 +113,10 @@ export function ContactEditorForm({
   }, [contacts, drafts]);
   if (!contacts || !drafts) return null;
 
-  const changes = getChanges(drafts);
-  const input = householdMutation.safeParse({ action: "saveContacts", changes });
+  const input = householdMutation.safeParse({
+    action: "saveContacts",
+    changes: getChanges(drafts),
+  });
   const originals = drafts.flatMap((draft) => (draft.original ? [draft.original] : []));
   const stale =
     error === "STALE_HOUSEHOLD" ||

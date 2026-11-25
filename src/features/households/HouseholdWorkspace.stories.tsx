@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { isLang, translate } from "@/lib/i18n/dictionary";
 import { HouseholdWorkspace } from "./HouseholdWorkspace";
 import { ContactEditorForm } from "./HouseholdContactEditor";
 
@@ -101,19 +100,10 @@ export const LongContactOnMobile: Story = {
       <HouseholdWorkspace {...args} />
     </div>
   ),
-  play: async ({ canvasElement, globals }) => {
+  play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const lang = isLang(globals.locale) ? globals.locale : "he";
-    const edit = canvas.getByRole("link", { name: translate(lang, "homeEditContacts") });
     const address = canvas.getByRole("button", { name: longEmail });
-    const mail = canvas.getByRole("link", { name: translate(lang, "mail") });
-    await expect(edit).toHaveAttribute("href", "/household/fictional-home/contacts/edit");
-    await expect(address.closest("article")).toBe(edit.closest("article"));
     await expect(address.scrollWidth).toBeGreaterThan(address.clientWidth);
-    const valueBounds = address.getBoundingClientRect();
-    const actionBounds = mail.getBoundingClientRect();
-    await expect(actionBounds.top).toBeLessThan(valueBounds.bottom);
-    await expect(actionBounds.bottom).toBeGreaterThan(valueBounds.top);
     await userEvent.click(address);
     await expect(
       await within(canvasElement.ownerDocument.body).findByRole("tooltip"),

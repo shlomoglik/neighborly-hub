@@ -50,9 +50,7 @@ export function ContactCardDetails({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <div className="shrink-0">
-          <ContactAction kind={kind} value={value} />
-        </div>
+        <ContactAction kind={kind} value={value} />
       </div>
       {label && (
         <p className="break-words text-sm text-muted-foreground">
