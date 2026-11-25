@@ -30,7 +30,8 @@ export function ContactFieldsEditor({
   children: ReactNode;
 }) {
   const { t } = useI18n();
-  const errorId = useId();
+  const fieldId = useId();
+  const errorId = `${fieldId}-error`;
   const invalid =
     Boolean(value.value) &&
     !contactValue.safeParse({
@@ -43,9 +44,10 @@ export function ContactFieldsEditor({
       <legend className="mb-2 text-sm font-medium">
         {t(adding ? "homeAddContact" : "homeContactEditor")}
       </legend>
-      <label className="block space-y-2 text-sm">
-        <span>{t("homeContactKind")}</span>
+      <div className="space-y-2 text-sm">
+        <label htmlFor={fieldId}>{t("homeContactKind")}</label>
         <select
+          id={fieldId}
           className="min-h-11 w-full rounded-xl border bg-card px-3"
           value={value.kind}
           onChange={(event) =>
@@ -55,7 +57,7 @@ export function ContactFieldsEditor({
           <option value="phone">{t("phone")}</option>
           <option value="email">{t("email")}</option>
         </select>
-      </label>
+      </div>
       <label className="block space-y-2 text-sm">
         <span>{t(value.kind)}</span>
         <Input
