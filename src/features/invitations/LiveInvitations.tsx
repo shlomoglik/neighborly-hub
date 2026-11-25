@@ -23,6 +23,7 @@ export function LiveInvitations({ projectId }: { projectId: string }) {
     email: string;
     kind: InvitationInput["kind"];
     buildingId: string | null;
+    combined?: boolean;
   } | null>(null);
   const resource = useInvitationResource(
     JSON.stringify([projectId, ipage, rpage]),
@@ -97,6 +98,7 @@ export function LiveInvitations({ projectId }: { projectId: string }) {
             email: invitation.recipientEmail ?? "",
             kind: invitation.kind,
             buildingId: invitation.buildingId,
+            combined: !!invitation.staff,
           });
           resource.refresh();
         }}
@@ -114,6 +116,7 @@ export function LiveInvitations({ projectId }: { projectId: string }) {
             email: input.recipientEmail ?? "",
             kind: input.kind,
             buildingId: input.kind === "project_manager" ? null : input.buildingId,
+            combined: input.kind === "resident" && !!input.staff,
           });
           resource.refresh();
           return true;

@@ -36,6 +36,7 @@ import {
 import { POST as submit, GET as context } from "@/app/api/join/[token]/route";
 import { POST as review } from "@/app/api/management/projects/[projectId]/join-requests/[requestId]/route";
 import { assignProjectStaff, inspectStaffRecipient } from "./staff";
+import type { CombinedStaff } from "./invitation-contracts";
 import { GET as mine } from "@/app/api/join/requests/route";
 const config = {
   baseURL: "https://invite.test",
@@ -1010,5 +1011,358 @@ describe.skipIf(!url)("PostgreSQL invitation onboarding and global identity sepa
     const body = JSON.stringify(await listJoinRequests(fixture.db, admin, a));
     expect(body).not.toContain('"userId"');
     expect(body).not.toContain('"tokenHash"');
+  });
+  async function personal(unitNumber: string, email: string, actor = admin, staff?: CombinedStaff) {
+    const building = (await readManagementHierarchy(fixture.db, admin, a))!.buildings[0];
+    const apartmentId = building.floors[0].apartments.find(
+      (unit) => unit.number === unitNumber,
+    )!.id;
+    const invite = await createInvitation(fixture.db, actor, a, {
+      kind: "resident",
+      buildingId: building.id,
+      apartmentId,
+      recipientEmail: email,
+      staff,
+      expiresInDays: 7,
+    });
+    return { ...invite, apartmentId };
+  }
+  async function open(token: string, user: string) {
+    return context(await request("GET", user), { params: Promise.resolve({ token }) });
+  }
+  async function storedInvitation(id: string) {
+    const [invite] = await fixture.db.select().from(s.invitations).where(eq(s.invitations.id, id));
+    return invite;
+  }
+  it("accepts a fixed invitation explicitly, reusing a linked identity and recording the authorization", async () => {
+    const i = await personal("9", `${linked}@example.test`);
+    const renewed = await renewInvitation(fixture.db, admin2, a, i.id);
+    check(await open(i.token, linked), 404);
+    const page = await open(renewed.token, linked);
+    check(page, 200);
+    expect(await page.json()).toMatchObject({
+      acceptancePolicy: "direct_acceptance",
+      fixedApartmentId: i.apartmentId,
+      request: null,
+    });
+    expect(await storedInvitation(i.id)).toMatchObject({
+      recipientUserId: linked,
+      consumedAt: null,
+    });
+    check(await apply(renewed.token, stranger, i.apartmentId), 404);
+    check(await apply(renewed.token, linked, apartmentSpare), 404);
+
+    const responses = await Promise.all([
+      apply(renewed.token, linked, i.apartmentId),
+      apply(renewed.token, linked, i.apartmentId),
+    ]);
+    responses.forEach((response) => check(response, 201));
+    const [result, retry] = await Promise.all(responses.map((response) => response.json()));
+    expect(result.status).toBe("approved");
+    expect(retry).toEqual(result);
+    const [saved] = await fixture.db
+      .select()
+      .from(s.joinRequests)
+      .where(eq(s.joinRequests.id, result.id));
+    expect(saved).toMatchObject({
+      userId: linked,
+      authorizedBy: admin2,
+      acceptedAt: expect.any(Date),
+      reviewedBy: null,
+      reviewedAt: null,
+    });
+    expect((await storedInvitation(i.id)).consumedAt).toEqual(saved.acceptedAt);
+    const members = await fixture.db
+      .select({
+        user: s.householdMembers.personId,
+        representative: s.householdMembers.isContactPerson,
+      })
+      .from(s.households)
+      .innerJoin(s.householdMembers, eq(s.householdMembers.householdId, s.households.id))
+      .where(eq(s.households.apartmentId, i.apartmentId));
+    expect(members).toEqual([{ user: linkedPerson, representative: true }]);
+    expect(await (await open(renewed.token, linked)).json()).toMatchObject({ request: result });
+    check(await decide(result.id), 409);
+  });
+
+  it("requires an exact verified email for an invitation sent before account creation", async () => {
+    const id = crypto.randomUUID();
+    const email = `${id}@example.test`;
+    const i = await personal("11", email);
+    expect((await storedInvitation(i.id)).recipientUserId).toBeNull();
+    const test = (await fixture.auth.$context).test;
+    await test.saveUser(test.createUser({ id, email, emailVerified: false }));
+    users.push(id);
+    check(await apply(i.token, stranger, i.apartmentId), 404);
+    check(await apply(i.token, id, i.apartmentId), 404);
+    await fixture.db.update(s.appUsers).set({ emailVerified: true }).where(eq(s.appUsers.id, id));
+    expect(await (await open(i.token, id)).json()).toMatchObject({ request: null });
+    expect((await storedInvitation(i.id)).consumedAt).toBeNull();
+    const accepted = await apply(i.token, id, i.apartmentId);
+    check(accepted, 201);
+    const result = await accepted.json();
+    expect(result).toMatchObject({ status: "approved" });
+    expect((await storedInvitation(i.id)).recipientUserId).toBe(id);
+    await fixture.db
+      .update(s.appUsers)
+      .set({ email: `updated-${email}` })
+      .where(eq(s.appUsers.id, id));
+    expect(await (await apply(i.token, id, i.apartmentId)).json()).toEqual(result);
+  });
+
+  it("lets only one personal invitation claim the same apartment", async () => {
+    const first = await personal("10", `${stranger}@example.test`);
+    const second = await personal("10", `${staffTarget}@example.test`);
+    const results = await Promise.all([
+      apply(first.token, stranger, first.apartmentId),
+      apply(second.token, staffTarget, second.apartmentId),
+    ]);
+    expect(results.map((response) => response.status).sort()).toEqual([201, 409]);
+    const failed = results.findIndex((response) => response.status === 409);
+    expect(await results[failed].json()).toEqual({ error: "APARTMENT_OCCUPIED" });
+    const loser = [first, second][failed];
+    expect((await storedInvitation(loser.id)).consumedAt).toBeNull();
+    const records = await fixture.db
+      .select({ status: s.joinRequests.status })
+      .from(s.joinRequests)
+      .where(inArray(s.joinRequests.invitationId, [first.id, second.id]));
+    expect(records).toEqual([{ status: "approved" }]);
+    const homes = await fixture.db
+      .select()
+      .from(s.households)
+      .where(eq(s.households.apartmentId, first.apartmentId));
+    expect(homes).toHaveLength(1);
+    expect(homes[0].createdBy).toBe([staffTarget, stranger][failed]);
+  });
+
+  it("revalidates issuer authority and allows only global-admin self-acceptance", async () => {
+    await fixture.db
+      .insert(s.staffAssignments)
+      .values({ userId: pm, projectId: a, role: "project_manager" });
+    const self = await personal("12", `${pm}@example.test`, pm);
+    check(await apply(self.token, pm, self.apartmentId), 403);
+    const fromManager = await personal("12", `${staffTarget}@example.test`, pm);
+    await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.userId, pm));
+    check(await apply(fromManager.token, staffTarget, fromManager.apartmentId), 404);
+    for (const expired of [true, false]) {
+      const inactive = await personal("12", `${staffTarget}@example.test`);
+      await fixture.db
+        .update(s.invitations)
+        .set(
+          expired
+            ? { createdAt: new Date(0), expiresAt: new Date(1000) }
+            : { revokedAt: new Date() },
+        )
+        .where(eq(s.invitations.id, inactive.id));
+      check(await apply(inactive.token, staffTarget, inactive.apartmentId), 404);
+      expect((await storedInvitation(inactive.id)).consumedAt).toBeNull();
+    }
+    const adminSelf = await personal("12", `${admin2}@example.test`, admin2);
+    expect(
+      await (await apply(adminSelf.token, admin2, adminSelf.apartmentId)).json(),
+    ).toMatchObject({ status: "approved" });
+  });
+
+  it("preserves the manual-review default when renewing an older personal invitation", async () => {
+    const token = "f".repeat(64);
+    const [legacy] = await fixture.db
+      .insert(s.invitations)
+      .values({
+        kind: "resident",
+        projectId: a,
+        buildingId: buildingA,
+        apartmentId: apartmentSpare,
+        recipientUserId: applicant,
+        recipientEmail: `${applicant}@example.test`,
+        tokenHash: hashInvitationToken(token),
+        createdBy: admin,
+        expiresAt: new Date(Date.now() + 60_000),
+      })
+      .returning({ id: s.invitations.id });
+    const renewed = await renewInvitation(fixture.db, admin2, a, legacy.id);
+    expect(await (await open(renewed.token, applicant)).json()).toMatchObject({
+      acceptancePolicy: "manual_review",
+    });
+    expect(await (await apply(renewed.token, applicant, apartmentSpare)).json()).toMatchObject({
+      status: "pending",
+    });
+  });
+  async function combinedRecipient() {
+    const id = crypto.randomUUID();
+    const email = `${id}@example.test`;
+    const test = (await fixture.auth.$context).test;
+    await test.saveUser(test.createUser({ id, email, emailVerified: true }));
+    users.push(id);
+    return { id, email };
+  }
+
+  it.each(["building_manager", "project_manager"] as const)(
+    "accepts residency with %s atomically and keeps the two memberships independent",
+    async (role) => {
+      const target = await combinedRecipient();
+      const staff = role === "building_manager" ? { role, buildingId: buildingOther } : { role };
+      const invitation = await personal(
+        role === "building_manager" ? "5" : "6",
+        target.email,
+        admin,
+        staff,
+      );
+      if (role === "project_manager") {
+        await fixture.db.insert(s.staffAssignments).values({
+          userId: target.id,
+          projectId: a,
+          role: "building_manager",
+          buildingId: buildingA,
+        });
+      }
+      const renewed = await renewInvitation(fixture.db, admin2, a, invitation.id);
+      check(await open(invitation.token, target.id), 404);
+      check(await open(renewed.token, stranger), 404);
+      const page = await open(renewed.token, target.id);
+      check(page, 200);
+      expect(await page.json()).toMatchObject({ staff, request: null });
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invitation.apartmentId)),
+      ).toHaveLength(0);
+      const responses = await Promise.all([
+        apply(renewed.token, target.id, invitation.apartmentId),
+        apply(renewed.token, target.id, invitation.apartmentId),
+      ]);
+      responses.forEach((response) => check(response, 201));
+      const [result, retry] = await Promise.all(responses.map((response) => response.json()));
+      expect(result).toMatchObject({ status: "approved", staff });
+      expect(retry).toEqual(result);
+      const rows = await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.userId, target.id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        role,
+        projectId: a,
+        buildingId: role === "building_manager" ? buildingOther : null,
+      });
+      const [record] = await fixture.db
+        .select()
+        .from(s.joinRequests)
+        .where(eq(s.joinRequests.id, result.id));
+      expect(record).toMatchObject({
+        authorizedBy: admin2,
+        userId: target.id,
+        acceptedAt: expect.any(Date),
+      });
+      expect((await listJoinRequests(fixture.db, target.id, null)).requests[0]).toMatchObject({
+        status: "approved",
+        staff,
+      });
+      check(
+        await revoke(await request("DELETE", admin), {
+          params: Promise.resolve({ projectId: a, invitationId: invitation.id }),
+        }),
+        200,
+      );
+      expect(await (await open(renewed.token, target.id)).json()).toMatchObject({
+        staff,
+        request: { status: "approved" },
+      });
+      const stillAssigned = await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.id, rows[0].id));
+      expect(stillAssigned).toHaveLength(1);
+      await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.id, rows[0].id));
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invitation.apartmentId)),
+      ).toMatchObject([{ createdBy: target.id, isActive: true }]);
+    },
+  );
+
+  it("rejects cross-project staff scope and refuses claims or renewal after authority is lost", async () => {
+    const target = await combinedRecipient();
+    await fixture.db
+      .insert(s.staffAssignments)
+      .values({ userId: pm, projectId: a, role: "project_manager" });
+    try {
+      await expect(
+        personal("7", target.email, pm, { role: "project_manager" }),
+      ).rejects.toMatchObject({ status: 404 });
+      const otherProjectBuilding = (await readManagementHierarchy(fixture.db, admin, b))!
+        .buildings[0].id;
+      await expect(
+        personal("7", target.email, admin, {
+          role: "building_manager",
+          buildingId: otherProjectBuilding,
+        }),
+      ).rejects.toMatchObject({ status: 404 });
+      const invitation = await personal("7", target.email, admin2, { role: "project_manager" });
+      await expect(renewInvitation(fixture.db, pm, a, invitation.id)).rejects.toMatchObject({
+        status: 404,
+      });
+      await fixture.db.delete(s.globalRoles).where(eq(s.globalRoles.userId, admin2));
+      try {
+        check(await apply(invitation.token, target.id, invitation.apartmentId), 404);
+        expect((await storedInvitation(invitation.id)).consumedAt).toBeNull();
+      } finally {
+        await fixture.db.insert(s.globalRoles).values({ userId: admin2, role: "admin" });
+      }
+    } finally {
+      await fixture.db.delete(s.staffAssignments).where(eq(s.staffAssignments.userId, pm));
+    }
+  });
+
+  it("rolls back a household when the combined staff grant cannot be written", async () => {
+    const target = await combinedRecipient();
+    const invite = await personal("8", target.email, admin, { role: "project_manager" });
+    await fixture.client.unsafe(`
+      CREATE FUNCTION skip_combined_grant_fixture() RETURNS trigger LANGUAGE plpgsql AS
+      $$ BEGIN RETURN NULL; END $$;
+      CREATE TRIGGER skip_combined_grant_fixture BEFORE INSERT ON staff_assignments
+      FOR EACH ROW WHEN (NEW.user_id = '${target.id}'::uuid)
+      EXECUTE FUNCTION skip_combined_grant_fixture();
+    `);
+    try {
+      const failed = await apply(invite.token, target.id, invite.apartmentId);
+      check(failed, 409);
+      expect(await failed.json()).toEqual({ error: "STAFF_GRANT_FAILED" });
+      expect((await storedInvitation(invite.id)).consumedAt).toBeNull();
+      expect(
+        await fixture.db
+          .select()
+          .from(s.households)
+          .where(eq(s.households.apartmentId, invite.apartmentId)),
+      ).toHaveLength(0);
+      expect(
+        await fixture.db
+          .select()
+          .from(s.userPersonLinks)
+          .where(eq(s.userPersonLinks.userId, target.id)),
+      ).toHaveLength(0);
+      expect((await listJoinRequests(fixture.db, target.id, null)).requests).toHaveLength(0);
+    } finally {
+      await fixture.client.unsafe(`DROP TRIGGER skip_combined_grant_fixture ON staff_assignments;
+        DROP FUNCTION skip_combined_grant_fixture();`);
+    }
+    await fixture.db
+      .insert(s.staffAssignments)
+      .values({ userId: target.id, projectId: a, role: "project_manager" });
+    check(await apply(invite.token, target.id, invite.apartmentId), 201);
+    const other = await combinedRecipient();
+    const occupied = await personal("8", other.email, admin, { role: "project_manager" });
+    const conflict = await apply(occupied.token, other.id, occupied.apartmentId);
+    check(conflict, 409);
+    expect(await conflict.json()).toEqual({ error: "APARTMENT_OCCUPIED" });
+    expect((await storedInvitation(occupied.id)).consumedAt).toBeNull();
+    expect(
+      await fixture.db
+        .select()
+        .from(s.staffAssignments)
+        .where(eq(s.staffAssignments.userId, other.id)),
+    ).toHaveLength(0);
   });
 });

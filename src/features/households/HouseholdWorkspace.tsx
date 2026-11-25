@@ -3,9 +3,12 @@ import { HouseholdNavigationContext } from "./HouseholdNavigationContext";
 import { RefreshButton } from "@/components/community/RefreshButton";
 import { useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import type { TKey } from "@/lib/i18n/dictionary";
 import { HouseholdDetailsContent } from "@/components/community/HouseholdPanel";
-import { VisibilitySelector, type Visibility } from "@/components/community/VisibilitySelector";
+import { ContactCard, ContactCardDetails } from "@/components/community/ContactCard";
+import { ContactForm, toVisibility } from "./ContactForm";
 import { CommunitySkeleton } from "@/components/community/CommunityLoading";
 import { SystemFeedback } from "@/components/community/SystemFeedback";
 import { Button } from "@/components/ui/button";
@@ -31,10 +34,23 @@ type Editor =
   | { type: "name"; value: string; expected: string }
   | { type: "contact"; id?: string; value: ContactFields; expected?: ContactFields }
   | { type: "delete"; id: string; expected: ContactFields };
-const toVisibility = (v: ContactFields["visibility"]): Visibility =>
-  v === "managers" ? "admins" : v === "project" ? "complex" : "building";
-const fromVisibility = (v: Visibility): ContactFields["visibility"] =>
-  v === "admins" ? "managers" : v === "complex" ? "project" : "building";
+const emptyContact: ContactFields = {
+  kind: "phone",
+  value: "",
+  label: null,
+  visibility: "managers",
+};
+function sameContact(a: ContactFields, b: ContactFields) {
+  return (
+    a.kind === b.kind && a.value === b.value && a.label === b.label && a.visibility === b.visibility
+  );
+}
+const failureMessages: Partial<Record<string, TKey>> = {
+  STALE_HOUSEHOLD: "homeStale",
+  DUPLICATE_CONTACT: "homeDuplicate",
+  CONTACT_LIMIT: "homeContactLimit",
+  INVALID_INPUT: "homeInvalid",
+};
 export function HouseholdFeedback({
   status,
   onRefresh,
@@ -64,6 +80,7 @@ export type HouseholdWorkspaceProps = {
   busy: boolean;
   error: string | null;
   onRefresh: () => void;
+  onClearError?: () => void;
   onPage: (page: number) => void;
   onSave: (input: HouseholdMutation) => Promise<boolean>;
 };
@@ -73,6 +90,7 @@ export function HouseholdWorkspace({
   busy,
   error,
   onRefresh,
+  onClearError,
   onPage,
   onSave,
 }: HouseholdWorkspaceProps) {
@@ -84,10 +102,16 @@ export function HouseholdWorkspace({
   const [saved, setSaved] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const restoreFocus = useRef(false);
+  const contactsHeading = useRef<HTMLHeadingElement>(null);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const editButtons = useRef(new Map<string, HTMLButtonElement>());
+  const deleteButtons = useRef(new Map<string, HTMLButtonElement>());
+  const contactFocus = useRef<{ kind: "add" | "edit" | "delete"; id?: string } | null>(null);
   useEffect(() => {
     if (status === "expired" || status === "unavailable") {
       setEditor(null);
       setSaved(false);
+      contactFocus.current = null;
     }
     if (status === "ready" && restoreFocus.current) {
       heading.current?.focus();
@@ -103,13 +127,44 @@ export function HouseholdWorkspace({
     )
       setEditor(null);
   }, [status, data, editor]);
+  useEffect(() => {
+    const target = contactFocus.current;
+    if (status !== "ready" || editor || busy || !target) return;
+    const button =
+      target.kind === "add"
+        ? addButton.current
+        : target.id &&
+          (target.kind === "edit" ? editButtons : deleteButtons).current.get(target.id);
+    (button && !button.disabled ? button : contactsHeading.current)?.focus();
+    contactFocus.current = null;
+  }, [status, editor, busy]);
+
+  const contactDraft = editor?.type === "contact" ? editor : null;
+  const contactDirty =
+    !!contactDraft && !sameContact(contactDraft.value, contactDraft.expected ?? emptyContact);
+  const savedContact = data?.ownContacts?.find((contact) => contact.id === contactDraft?.id);
+  const contactStale =
+    !!contactDraft &&
+    (error === "STALE_HOUSEHOLD" ||
+      (!!contactDraft.expected &&
+        (!savedContact || !sameContact(savedContact, contactDraft.expected))));
   const open = (value: Editor) => {
+    onClearError?.();
     setEditor(value);
     setInvalid(false);
     setSaved(false);
   };
+  const closeEditor = (completed = false) => {
+    if (editor?.type === "contact") {
+      contactFocus.current = editor.id ? { kind: "edit", id: editor.id } : { kind: "add" };
+    } else if (editor?.type === "delete") {
+      contactFocus.current = completed ? { kind: "add" } : { kind: "delete", id: editor.id };
+    }
+    onClearError?.();
+    setEditor(null);
+  };
   const submit = async () => {
-    if (!editor || busy) return;
+    if (!editor || busy || (editor.type === "contact" && (!contactDirty || contactStale))) return;
     const input =
       editor.type === "name"
         ? { action: "rename", name: editor.value, expected: editor.expected }
@@ -129,13 +184,54 @@ export function HouseholdWorkspace({
       return;
     }
     if (await onSave(result.data)) {
-      setEditor(null);
+      closeEditor(true);
       setSaved(true);
-      restoreFocus.current = true;
+      if (editor.type === "name") restoreFocus.current = true;
     }
   };
   const changeContact = (value: Partial<ContactFields>) =>
     setEditor((e) => (e?.type === "contact" ? { ...e, value: { ...e.value, ...value } } : e));
+  const feedback = (code: string) => (
+    <p role="alert" className="text-sm text-destructive">
+      {t(failureMessages[code] ?? "homeUncertain")}
+    </p>
+  );
+  const contactForm = contactDraft && (
+    <ContactForm
+      value={contactDraft.value}
+      adding={!contactDraft.id}
+      busy={busy}
+      canSave={
+        contactDirty &&
+        !contactStale &&
+        householdMutation.safeParse(
+          contactDraft.id
+            ? {
+                action: "updateContact",
+                id: contactDraft.id,
+                contact: contactDraft.value,
+                expected: contactDraft.expected,
+              }
+            : { action: "addContact", contact: contactDraft.value },
+        ).success
+      }
+      feedback={
+        contactStale ? (
+          <>
+            {feedback("STALE_HOUSEHOLD")}
+            <Button type="button" variant="outline" onClick={onRefresh}>
+              {t("refreshDirectory")}
+            </Button>
+          </>
+        ) : error ? (
+          feedback(error)
+        ) : null
+      }
+      onChange={changeContact}
+      onSubmit={() => void submit()}
+      onCancel={() => closeEditor()}
+    />
+  );
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -212,68 +308,79 @@ export function HouseholdWorkspace({
           {data.canRename && (
             <Button
               variant="outline"
-              disabled={busy}
+              disabled={busy || contactDirty}
               onClick={() => open({ type: "name", value: data.name, expected: data.name })}
             >
               {t("homeRename")}
             </Button>
           )}
           {data.ownContacts !== null && (
-            <section className="space-y-3 rounded-2xl border bg-card p-4">
-              <h2 className="text-xl font-semibold">{t("homeMyContacts")}</h2>
+            <section className="min-w-0 space-y-3 rounded-2xl border bg-card p-4">
+              <h2 ref={contactsHeading} tabIndex={-1} className="text-xl font-semibold">
+                {t("homeMyContacts")}
+              </h2>
               <p className="text-sm text-muted-foreground">{t("homeGlobalContacts")}</p>
-              {data.ownContacts.length === 0 && <p>{t("homeNoContacts")}</p>}
+              {data.ownContacts.length === 0 && !contactDraft && <p>{t("homeNoContacts")}</p>}
               {data.ownContacts.map(({ id, ...contact }) => (
-                <div key={id} className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
-                  <div className="min-w-0 flex-1">
-                    <p>
-                      <bdi dir="ltr" className="break-all">
-                        {contact.value}
-                      </bdi>
-                    </p>
-                    <p className="text-sm">
-                      {contact.label && <bdi>{contact.label} · </bdi>}
-                      {t(
-                        contact.visibility === "managers"
-                          ? "vis_managers"
-                          : contact.visibility === "building"
-                            ? "vis_building"
-                            : "vis_project",
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    aria-label={t("homeEditContact", { value: contact.value })}
-                    onClick={() => open({ type: "contact", id, value: contact, expected: contact })}
-                  >
-                    {t("edit")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={busy}
-                    aria-label={t("homeDeleteContact", { value: contact.value })}
-                    onClick={() => open({ type: "delete", id, expected: contact })}
-                  >
-                    {t("delete")}
-                  </Button>
-                </div>
+                <ContactCard key={id}>
+                  {contactDraft?.id === id ? (
+                    contactForm
+                  ) : (
+                    <ContactCardDetails
+                      {...contact}
+                      visibility={toVisibility(contact.visibility)}
+                      actions={
+                        <>
+                          <Button
+                            ref={(node) => {
+                              if (node) editButtons.current.set(id, node);
+                              else editButtons.current.delete(id);
+                            }}
+                            variant="outline"
+                            size="icon"
+                            disabled={busy || contactDirty}
+                            aria-label={t("homeEditContact", { value: contact.value })}
+                            onClick={() =>
+                              open({ type: "contact", id, value: contact, expected: contact })
+                            }
+                          >
+                            <Pencil aria-hidden="true" />
+                          </Button>
+                          <Button
+                            ref={(node) => {
+                              if (node) deleteButtons.current.set(id, node);
+                              else deleteButtons.current.delete(id);
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            disabled={busy || contactDirty}
+                            aria-label={t("homeDeleteContact", { value: contact.value })}
+                            onClick={() => open({ type: "delete", id, expected: contact })}
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </Button>
+                        </>
+                      }
+                    />
+                  )}
+                </ContactCard>
               ))}
+              {contactDraft && !savedContact && <ContactCard>{contactForm}</ContactCard>}
               <Button
-                disabled={busy || data.ownContacts.length >= 10}
-                onClick={() =>
-                  open({
-                    type: "contact",
-                    value: { kind: "phone", value: "", label: null, visibility: "managers" },
-                  })
+                ref={addButton}
+                disabled={
+                  busy ||
+                  contactDirty ||
+                  !!(contactDraft && !contactDraft.id) ||
+                  data.ownContacts.length >= 10
                 }
+                onClick={() => open({ type: "contact", value: emptyContact })}
               >
                 {t("homeAddContact")}
               </Button>
             </section>
           )}
-          {editor && editor.type !== "delete" && (
+          {editor?.type === "name" && (
             <form
               className="community-enter space-y-4 rounded-2xl border bg-card p-4"
               onSubmit={(e) => {
@@ -282,96 +389,39 @@ export function HouseholdWorkspace({
               }}
             >
               <fieldset disabled={busy} className="space-y-4">
-                <legend className="mb-3 font-semibold">
-                  {t(editor.type === "name" ? "homeRename" : "homeContactEditor")}
-                </legend>
-                {editor.type === "name" ? (
-                  <label className="block space-y-2">
-                    <span>{t("familyName")}</span>
-                    <Input
-                      autoFocus
-                      required
-                      maxLength={100}
-                      value={editor.value}
-                      onChange={(e) => setEditor({ ...editor, value: e.target.value })}
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <label className="block space-y-2">
-                      <span>{t("homeContactKind")}</span>
-                      <select
-                        className="min-h-11 w-full rounded-xl border bg-card px-3"
-                        value={editor.value.kind}
-                        onChange={(e) =>
-                          changeContact({ kind: e.target.value as "phone" | "email" })
-                        }
-                      >
-                        <option value="phone">{t("phone")}</option>
-                        <option value="email">{t("email")}</option>
-                      </select>
-                    </label>
-                    <label className="block space-y-2">
-                      <span>{t(editor.value.kind === "phone" ? "phone" : "email")}</span>
-                      <Input
-                        autoFocus
-                        required
-                        dir="ltr"
-                        type={editor.value.kind === "email" ? "email" : "tel"}
-                        maxLength={editor.value.kind === "email" ? 254 : 40}
-                        value={editor.value.value}
-                        onChange={(e) => changeContact({ value: e.target.value })}
-                      />
-                    </label>
-                    <label className="block space-y-2">
-                      <span>{t("homeContactLabel")}</span>
-                      <Input
-                        maxLength={50}
-                        value={editor.value.label ?? ""}
-                        onChange={(e) => changeContact({ label: e.target.value || null })}
-                      />
-                    </label>
-                    <VisibilitySelector
-                      value={toVisibility(editor.value.visibility)}
-                      onChange={(v) => changeContact({ visibility: fromVisibility(v) })}
-                    />
-                  </>
-                )}
+                <legend className="mb-3 font-semibold">{t("homeRename")}</legend>
+                <label className="block space-y-2">
+                  <span>{t("familyName")}</span>
+                  <Input
+                    autoFocus
+                    required
+                    maxLength={100}
+                    value={editor.value}
+                    onChange={(e) => setEditor({ ...editor, value: e.target.value })}
+                  />
+                </label>
                 {invalid && <p role="alert">{t("homeInvalid")}</p>}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button type="submit">{t(busy ? "saving" : "save")}</Button>
-                  <Button type="button" variant="outline" onClick={() => setEditor(null)}>
+                  <Button type="button" variant="outline" onClick={() => closeEditor()}>
                     {t("cancel")}
                   </Button>
                 </div>
               </fieldset>
             </form>
           )}
-          {error && (
-            <p role="alert" className="text-destructive">
-              {t(
-                error === "STALE_HOUSEHOLD"
-                  ? "homeStale"
-                  : error === "DUPLICATE_CONTACT"
-                    ? "homeDuplicate"
-                    : error === "CONTACT_LIMIT"
-                      ? "homeContactLimit"
-                      : error === "INVALID_INPUT"
-                        ? "homeInvalid"
-                        : "homeUncertain",
-              )}
-            </p>
-          )}
+          {error && (!editor || editor.type === "name") && feedback(error)}
           {saved && <p role="status">{t("homeSaved")}</p>}
           <AlertDialog
             open={editor?.type === "delete"}
             onOpenChange={(open) => {
-              if (!open && !busy) setEditor(null);
+              if (!open && !busy) closeEditor();
             }}
           >
-            <AlertDialogContent>
+            <AlertDialogContent onCloseAutoFocus={(event) => event.preventDefault()}>
               <AlertDialogTitle>{t("homeDeleteTitle")}</AlertDialogTitle>
               <AlertDialogDescription>{t("homeDeleteHint")}</AlertDialogDescription>
+              {error && editor?.type === "delete" && feedback(error)}
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
                 <AlertDialogAction

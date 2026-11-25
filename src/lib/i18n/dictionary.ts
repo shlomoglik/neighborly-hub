@@ -674,6 +674,52 @@ export const dict = {
     en: "By submitting, you agree to appear in the directory as part of joining the community. You cannot hide your basic identity while keeping access to others. Directory access starts only after your request is approved.",
     ru: "Подавая заявку, вы соглашаетесь появиться в справочнике как участник сообщества. Нельзя скрыть основные данные о себе, сохранив доступ к другим. Доступ откроется только после одобрения заявки.",
   },
+  inviteAdditionalStaff: {
+    he: "תפקיד נוסף בפרויקט",
+    en: "Additional role in the project",
+    ru: "Дополнительная роль в проекте",
+  },
+  inviteResidentOnly: { he: "מגורים בלבד", en: "Residency only", ru: "Только проживание" },
+  inviteStaffBuilding: {
+    he: "הבניין של ועד הבית",
+    en: "Building for the committee role",
+    ru: "Дом для роли домового комитета",
+  },
+  joinCombinedHint: {
+    he: "קבלת ההזמנה יוצרת משק בית בדירה ומפעילה את התפקיד שמוצג כאן. שתי הפעולות יושלמו יחד.",
+    en: "Accepting creates your household in the apartment and activates the role shown here. Both take effect together.",
+    ru: "Принятие создаёт домохозяйство в квартире и активирует указанную роль. Оба изменения вступают в силу одновременно.",
+  },
+  joinCombinedAccept: {
+    he: "קבלת ההזמנה לדירה ולתפקיד",
+    en: "Accept apartment and role",
+    ru: "Принять приглашение в квартиру и на роль",
+  },
+  inviteCombinedFailed: {
+    he: "לא ניתן היה להפעיל את התפקיד. משק הבית לא נוצר. פנו לשולח ההזמנה.",
+    en: "The role could not be granted, so the household was not created. Contact the invitation sender.",
+    ru: "Не удалось назначить роль, поэтому домохозяйство не создано. Свяжитесь с отправителем приглашения.",
+  },
+  joinPersonalHint: {
+    he: "זו הזמנה אישית לחשבון שלכם. אם הדירה פנויה, קבלת ההזמנה תיצור מיד משק בית ותפתח גישה לספר השכנים.",
+    en: "This invitation is for your account. If the apartment is vacant, accepting creates your household and opens the directory immediately.",
+    ru: "Это приглашение для вашего аккаунта. Если квартира свободна, принятие сразу создаст ваше домохозяйство и откроет доступ к справочнику.",
+  },
+  joinPersonalNotice: {
+    he: "בקבלת ההזמנה אתם מסכימים להופיע בספר כחלק מההצטרפות לקהילה. הגישה לספר כוללת חשיפה של פרטי הזהות הבסיסיים שלכם לפי הגדרות הקהילה.",
+    en: "By accepting, you agree to appear in the directory as part of joining the community. Directory access includes sharing your basic identity according to community settings.",
+    ru: "Принимая приглашение, вы соглашаетесь появиться в справочнике как участник сообщества. Доступ к справочнику подразумевает видимость ваших основных данных по настройкам сообщества.",
+  },
+  joinPersonalAccept: {
+    he: "קבלת ההזמנה ויצירת משק בית",
+    en: "Accept invitation and create household",
+    ru: "Принять приглашение и создать домохозяйство",
+  },
+  joinPersonalOccupied: {
+    he: "כבר קיים משק בית פעיל בדירה. פנו לנציג משק הבית כדי לקבל הזמנת הצטרפות, או לשולח ההזמנה כדי לבדוק את פרטי הדירה.",
+    en: "This apartment already has an active household. Ask its representative for a household-member invitation, or contact the sender to check the apartment details.",
+    ru: "В квартире уже есть активное домохозяйство. Попросите его представителя пригласить вас как участника или уточните данные квартиры у отправителя.",
+  },
   inviteApprove: { he: "אישור בקשה", en: "Approve request", ru: "Одобрить заявку" },
   inviteReject: { he: "דחיית בקשה", en: "Reject request", ru: "Отклонить заявку" },
   inviteReviewConfirm: {

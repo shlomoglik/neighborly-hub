@@ -429,6 +429,11 @@ export const invitations = pgTable(
     apartmentId: uuid("apartment_id"),
     householdId: uuid("household_id"),
     kind: text("kind").notNull(),
+    acceptancePolicy: text("acceptance_policy", { enum: ["manual_review", "direct_acceptance"] })
+      .notNull()
+      .default("manual_review"),
+    staffRole: text("staff_role", { enum: ["project_manager", "building_manager"] }),
+    staffBuildingId: uuid("staff_building_id"),
     recipientEmail: text("recipient_email"),
     recipientUserId: uuid("recipient_user_id").references(() => appUsers.id, {
       onDelete: "restrict",
@@ -442,7 +447,39 @@ export const invitations = pgTable(
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
   },
-  (t) => [index("invitations_scope_idx").on(t.projectId, t.buildingId, t.createdAt, t.id)],
+  (t) => [
+    foreignKey({
+      name: "invitations_staff_building_project_fk",
+      columns: [t.staffBuildingId, t.projectId],
+      foreignColumns: [buildings.id, buildings.projectId],
+    }).onDelete("cascade"),
+    index("invitations_staff_building_project_idx")
+      .on(t.staffBuildingId, t.projectId)
+      .where(sql`${t.staffBuildingId} IS NOT NULL`),
+    check(
+      "invitations_staff_scope_check",
+      sql`
+      (${t.staffRole} IS NULL AND ${t.staffBuildingId} IS NULL)
+      OR (
+        ${t.staffRole} IS NOT NULL AND ${t.kind} = 'resident'
+        AND ${t.acceptancePolicy} = 'direct_acceptance'
+        AND ${t.apartmentId} IS NOT NULL AND ${t.recipientEmail} IS NOT NULL
+        AND ((${t.staffRole} = 'project_manager' AND ${t.staffBuildingId} IS NULL)
+          OR (${t.staffRole} = 'building_manager' AND ${t.staffBuildingId} IS NOT NULL))
+      )
+    `,
+    ),
+    index("invitations_scope_idx").on(t.projectId, t.buildingId, t.createdAt, t.id),
+    check(
+      "invitations_acceptance_policy_check",
+      sql`
+      ${t.acceptancePolicy} = 'manual_review'
+      OR (${t.acceptancePolicy} = 'direct_acceptance' AND ${t.kind} = 'resident'
+        AND ${t.apartmentId} IS NOT NULL
+        AND (${t.recipientUserId} IS NOT NULL OR ${t.recipientEmail} IS NOT NULL))
+    `,
+    ),
+  ],
 );
 export const joinRequests = pgTable(
   "join_requests",
@@ -460,13 +497,27 @@ export const joinRequests = pgTable(
     status: text("status").notNull().default("pending"),
     reviewedBy: uuid("reviewed_by").references(() => appUsers.id, { onDelete: "restrict" }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    authorizedBy: uuid("authorized_by").references(() => appUsers.id, { onDelete: "restrict" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
     unique("join_requests_invitation_id_user_id_key").on(t.invitationId, t.userId),
     index("join_requests_user_idx").on(t.userId, t.createdAt, t.id),
     index("join_requests_invitation_status_idx").on(t.invitationId, t.status, t.createdAt, t.id),
-    // Audit completeness and global-admin-only self-review are enforced in SQL migration 0010.
+    // Global-admin-only self-review is enforced by the SQL trigger in migration 0010.
+    check(
+      "join_requests_review_audit_check",
+      sql`
+      (${t.authorizedBy} IS NULL AND ${t.acceptedAt} IS NULL AND (
+        (${t.status} = 'pending' AND ${t.reviewedBy} IS NULL AND ${t.reviewedAt} IS NULL)
+        OR (${t.status} <> 'pending' AND ${t.reviewedBy} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL)
+      ))
+      OR (${t.status} = 'approved' AND ${t.apartmentId} IS NOT NULL
+        AND ${t.authorizedBy} IS NOT NULL AND ${t.acceptedAt} IS NOT NULL
+        AND ${t.reviewedBy} IS NULL AND ${t.reviewedAt} IS NULL)
+    `,
+    ),
   ],
 );
 

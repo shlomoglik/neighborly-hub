@@ -14,6 +14,11 @@ Member reads have stable pages of 20. Child additions and adult approvals serial
 
 ## Adult invitation flow
 
+[Personal apartment acceptance](invitation-onboarding.md#personal-apartment-acceptance)
+creates a household only in a vacant apartment. An active household keeps its
+membership and representative. To join it, ask the representative for a
+household-member invitation and use the reviewed flow below.
+
 Only a current adult representative can issue `household_member` invitations through the household endpoint. The server derives project/building/apartment/household scope; the body cannot choose identities, roles or another household. The new composite `(household_id, apartment_id)` FK, together with existing apartment/building/project FKs and kind/scope CHECKs, prevents cross-apartment/project binding. The link is single-use, expires in 1–90 days (default seven), supports the existing optional verified recipient restriction, and stores only the token hash. At most 20 unexpired/unrevoked links may exist for a household; a consumed link still counts until revoked or expired.
 
 The representative gets the link once and reuses local printable/downloadable QR, copy, WhatsApp recipient/manual number and mailto sharing. Messages are sent by the user. The private page lists bounded invitation metadata and supports confirmed revocation. Authorized managers can also see/revoke these invitations through their existing scoped management workspace. Neither the token, hash nor child records are returned by list endpoints.

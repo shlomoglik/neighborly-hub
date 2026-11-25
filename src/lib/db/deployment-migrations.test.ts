@@ -8,9 +8,10 @@ import {
 } from "../../../scripts/db/migrations.mjs";
 import { deploymentBuild, deploymentFailureMessage } from "../../../scripts/vercel-build.mjs";
 
-it("loads only the eleven authoritative SQL migrations and preserves function bodies", async () => {
+it("loads the authoritative SQL migrations and preserves function bodies", async () => {
   const migrations = await loadMigrations();
-  expect(migrations).toHaveLength(11);
+  expect(migrations).toHaveLength(13);
+  expect(migrations.at(-1)?.name).toBe("0013_combined_apartment_invitations.sql");
   expect(migrations[1].body).toContain("BEGIN\n");
   expect(migrations[0].checksum).toMatch(/^[a-f0-9]{64}$/);
 });

@@ -41,6 +41,7 @@ function LiveHousehold({
       error={action.error}
       onPage={onPage}
       onRefresh={resource.refresh}
+      onClearError={action.clear}
       onSave={async (input) => {
         const result = await action.run(
           (signal) => householdApi.update(id, input, signal),

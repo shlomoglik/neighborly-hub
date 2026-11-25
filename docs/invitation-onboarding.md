@@ -1,6 +1,6 @@
 # Invitation onboarding
 
-Apply authoritative SQL migrations 0001–0006, in order. Migration 0005 adds `invitations` and `join_requests`, composite structural foreign keys, normalized recipient restrictions, token uniqueness, payload/review constraints and pagination indexes. Do not run the legacy Drizzle/Supabase migration.
+Apply all authoritative SQL migrations in filename order with `pnpm db:migrate`. Migration 0005 adds `invitations` and `join_requests`, composite structural foreign keys, normalized recipient restrictions, token uniqueness, payload/review constraints and pagination indexes. Do not run the legacy Drizzle/Supabase migration.
 
 ## Account and membership boundary
 
@@ -17,26 +17,94 @@ The initial resident flow creates one adult member for an apartment without an a
 | Project manager           | Project                                              | Global admin                                                     | One request            |
 | Building manager          | Project and building                                 | Global admin                                                     | One request            |
 
-Independent staff grants combine; resident directory visibility grants no invitation management rights. Creation, discovery, revocation and review scope are enforced in SQL using verified session identity. Grants are loaded on every request. Reads use a read-only repeatable-read snapshot; writes lock current grants, invitation/request rows and affected identity/apartment rows. Approval rechecks the issuer's current authority, expiry, revocation, recipient restriction, scope and apartment availability. A manager cannot review their own request. Rejection grants no access and is allowed after expiry/revocation. Revoking an invitation does not revoke a previously approved residency/staff assignment.
+Independent staff grants combine; resident directory visibility grants no invitation management rights. Creation, discovery, revocation and review scope are enforced in SQL using verified session identity. Grants are loaded on every request. Reads use a read-only repeatable-read snapshot; writes lock current grants, invitation/request rows and affected identity/apartment rows. Approval rechecks the issuer's current authority, expiry, revocation, recipient restriction, scope and apartment availability. Only a current Global Admin can review their own resident or staff request. Rejection grants no access and is allowed after expiry/revocation. Revoking an invitation does not revoke a previously approved residency/staff assignment.
 
 An optional email restriction binds to the stable ID of an existing verified account, without exposing an account-search API. For a future account, verified matching email is required. An unrestricted link can be claimed by any signed-in account; its eventual access still requires an authorized reviewer. A delivery phone or email prefill is not proof of identity. The account email shown in a review belongs to the authenticated applicant, not the user-entered resident name.
 
-Tokens contain 256 random bits. Only SHA-256 hashes persist; the full URL is returned once on creation and must be copied/printed then. It cannot be retrieved later. URLs use configured `BETTER_AUTH_URL`, never the request's Host header. Opening a link, crawler/prefetch GET or OAuth redirect never consumes it. A single-use link is consumed only when a request transaction commits; retries by the same account return its saved request. Reusable building links accept one request per account per link. A rejected/consumed single-use link requires a new invitation for another attempt. Existing requests remain visible to their applicant after expiry/revocation; no other applicant can open the inactive link.
+Tokens contain 256 random bits. Only SHA-256 hashes persist; the full URL is returned once on creation and must be copied/printed then. It cannot be retrieved later. URLs use configured `BETTER_AUTH_URL`, never the request's Host header. Opening a link, crawler/prefetch GET or OAuth redirect never consumes it. A single-use link is consumed only when the explicit submission transaction commits; retries by the same account return its saved request. Reusable building links accept one request per account per link. A rejected/consumed single-use link requires a new invitation for another attempt. Existing requests remain visible to their applicant after expiry/revocation; no other applicant can open the inactive link.
+
+## Personal apartment acceptance
+
+| Invitation                                                                     | Outcome of explicit submission                                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| New resident link to one fixed residential apartment with a recipient          | Immediate approval if the apartment is vacant and the recipient and invitation are eligible |
+| Previously issued link or a renewed manual-review link                         | Manual review                                                                               |
+| Fixed apartment without a recipient, or building link with apartment selection | Manual review                                                                               |
+| Existing-household member link or standalone staff link                        | Existing manual-review flow                                                                 |
+
+Migration 0012 defaults all existing invitations to `manual_review` and preserves
+their pending requests. The server assigns `direct_acceptance` during creation
+based on the kind, fixed residential destination and recipient. Renewal rotates
+the token and preserves this policy. The existing verified account ID takes
+precedence over the address. If no account was bound at issuance, acceptance
+requires a verified email matching the normalized recipient address and binds the
+consumed invitation to that account.
+
+The recipient sees the fixed destination and the directory participation and
+privacy disclosures before explicitly accepting. GET, sign-in and email
+verification leave the link unconsumed. POST revalidates recipient verification,
+the fixed destination, expiry, revocation and current issuer authority. Only a
+current Global Admin may directly accept their own invitation.
+
+The transaction locks the invitation, recipient account and apartment. It
+reuses the recipient's linked adult identity or creates one with the issuer as
+verifier, provisions an approved household and representative, saves the approved
+result and consumes the link. The active-household unique index also arbitrates
+competing writes. An occupied apartment returns `409 APARTMENT_OCCUPIED` and
+keeps the link unconsumed. The recipient can ask the household representative
+for a member invitation or contact the issuer to confirm the destination.
+Repeat submissions return the saved result to the eligible recipient, and
+reloading shows approved status with household and directory links.
+
+A directly approved request records the authorizing issuer in `authorized_by`,
+the accepting account in `user_id`, and the time in `accepted_at`. Its review
+fields are empty. Manual decisions continue to record `reviewed_by` and
+`reviewed_at`.
+
+## Combined apartment and staff invitations
+
+A global admin can add one staff role when issuing a personal invitation for a
+fixed residential apartment. A project manager covers the whole project.
+A building committee role requires an explicit building in the same project,
+which may differ from the apartment's building. The issuer and recipient see
+both destinations before issuance or acceptance. Scoped managers cannot list,
+issue, renew or revoke combined invitations.
+
+The existing resident creation body accepts optional `staff` as
+`{ role: "project_manager" }` or
+`{ role: "building_manager", buildingId }`. This requires `recipientEmail`
+and a fixed residential apartment. The acceptance payload remains the ordinary
+resident payload. The server takes the staff role and scope from the invitation
+rather than the browser. Context, listings, and request history include the
+requested staff scope. Acceptance and its retries return the same approved
+request ID and staff scope.
+
+Both grants commit together with direct acceptance and link consumption.
+Existing coverage is reused. A project-manager upgrade replaces narrower
+building grants. The persisted invitation records the staff scope. The accepted
+request records the issuer, recipient, and acceptance timestamp for both
+memberships. A conflict or failed staff write rolls back the household and
+keeps the invitation unconsumed. Renewal requires an authorized global admin
+and preserves both scopes. Revocation blocks future acceptance. Staff removal
+uses the existing management flow and leaves the household membership intact.
+
+Migration 0013 adds optional staff scope columns. Older invitations default to
+having no additional staff role. Standalone staff invitations retain manual review.
 
 ## HTTP contracts
 
 All endpoints require a verified database session, return `Cache-Control: private, no-store`, `Vary: Cookie`, and `Referrer-Policy: no-referrer`. Anonymous requests receive 401; invalid/missing/unauthorized detail identifiers share generic 404. Writes require exact configured Origin and a bounded JSON body (4096 bytes). Unexpected errors return a generic 500. Typed input schemas reject extra identity/role parameters. Pages are 1–10000 with 20 items and `hasNext`, following repository conventions.
 
-| Endpoint                                                               | Behavior                                                                                                            |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/management/projects/:projectId/invitations?page=1`           | Scoped metadata and server-derived `canInviteStaff`; no token/hash or raw role records                              |
-| `POST /api/management/projects/:projectId/invitations`                 | Strict kind/scope, optional `recipientEmail`, `expiresInDays` 1–90 (default 7); returns `{id,url}` once             |
-| `DELETE /api/management/projects/:projectId/invitations/:invitationId` | Revoke scoped invitation                                                                                            |
-| `GET /api/management/projects/:projectId/join-requests?page=1`         | Scoped requests, submitted names, applicant account name/email and `canReview`; no user IDs/session/contact records |
-| `POST /api/management/projects/:projectId/join-requests/:requestId`    | `{decision:"approve"                                                                                                | "reject"}`; authoritative transaction, no optimistic grant |
-| `GET /api/join/:token?page=1`                                          | Minimal project/building context and paginated apartment labels, or caller's existing request status                |
-| `POST /api/join/:token`                                                | Resident `{apartmentId,fullName,householdName}` or staff `{}`; saves pending request                                |
-| `GET /api/join/requests?page=1`                                        | Caller-owned requests across projects                                                                               |
+| Endpoint                                                               | Behavior                                                                                                             |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/management/projects/:projectId/invitations?page=1`           | Scoped metadata and server-derived `canInviteStaff`; no token/hash or raw role records                               |
+| `POST /api/management/projects/:projectId/invitations`                 | Strict kind/scope, optional `recipientEmail`, `expiresInDays` 1–90 (default 7); returns `{id,url}` once              |
+| `DELETE /api/management/projects/:projectId/invitations/:invitationId` | Revoke scoped invitation                                                                                             |
+| `GET /api/management/projects/:projectId/join-requests?page=1`         | Scoped requests, submitted names, applicant account name/email and `canReview`; no user IDs/session/contact records  |
+| `POST /api/management/projects/:projectId/join-requests/:requestId`    | `{decision:"approve"                                                                                                 | "reject"}`; authoritative transaction, no optimistic grant |
+| `GET /api/join/:token?page=1`                                          | Minimal project/building context, `acceptancePolicy`, apartment labels and the caller's saved result if present      |
+| `POST /api/join/:token`                                                | Resident `{apartmentId,fullName,householdName}`, household member `{fullName}`, or staff `{}`; returns `{id,status}` |
+| `GET /api/join/requests?page=1`                                        | Caller-owned requests across projects                                                                                |
 
 Approval conflicts return 409 (`APARTMENT_OCCUPIED`, `IDENTITY_UNAVAILABLE`, `REQUEST_REVIEWED`, `INVITATION_INACTIVE`); self-review returns 403 except for current Global Admins reviewing resident or management requests. Household-member self-review and self-invitation remain prohibited. Global Admin self-approval records the same review audit fields and, for a new resident identity, the admin as verifier. Migration 0010 replaces both database self-action prohibitions with write-time global-role checks while preserving complete review audit fields. A deleted issuer grant makes further claims/approvals unavailable. No public account directory or arbitrary user/person identity binding is introduced.
 
@@ -103,7 +171,7 @@ Both resident flows display the agreed reciprocal-participation policy before
 submission: approval lists adult identity and household/building/apartment context
 within the existing community scope. Optional phone/email use separate privacy
 controls, with managers-only defaults and current cross-project effects. Children
-remain excluded; submission itself grants no access. Residents cannot hide their
+remain excluded; access begins when membership becomes approved. Residents cannot hide their
 basic identity while keeping access to others' profiles.
 
 The submit notice explicitly acknowledges participation without an extra checkbox
@@ -116,8 +184,7 @@ Audit coverage: G1 invitation/history handoff, G2 applicant guidance and G7 list
 disclosure. Deferred: G1 unlinked-directory guidance (outside this PR's file
 boundary) and G2 reviewer conflict recovery. G7 listing scope is now a confirmed
 product decision; per-community contact overrides remain outside this PR. G10 real-login/two-building device
-verification and the wider pilot guide remain follow-ups. No authorization,
-transaction, membership, renewal or provisioning behavior changes here.
+verification and the wider pilot guide remain follow-ups.
 
 Before pilot enrollment, record commit/device/browser and results at 390px for
 both enabled sign-in methods: return to invitation, submit, pending refresh,

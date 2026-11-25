@@ -102,6 +102,56 @@ it("shows staff invitations only with server capability", () => {
   fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
   expect(screen.getByRole("option", { name: translate("en", "project_manager") })).toBeTruthy();
 });
+it("previews and submits a distinct staff building for a personal apartment invitation", async () => {
+  const defaults = workspace();
+  cleanup();
+  const staffBuildingId = "d2dbcdcc-6d02-4c5d-881c-a21e528b7872";
+  const p = workspace({
+    data: {
+      ...defaults.data!,
+      hierarchy: {
+        ...defaults.data!.hierarchy,
+        buildings: [
+          ...defaults.data!.hierarchy.buildings,
+          { id: staffBuildingId, name: "Committee building", floors: [] },
+        ],
+      },
+      invitations: { ...defaults.data!.invitations, canInviteStaff: true },
+    },
+  });
+  fireEvent.click(screen.getByRole("button", { name: translate("en", "inviteCreate") }));
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByLabelText(translate("en", "building")), {
+    target: { value: buildingId },
+  });
+  expect(dialog.queryByLabelText(translate("en", "inviteAdditionalStaff"))).toBeNull();
+  fireEvent.change(dialog.getByLabelText(translate("en", "apartment")), {
+    target: { value: apartmentId },
+  });
+  fireEvent.change(dialog.getByLabelText(translate("en", "inviteAdditionalStaff")), {
+    target: { value: "building_manager" },
+  });
+  fireEvent.change(dialog.getByLabelText(translate("en", "inviteStaffBuilding")), {
+    target: { value: staffBuildingId },
+  });
+  expect(dialog.getByText("Committee building", { selector: "bdi" })).toBeTruthy();
+  const submit = dialog.getByRole("button", { name: translate("en", "inviteCreate") });
+  expect((submit as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(dialog.getByLabelText(translate("en", "inviteRecipientEmail")), {
+    target: { value: "recipient@example.test" },
+  });
+  fireEvent.click(submit);
+  await waitFor(() =>
+    expect(p.onCreate).toHaveBeenCalledWith({
+      kind: "resident",
+      buildingId,
+      apartmentId,
+      recipientEmail: "recipient@example.test",
+      expiresInDays: 7,
+      staff: { role: "building_manager", buildingId: staffBuildingId },
+    }),
+  );
+});
 it.each(["loading", "error", "unavailable", "expired"] as const)(
   "hides previous hierarchy, links and requests in %s state",
   (status) => {
@@ -120,6 +170,7 @@ function join(overrides: Partial<JoinInvitationProps> = {}, lang: Lang = "en") {
     busy: false,
     error: null,
     data: {
+      acceptancePolicy: "manual_review",
       projectName: "Saved project",
       buildingName: "Scoped building",
       fixedApartmentId: apartmentId,
@@ -397,6 +448,73 @@ it.each(["he", "en", "ru"] as const)(
     }
   },
 );
+it.each(["he", "en", "ru"] as const)(
+  "shows a fixed personal destination and requires explicit acceptance in %s",
+  async (lang) => {
+    const base = join({}, lang);
+    cleanup();
+    const data = { ...base.data!, acceptancePolicy: "direct_acceptance" as const };
+    const { onSubmit } = join({ data }, lang);
+    const notice = screen.getByRole("complementary", {
+      name: translate(lang, "joinParticipation"),
+    });
+    expect(within(notice).getByText(translate(lang, "joinPersonalNotice"))).toBeTruthy();
+    expect(within(notice).getByText(translate(lang, "joinContactPrivacy"))).toBeTruthy();
+    expect(screen.getByText("2", { selector: "bdi" })).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(translate(lang, "fullName")), {
+      target: { value: "Dana Resident" },
+    });
+    fireEvent.change(screen.getByLabelText(translate(lang, "familyName")), {
+      target: { value: "Dana's household" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: translate(lang, "joinPersonalAccept") }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      apartmentId,
+      fullName: "Dana Resident",
+      householdName: "Dana's household",
+    });
+
+    cleanup();
+    join({ data, error: "APARTMENT_OCCUPIED" }, lang);
+    expect(screen.getByText(translate(lang, "joinPersonalOccupied"))).toBeTruthy();
+
+    cleanup();
+    join({ data: { ...data, request: { id: "saved", status: "approved" } } }, lang);
+    expect(screen.getByRole("status").textContent).toBe(translate(lang, "inviteApproved"));
+    expect(
+      screen.getByRole("link", { name: translate(lang, "openBook") }).getAttribute("href"),
+    ).toBe("/directory");
+    expect(
+      screen.getByRole("link", { name: translate(lang, "homeMyContacts") }).getAttribute("href"),
+    ).toBe("/household");
+    expect(
+      screen.queryByRole("button", { name: translate(lang, "joinPersonalAccept") }),
+    ).toBeNull();
+  },
+);
+it("shows the combined scope before one acceptance and links to management after approval", () => {
+  const base = join();
+  cleanup();
+  const data = {
+    ...base.data!,
+    projectId,
+    acceptancePolicy: "direct_acceptance" as const,
+    staff: { role: "building_manager" as const, buildingId, buildingName: "Committee scope" },
+  };
+  join({ data, error: "STAFF_GRANT_FAILED" });
+  expect(screen.getByText("Committee scope")).toBeTruthy();
+  expect(screen.getByText(translate("en", "inviteCombinedFailed"))).toBeTruthy();
+  expect(screen.getByRole("button", { name: translate("en", "joinCombinedAccept") })).toBeTruthy();
+  cleanup();
+  join({ data: { ...data, request: { id: "saved", status: "approved" } } });
+  expect(
+    screen
+      .getByRole("link", { name: translate("en", "openProjectManagement") })
+      .getAttribute("href"),
+  ).toBe(`/manage/project/${projectId}`);
+});
 it.each(["ready", "unavailable"] as const)(
   "offers recovery without a join form for an inactive invitation (%s)",
   (status) => {

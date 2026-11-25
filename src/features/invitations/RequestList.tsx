@@ -54,6 +54,11 @@ export function RequestList({
                 </>
               )}
             </p>
+            {row.staff && (
+              <p>
+                {t(row.staff.role)} · <bdi>{row.staff.buildingName ?? row.projectName}</bdi>
+              </p>
+            )}
             <p>
               <bdi>{row.fullName ?? row.accountName}</bdi> · <bdi>{row.householdName}</bdi>
             </p>
@@ -103,8 +108,7 @@ export function RequestList({
             )}
             {!onReview &&
               row.status === "approved" &&
-              row.kind !== "resident" &&
-              row.kind !== "household_member" && (
+              (row.staff || (row.kind !== "resident" && row.kind !== "household_member")) && (
                 <Link className="text-primary underline" href={managementHref(row.projectId)}>
                   {t("openProjectManagement")}
                 </Link>

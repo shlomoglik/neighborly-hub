@@ -14,6 +14,8 @@ Contact methods belong to the global person, not to a project or household. The 
 
 The separate [private family workflow](family-membership.md) now manages child profiles and reviewed invitations into occupied households. Delegating representative privileges, adult removal, ownership and household moves remain follow-up work.
 
+The household page uses the same contact card for authorized member details and self-service contacts. The edit action opens the form inside the selected card. Add uses the same form in a draft card and defaults to managers-only visibility. Save sends all fields for the selected contact in one request using the original snapshot. A modified draft must be saved or canceled before opening another editor. A conflict keeps the draft visible and blocks Save. Refresh, cancel the stale draft, and reopen the card to review the current values before editing again. Storybook's Inline Contacts examples exercise Save and Cancel in Hebrew and English with fictional long contact values.
+
 ## API
 
 All routes verify the database session. Every success/error response is `private, no-store` and varies by cookie. UUID and pagination inputs are validated. Unauthorized/missing/pending/inactive details share a generic 404. Writes require the exact configured Origin and streamed JSON bodies of at most 4096 bytes; schemas reject unknown fields and invalid contact values.
