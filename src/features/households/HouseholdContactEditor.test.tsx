@@ -81,6 +81,7 @@ it("defaults new details to managers, rejects invalid values and stages removals
   render(localized(props));
   fireEvent.click(screen.getByRole("button", { name: "Add contact detail" }));
   const draft = within(screen.getByRole("group", { name: "Add contact detail" }));
+  expect(draft.getByRole("button", { name: "Delete" })).toHaveAttribute("type", "button");
   expect(draft.getByRole("radio", { name: translate("en", "vis_managers") })).toBeChecked();
   fireEvent.change(screen.getByLabelText(translate("en", "phone")), { target: { value: "-----" } });
   expect(save()).toBeDisabled();

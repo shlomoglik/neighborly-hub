@@ -22,16 +22,17 @@ export function ContactFieldsEditor({
   value,
   adding,
   onChange,
-  children,
+  headerAction,
 }: {
   value: ContactFields;
   adding: boolean;
   onChange: (patch: Partial<ContactFields>) => void;
-  children: ReactNode;
+  headerAction: ReactNode;
 }) {
   const { t } = useI18n();
   const fieldId = useId();
   const errorId = `${fieldId}-error`;
+  const title = t(adding ? "homeAddContact" : "homeContactEditor");
   const invalid =
     Boolean(value.value) &&
     !contactValue.safeParse({
@@ -41,9 +42,13 @@ export function ContactFieldsEditor({
 
   return (
     <fieldset className="min-w-0 space-y-3 rounded-xl border bg-card p-3">
-      <legend className="mb-2 text-sm font-medium">
-        {t(adding ? "homeAddContact" : "homeContactEditor")}
-      </legend>
+      <legend className="sr-only">{title}</legend>
+      <header className="flex items-start justify-between gap-2">
+        <span aria-hidden="true" className="min-w-0 py-3 text-sm font-medium">
+          {title}
+        </span>
+        {headerAction}
+      </header>
       <div className="space-y-2 text-sm">
         <label htmlFor={fieldId}>{t("homeContactKind")}</label>
         <select
@@ -90,7 +95,6 @@ export function ContactFieldsEditor({
         value={toVisibility(value.visibility)}
         onChange={(next) => onChange({ visibility: contactVisibility[next] })}
       />
-      {children}
     </fieldset>
   );
 }
