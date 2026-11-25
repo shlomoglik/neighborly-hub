@@ -28,6 +28,7 @@ const home: HouseholdDetail = {
   apartment: "1",
   floor: 0,
   canRename: true,
+  ownPersonId: "adult",
   ownContacts: [],
   members: [],
   page: 1,
@@ -86,6 +87,7 @@ it("uses directory navigation for another household and hides family editing fro
   vi.mocked(householdApi.detail).mockResolvedValue({
     ...home,
     canRename: false,
+    ownPersonId: null,
     ownContacts: null,
   });
   render(view(<div>Content</div>));

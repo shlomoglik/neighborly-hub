@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { I18nContext } from "@/lib/i18n/context";
@@ -20,6 +20,7 @@ const props = (): HouseholdWorkspaceProps => ({
     apartment: "1A",
     floor: 0,
     canRename: true,
+    ownPersonId: "adult",
     ownContacts: [],
     members: [{ id: "adult", name: "Adult", primary: true, contacts: [] }],
     page: 1,
@@ -49,7 +50,10 @@ it.each(["he", "en", "ru"] as const)(
     expect(screen.getByText("Family")).toBeTruthy();
     expect(screen.getByText("Adult")).toBeTruthy();
     expect(screen.getByRole("button", { name: translate(lang, "homeRename") })).toBeTruthy();
-    expect(screen.getByText(translate(lang, "homeGlobalContacts"))).toBeTruthy();
+    expect(screen.getByRole("link", { name: translate(lang, "homeEditContacts") })).toHaveAttribute(
+      "href",
+      "/household/home/contacts/edit",
+    );
   },
 );
 it("hides editors for directory viewers and discards stale data during loading/denial", () => {
@@ -57,7 +61,7 @@ it("hides editors for directory viewers and discards stale data during loading/d
   value.data = { ...value.data!, canRename: false, ownContacts: null };
   const { rerender } = render(localized(value));
   expect(screen.queryByRole("button", { name: "Edit household name" })).toBeNull();
-  expect(screen.queryByText("My contact details")).toBeNull();
+  expect(screen.queryByRole("link", { name: "Edit contact details" })).toBeNull();
   rerender(localized({ ...value, status: "loading" }));
   expect(screen.queryByText("Family")).toBeNull();
   expect(screen.getByRole("status").getAttribute("aria-busy")).toBe("true");
@@ -79,31 +83,6 @@ it("submits renamed household with its original value for conflict detection", a
   );
   expect(await screen.findByText("Changes saved.")).toBeTruthy();
 });
-it("defaults new contact privacy to managers and validates values before writing", async () => {
-  const value = props();
-  render(localized(value));
-  fireEvent.click(screen.getByRole("button", { name: "Add contact detail" }));
-  expect(screen.getByRole("radio", { name: translate("en", "vis_managers") })).toHaveProperty(
-    "checked",
-    true,
-  );
-  fireEvent.change(screen.getByLabelText(translate("en", "phone")), { target: { value: "-----" } });
-  const save = screen.getByRole("button", { name: "Save" });
-  expect(save).toBeDisabled();
-  fireEvent.click(save);
-  expect(value.onSave).not.toHaveBeenCalled();
-  expect(screen.getByRole("alert")).toBeTruthy();
-  fireEvent.change(screen.getByLabelText(translate("en", "phone")), {
-    target: { value: "0501234567" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() =>
-    expect(value.onSave).toHaveBeenCalledWith({
-      action: "addContact",
-      contact: { kind: "phone", value: "0501234567", label: null, visibility: "managers" },
-    }),
-  );
-});
 it("retains drafts through revalidation, shows conflicts, and clears editing when access is revoked", () => {
   const value = props();
   const { rerender } = render(localized(value));
@@ -118,35 +97,6 @@ it("retains drafts through revalidation, shows conflicts, and clears editing whe
   rerender(localized(value));
   expect(screen.queryByRole("textbox")).toBeNull();
 });
-it("requires deletion confirmation and blocks controls while saving", async () => {
-  const value = props();
-  const contact = {
-    id: "00000000-0000-4000-8000-000000000001",
-    kind: "email" as const,
-    value: "self@example.test",
-    label: null,
-    visibility: "project" as const,
-  };
-  value.data!.ownContacts = [contact];
-  const { rerender } = render(localized(value));
-  fireEvent.click(screen.getByRole("button", { name: "Delete self@example.test" }));
-  expect(value.onSave).not.toHaveBeenCalled();
-  expect(screen.getByRole("alertdialog")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-  expect(value.onSave).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Delete self@example.test" }));
-  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-  const { id, ...expected } = contact;
-  await waitFor(() =>
-    expect(value.onSave).toHaveBeenCalledWith({ action: "deleteContact", id, expected }),
-  );
-  rerender(localized({ ...value, busy: true }));
-  expect(screen.getByRole("button", { name: "Edit self@example.test" })).toHaveProperty(
-    "disabled",
-    true,
-  );
-});
-
 it.each(["he", "en", "ru"] as const)(
   "displays a solo resident and roommates without changing their individual names in %s",
   async (lang) => {
@@ -188,105 +138,35 @@ it.each(["he", "en", "ru"] as const)(
   },
 );
 
-const savedEmail = {
-  id: "00000000-0000-4000-8000-000000000001",
-  kind: "email",
-  value: "self@example.test",
-  label: "Home",
-  visibility: "project",
-} as const;
-
-it("edits one saved card in place and submits all fields with the original snapshot", async () => {
+it("places one edit link on the owner's card and preserves the full email target", () => {
   const value = props();
+  const email = "a.very.long.contact.address.for.this.example@neighborhood.example.test";
   value.data!.ownContacts = [
-    savedEmail,
-    { ...savedEmail, id: "other", value: "second@example.test" },
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      kind: "email",
+      value: email,
+      label: null,
+      visibility: "project",
+    },
   ];
-  render(localized(value));
-
-  const edit = screen.getByRole("button", { name: "Edit self@example.test" });
-  const card = edit.closest(".rounded-xl") as HTMLElement;
-  fireEvent.click(edit);
-
-  const form = within(card);
-  expect(form.getByLabelText(translate("en", "email"))).toHaveFocus();
-  expect(form.getByRole("button", { name: "Save" })).toBeDisabled();
-  fireEvent.change(form.getByLabelText(translate("en", "homeContactKind")), {
-    target: { value: "phone" },
+  value.data!.members.push({
+    id: "neighbor",
+    name: "Neighbor",
+    primary: false,
+    contacts: [{ kind: "email", value: "neighbor@example.test" }],
   });
-  const phone = form.getByLabelText(translate("en", "phone"));
-  expect(phone).toHaveAttribute("inputmode", "tel");
-  fireEvent.change(phone, { target: { value: "0501234567" } });
-  fireEvent.change(form.getByLabelText(translate("en", "homeContactLabel")), {
-    target: { value: "Mobile" },
-  });
-  fireEvent.click(form.getByRole("radio", { name: translate("en", "vis_building") }));
-  expect(screen.getByRole("button", { name: "Edit second@example.test" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "Add contact detail" })).toBeDisabled();
-
-  fireEvent.click(form.getByRole("button", { name: "Save" }));
-  const { id, ...expected } = savedEmail;
-  await waitFor(() =>
-    expect(value.onSave).toHaveBeenCalledExactlyOnceWith({
-      action: "updateContact",
-      id,
-      expected,
-      contact: { kind: "phone", value: "0501234567", label: "Mobile", visibility: "building" },
-    }),
-  );
-  await waitFor(() =>
-    expect(form.getByRole("button", { name: "Edit self@example.test" })).toHaveFocus(),
-  );
-});
-
-it("keeps a failed draft inline, blocks stale resubmission, and restores focus on cancel", async () => {
-  const value = props();
-  value.data!.ownContacts = [savedEmail];
-  value.onSave = vi.fn().mockResolvedValue(false);
   const { rerender } = render(localized(value));
-  const edit = screen.getByRole("button", { name: "Edit self@example.test" });
-  const card = edit.closest(".rounded-xl") as HTMLElement;
-  fireEvent.click(edit);
-  const form = within(card);
-  const label = form.getByLabelText(translate("en", "homeContactLabel"));
-  fireEvent.change(label, { target: { value: "Draft" } });
-  fireEvent.click(form.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(value.onSave).toHaveBeenCalledTimes(1));
-
-  rerender(localized({ ...value, error: "DUPLICATE_CONTACT" }));
-  expect(form.getByRole("alert")).toHaveTextContent(translate("en", "homeDuplicate"));
-  expect(label).toHaveValue("Draft");
-
-  rerender(localized({ ...value, error: "STALE_HOUSEHOLD" }));
-  expect(form.getByRole("alert")).toHaveTextContent(translate("en", "homeStale"));
-  expect(form.getByRole("button", { name: "Save" })).toBeDisabled();
-  fireEvent.click(form.getByRole("button", { name: translate("en", "refreshDirectory") }));
-  expect(value.onRefresh).toHaveBeenCalledTimes(1);
-  expect(value.onSave).toHaveBeenCalledTimes(1);
-
-  value.data!.ownContacts = [{ ...savedEmail, label: "Updated elsewhere" }];
-  rerender(localized(value));
-  expect(form.getByRole("button", { name: "Save" })).toBeDisabled();
-  expect(label).toHaveValue("Draft");
-  fireEvent.click(form.getByRole("button", { name: "Cancel" }));
-  expect(form.getByText("Updated elsewhere")).toBeVisible();
-  expect(form.getByRole("button", { name: "Edit self@example.test" })).toHaveFocus();
-});
-
-it("shows only authorized member actions and clears an owner draft when edit rights disappear", () => {
-  const value = props();
-  value.data!.ownContacts = [savedEmail];
-  value.data!.members[0].contacts = [{ kind: "email", value: "public@example.test" }];
-  const { rerender } = render(localized(value));
-  expect(screen.getByRole("link", { name: translate("en", "mail") })).toHaveAttribute(
+  const edit = screen.getByRole("link", { name: "Edit contact details" });
+  const card = edit.closest("article");
+  expect(card).toHaveTextContent("Adult");
+  expect(card).toHaveTextContent(email);
+  expect(screen.getByRole("button", { name: email })).toHaveClass("truncate");
+  expect(screen.getAllByRole("link", { name: translate("en", "mail") })[0]).toHaveAttribute(
     "href",
-    "mailto:public%40example.test",
+    `mailto:${encodeURIComponent(email)}`,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Edit self@example.test" }));
-  expect(screen.getByDisplayValue("self@example.test")).toBeVisible();
-  rerender(localized({ ...value, data: { ...value.data!, ownContacts: null } }));
-  expect(screen.queryByDisplayValue("self@example.test")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Edit self@example.test" })).toBeNull();
-  rerender(localized(value));
-  expect(screen.queryByDisplayValue("self@example.test")).toBeNull();
+  rerender(localized({ ...value, data: { ...value.data!, ownContacts: null, ownPersonId: null } }));
+  expect(screen.queryByRole("link", { name: "Edit contact details" })).toBeNull();
+  expect(screen.queryByText(email)).toBeNull();
 });

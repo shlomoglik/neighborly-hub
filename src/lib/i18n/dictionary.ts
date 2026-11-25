@@ -451,7 +451,11 @@ export const dict = {
     ru: "Вы ещё не добавили контактные данные.",
   },
   homeAddContact: { he: "הוספת פרט קשר", en: "Add contact detail", ru: "Добавить контакт" },
-  homeEditContact: { he: "עריכת {value}", en: "Edit {value}", ru: "Изменить {value}" },
+  homeEditContacts: {
+    he: "עריכת פרטי קשר",
+    en: "Edit contact details",
+    ru: "Изменить контактные данные",
+  },
   homeDeleteContact: { he: "מחיקת {value}", en: "Delete {value}", ru: "Удалить {value}" },
   homeContactEditor: {
     he: "עריכת פרט קשר",

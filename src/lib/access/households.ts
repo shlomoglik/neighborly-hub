@@ -5,6 +5,7 @@ import * as s from "../../../drizzle/schema";
 import { loadGrants, scopeFor } from "./grants";
 import {
   householdMutation,
+  type ContactChange,
   type HouseholdDetail,
   type HouseholdList,
   type HouseholdMutation,
@@ -154,6 +155,7 @@ export async function readHousehold(
         apartment: home.apartment,
         floor: home.floor,
         canRename: !!self?.primary,
+        ownPersonId: self?.personId ?? null,
         ownContacts:
           ownContacts?.map((c) => ({
             ...c,
@@ -207,6 +209,8 @@ export async function updateHousehold(
       if (!self.primary) throw unavailable();
       if (self.name !== input.expected) throw new HouseholdError(409, "STALE_HOUSEHOLD");
       await tx.update(s.households).set({ displayName: input.name }).where(eq(s.households.id, id));
+    } else if (input.action === "saveContacts") {
+      await saveContacts(tx, self.personId, input.changes);
     } else if (input.action === "addContact") {
       const contacts = await tx
         .select({
@@ -244,4 +248,71 @@ export async function updateHousehold(
     }
     return { id };
   });
+}
+
+async function saveContacts(
+  tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  personId: string,
+  changes: ContactChange[],
+) {
+  const rows = await tx
+    .select()
+    .from(s.contactMethods)
+    .where(eq(s.contactMethods.partyId, personId))
+    .orderBy(s.contactMethods.id)
+    .for("update");
+  const previous = new Map(rows.map((row) => [row.id, row]));
+  const changed = new Set<string>();
+  const next = new Map(previous);
+  const additions = [];
+  for (const change of changes) {
+    if (change.action === "addContact") {
+      additions.push(change.contact);
+      continue;
+    }
+    const { id, expected } = change;
+    const current = previous.get(id);
+    if (
+      !current ||
+      current.kind !== expected.kind ||
+      current.value !== expected.value ||
+      current.label !== expected.label ||
+      current.visibility !== expected.visibility
+    )
+      throw new HouseholdError(409, "STALE_HOUSEHOLD");
+    if (changed.has(id)) throw new HouseholdError(400, "INVALID_INPUT");
+    changed.add(id);
+    if (change.action === "deleteContact") next.delete(id);
+    else next.set(id, { ...current, ...change.contact });
+  }
+
+  if (additions.length && next.size + additions.length > 10)
+    throw new HouseholdError(409, "CONTACT_LIMIT");
+  const keys = new Set<string>();
+  const keyOf = (contact: { kind: string; value: string }) =>
+    JSON.stringify([contact.kind, contact.value]);
+  for (const [id, current] of next) {
+    const original = previous.get(id)!;
+    if (keyOf(current) === keyOf(original)) keys.add(keyOf(current));
+  }
+  const newValues = [
+    ...additions,
+    ...[...next.values()].filter((row) => keyOf(row) !== keyOf(previous.get(row.id)!)),
+  ];
+  for (const contact of newValues) {
+    const key = keyOf(contact);
+    if (keys.has(key)) throw new HouseholdError(409, "DUPLICATE_CONTACT");
+    keys.add(key);
+  }
+
+  for (const change of changes) {
+    if (change.action === "addContact") continue;
+    const target = and(eq(s.contactMethods.id, change.id), eq(s.contactMethods.partyId, personId));
+    if (change.action === "deleteContact") await tx.delete(s.contactMethods).where(target);
+    else await tx.update(s.contactMethods).set(change.contact).where(target);
+  }
+  if (additions.length)
+    await tx
+      .insert(s.contactMethods)
+      .values(additions.map((contact) => ({ ...contact, partyId: personId })));
 }

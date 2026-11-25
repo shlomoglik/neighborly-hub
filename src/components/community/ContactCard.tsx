@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useI18n } from "@/lib/i18n/context";
 import { ContactAction } from "./ContactAction";
 import type { Visibility } from "./VisibilitySelector";
@@ -15,42 +16,60 @@ export function ContactCardDetails({
   value,
   label,
   visibility,
-  actions,
 }: {
   kind: "phone" | "email" | "whatsapp";
   value: string;
   label?: string | null;
   visibility?: Visibility;
-  actions?: ReactNode;
 }) {
   const { t } = useI18n();
+  const [showValue, setShowValue] = useState(false);
   return (
-    <div className="flex flex-wrap items-start gap-2">
-      <div className="min-w-0 flex-[1_1_10rem] space-y-1">
-        <p className="text-sm font-medium">{t(kind)}</p>
-        <p className="min-w-0 break-all text-sm tabular-nums">
-          <bdi dir="ltr">{value}</bdi>
+    <div className="min-w-0 space-y-1">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm font-medium">{t(kind)}</p>
+          <TooltipProvider>
+            <Tooltip open={showValue} onOpenChange={setShowValue}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="block max-w-full cursor-help truncate text-sm tabular-nums"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setShowValue(true);
+                  }}
+                  dir="ltr"
+                >
+                  {value}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[calc(100vw-2rem)] wrap-anywhere" dir="ltr">
+                {value}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <div className="shrink-0">
+          <ContactAction kind={kind} value={value} />
+        </div>
+      </div>
+      {label && (
+        <p className="break-words text-sm text-muted-foreground">
+          <bdi>{label}</bdi>
         </p>
-        {label && (
-          <p className="break-words text-sm text-muted-foreground">
-            <bdi>{label}</bdi>
-          </p>
-        )}
-        {visibility && (
-          <p className="text-sm text-muted-foreground">
-            {t(
-              visibility === "admins"
-                ? "vis_managers"
-                : visibility === "building"
-                  ? "vis_building"
-                  : "vis_project",
-            )}
-          </p>
-        )}
-      </div>
-      <div className="flex min-w-0 max-w-full flex-wrap gap-1">
-        {actions ?? <ContactAction kind={kind} value={value} />}
-      </div>
+      )}
+      {visibility && (
+        <p className="text-sm text-muted-foreground">
+          {t(
+            visibility === "admins"
+              ? "vis_managers"
+              : visibility === "building"
+                ? "vis_building"
+                : "vis_project",
+          )}
+        </p>
+      )}
     </div>
   );
 }
