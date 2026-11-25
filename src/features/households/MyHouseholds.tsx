@@ -11,7 +11,9 @@ import { householdApi } from "./household-api";
 export function MyHouseholds() {
   const { t } = useI18n();
   const [page, setPage] = useState(1);
-  const resource = usePrivateResource(String(page), (signal) => householdApi.mine(page, signal));
+  const resource = usePrivateResource(String(page), (signal) => householdApi.mine(page, signal), {
+    keepDataOnRefresh: true,
+  });
   return (
     <AppShell>
       <section className="space-y-5">
@@ -19,7 +21,7 @@ export function MyHouseholds() {
           <h1 className="text-2xl font-bold">{t("homeMine")}</h1>
           <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
             <RefreshButton
-              disabled={resource.status === "loading"}
+              disabled={resource.refreshing || resource.status === "loading"}
               onClick={resource.refresh}
               label={t("refreshDirectory")}
             />

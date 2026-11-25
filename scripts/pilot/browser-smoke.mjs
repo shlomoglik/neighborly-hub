@@ -274,7 +274,32 @@ try {
   await check("mobile: edit own contact details and persist visibility", async () => {
     await residentPage.goto(`${origin}/household/${householdId}`);
     await button(residentPage, "homeAddContact").click();
-    await residentPage.getByLabel(t.phone, { exact: true }).fill("0501234567");
+    const phone = residentPage.getByLabel(t.phone, { exact: true });
+    await phone.fill("0501234567");
+
+    const detailUrl = `${origin}/api/households/${householdId}`;
+    let releaseRefresh;
+    const pausedRefresh = new Promise((resolve) => {
+      releaseRefresh = resolve;
+    });
+    await residentPage.route(detailUrl, async (route) => {
+      if (route.request().method() === "GET") await pausedRefresh;
+      await route.continue();
+    });
+    try {
+      const refreshing = residentPage.waitForRequest(
+        (request) => request.url() === detailUrl && request.method() === "GET",
+      );
+      await residentPage.evaluate(() => window.dispatchEvent(new Event("focus")));
+      await refreshing;
+      assert.equal(await phone.isVisible(), true);
+      assert.equal(await phone.inputValue(), "0501234567");
+      assert.equal(await phone.evaluate((input) => input === document.activeElement), true);
+    } finally {
+      releaseRefresh();
+      await residentPage.unroute(detailUrl);
+    }
+
     await residentPage
       .locator("label")
       .filter({ has: residentPage.getByRole("radio", { name: t.vis_project, exact: true }) })

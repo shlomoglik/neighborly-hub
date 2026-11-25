@@ -16,7 +16,7 @@ navigation item on desktop and mobile. The
 family management tab follows the existing `canRename` representative capability;
 server authorization remains authoritative for direct links and mutations.
 
-Only this household resource opts into `usePrivateResource`'s same-key refresh
-retention. Existing consumers still clear data during loading. Household changes,
-hidden pages, failed reads and explicit access invalidation clear retained data.
+Household details, family management and My Households keep their loaded content
+visible during same-resource refreshes. Household changes, hidden pages, failed
+reads and explicit access invalidation clear retained data.
 There is no global or persistent client cache of household metadata.
