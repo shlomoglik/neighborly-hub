@@ -277,18 +277,19 @@ try {
     const phone = residentPage.getByLabel(t.phone, { exact: true });
     await phone.fill("0501234567");
 
-    const detailUrl = `${origin}/api/households/${householdId}`;
+    const isHouseholdDetail = (url) =>
+      url.origin === origin && url.pathname === `/api/households/${householdId}`;
     let releaseRefresh;
     const pausedRefresh = new Promise((resolve) => {
       releaseRefresh = resolve;
     });
-    await residentPage.route(detailUrl, async (route) => {
+    await residentPage.route(isHouseholdDetail, async (route) => {
       if (route.request().method() === "GET") await pausedRefresh;
       await route.continue();
     });
     try {
       const refreshing = residentPage.waitForRequest(
-        (request) => request.url() === detailUrl && request.method() === "GET",
+        (request) => request.method() === "GET" && isHouseholdDetail(new URL(request.url())),
       );
       await residentPage.evaluate(() => window.dispatchEvent(new Event("focus")));
       await refreshing;
@@ -297,7 +298,7 @@ try {
       assert.equal(await phone.evaluate((input) => input === document.activeElement), true);
     } finally {
       releaseRefresh();
-      await residentPage.unroute(detailUrl);
+      await residentPage.unroute(isHouseholdDetail);
     }
 
     await residentPage
