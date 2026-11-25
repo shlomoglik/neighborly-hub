@@ -24,12 +24,18 @@ export function usePrivateResource<T>(
   latest.current = { requestKey, key };
   useEffect(() => {
     const refresh = () => setRevision((n) => n + 1);
-    const visibility = () => {
-      setPaused(document.visibilityState === "hidden");
+    const hide = () => {
+      active.current?.abort();
+      setSnapshot((previous) => ({ ...previous, status: "loading", data: null }));
+      setPaused(true);
       refresh();
     };
-    const hide = () => {
-      setPaused(true);
+    const visibility = () => {
+      if (document.visibilityState === "hidden") {
+        hide();
+        return;
+      }
+      setPaused(false);
       refresh();
     };
     const timer = window.setInterval(() => {
@@ -116,5 +122,13 @@ export function usePrivateResource<T>(
               ? snapshot.data
               : null,
         };
-  return { key: view.key, status: view.status, data: view.data, refresh, invalidate };
+  const refreshing = view.status === "loading" && view.data !== null;
+  return {
+    key: view.key,
+    status: refreshing ? ("ready" as const) : view.status,
+    data: view.data,
+    refreshing,
+    refresh,
+    invalidate,
+  };
 }

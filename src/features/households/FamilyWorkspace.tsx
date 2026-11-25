@@ -37,6 +37,7 @@ export type FamilyWorkspaceProps = {
   status: ResourceStatus;
   data: { family: FamilyPage; invitations: InvitationPage } | null;
   busy: boolean;
+  refreshing?: boolean;
   error: string | null;
   created: { id: string; url: string; email: string } | null;
   onRefresh: () => void;
@@ -76,11 +77,11 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
       setEmail("");
       setSaved(false);
     }
-    if (p.status === "ready" && focusAfter.current) {
+    if (p.status === "ready" && !p.refreshing && focusAfter.current) {
       heading.current?.focus();
       focusAfter.current = false;
     }
-  }, [p.status]);
+  }, [p.status, p.refreshing]);
   const open = (member?: FamilyMember) => {
     setEditor({
       requestId: crypto.randomUUID(),
@@ -137,7 +138,7 @@ export function FamilyWorkspace(p: FamilyWorkspaceProps) {
         </Heading>
         <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <RefreshButton
-            disabled={p.busy || p.status === "loading"}
+            disabled={p.busy || p.refreshing || p.status === "loading"}
             onClick={p.onRefresh}
             label={t("refreshDirectory")}
           />

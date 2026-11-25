@@ -16,13 +16,17 @@ function FamilyController({ id }: { id: string }) {
   const [page, setPage] = useState(1);
   const [invitationPage, setInvitationPage] = useState(1);
   const [created, setCreated] = useState<{ id: string; url: string; email: string } | null>(null);
-  const resource = usePrivateResource(`${id}:${page}:${invitationPage}`, async (signal) => {
-    const [family, invitations] = await Promise.all([
-      familyApi.members(id, page, signal),
-      familyApi.invitations(id, invitationPage, signal),
-    ]);
-    return { family, invitations };
-  });
+  const resource = usePrivateResource(
+    `${id}:${page}:${invitationPage}`,
+    async (signal) => {
+      const [family, invitations] = await Promise.all([
+        familyApi.members(id, page, signal),
+        familyApi.invitations(id, invitationPage, signal),
+      ]);
+      return { family, invitations };
+    },
+    { keepDataOnRefresh: true },
+  );
   const status =
     shared?.resource.status === "expired" || shared?.resource.status === "unavailable"
       ? shared.resource.status
@@ -46,6 +50,7 @@ function FamilyController({ id }: { id: string }) {
       status={status}
       data={denied ? null : resource.data}
       busy={action.busy}
+      refreshing={resource.refreshing}
       error={action.error}
       created={created}
       onRefresh={() => {
