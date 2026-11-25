@@ -29,7 +29,7 @@ export function ContactAction({
         ? `https://wa.me/${digits}`
         : `tel:${digits}`;
   return (
-    <Button variant="outline" size="sm" asChild>
+    <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" asChild>
       <a href={href} aria-label={label}>
         <Icon aria-hidden="true" />
         {label}

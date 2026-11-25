@@ -35,10 +35,7 @@ const expectedContact = z
   .strict();
 const validContact = (c: z.infer<typeof contactFields>) =>
   contactValue.safeParse({ kind: c.kind, value: c.value }).success;
-export const householdMutation = z.discriminatedUnion("action", [
-  z
-    .object({ action: z.literal("rename"), name: householdName, expected: z.string().max(1000) })
-    .strict(),
+const contactActions = [
   z
     .object({ action: z.literal("addContact"), contact: contactFields.refine(validContact) })
     .strict(),
@@ -57,8 +54,30 @@ export const householdMutation = z.discriminatedUnion("action", [
       expected: expectedContact,
     })
     .strict(),
+] as const;
+const contactChange = z.discriminatedUnion("action", contactActions);
+export const householdMutation = z.discriminatedUnion("action", [
+  z
+    .object({ action: z.literal("rename"), name: householdName, expected: z.string().max(1000) })
+    .strict(),
+  ...contactActions,
+  z
+    .object({ action: z.literal("saveContacts"), changes: z.array(contactChange).min(1).max(20) })
+    .strict(),
 ]);
+export const householdBodyLimit = 288 * 1024;
+export type ContactChange = z.input<typeof contactChange>;
 export type ContactFields = z.infer<typeof contactFields>;
+export function sameContact(
+  a: { kind: string; value: string; label: string | null; visibility: string },
+  b: ContactFields,
+) {
+  return (
+    a.kind === b.kind && a.value === b.value && a.label === b.label && a.visibility === b.visibility
+  );
+}
+
+export type SavedContact = { id: string } & ContactFields;
 export type HouseholdMutation = z.infer<typeof householdMutation>;
 export type HouseholdSummary = {
   id: string;
@@ -71,7 +90,8 @@ export type HouseholdList = { households: HouseholdSummary[]; page: number; hasN
 export type HouseholdDetail = HouseholdSummary & {
   floor: number;
   canRename: boolean;
-  ownContacts: ({ id: string } & ContactFields)[] | null;
+  ownPersonId: string | null;
+  ownContacts: SavedContact[] | null;
   members: {
     id: string;
     name: string;

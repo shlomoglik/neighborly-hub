@@ -6,6 +6,7 @@ import postgres from "postgres";
 import * as s from "../../../drizzle/schema";
 import { createAuth } from "../auth/create-auth";
 import { readDirectory } from "./directory";
+import { householdBodyLimit, type SavedContact } from "./household-contracts";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/server", () => ({ getAuth: async () => fixture.auth }));
 vi.mock("@/lib/auth/config", () => ({ readAuthConfig: () => config }));
@@ -294,6 +295,51 @@ describe.skipIf(!url)("Live household privacy and self-service with signed sessi
       contact.value,
     );
   });
+  it("saves a contact batch atomically and rejects stale or out-of-scope contacts", async () => {
+    const own: SavedContact[] = (await (await get(adult)).json()).ownContacts;
+    const [{ id: first, ...firstSnapshot }, { id: second, ...secondSnapshot }] = own;
+    const foreign: SavedContact = (await (await get(rep)).json()).ownContacts[0];
+    const { id: foreignId, ...foreignSnapshot } = foreign;
+    const update = {
+      action: "updateContact",
+      id: first,
+      expected: firstSnapshot,
+      contact: { ...firstSnapshot, value: "0506789012" },
+    };
+    const batch = (change: object) => ({ action: "saveContacts", changes: [update, change] });
+    const currentContacts = async () => (await (await get(adult)).json()).ownContacts;
+    expect(
+      (
+        await write(
+          adult,
+          batch({ action: "deleteContact", id: foreignId, expected: foreignSnapshot }),
+        )
+      ).status,
+    ).toBe(409);
+    expect(await currentContacts()).toEqual(own);
+    expect(
+      (
+        await write(
+          adult,
+          batch({
+            action: "deleteContact",
+            id: second,
+            expected: { ...secondSnapshot, label: "Stale" },
+          }),
+        )
+      ).status,
+    ).toBe(409);
+    expect(await currentContacts()).toEqual(own);
+    expect(
+      (await write(adult, batch({ action: "addContact", contact: update.contact }))).status,
+    ).toBe(409);
+    expect(await currentContacts()).toEqual(own);
+    expect(
+      (await write(adult, batch({ action: "deleteContact", id: second, expected: secondSnapshot })))
+        .status,
+    ).toBe(200);
+    expect(await currentContacts()).toEqual([{ id: first, ...update.contact }, own[2]]);
+  });
   it("serializes simultaneous edits across households and rejects duplicate contact retries", async () => {
     const responses = await Promise.all([
       write(rep, { action: "rename", expected: "Updated", name: "Concurrent A" }),
@@ -343,7 +389,7 @@ describe.skipIf(!url)("Live household privacy and self-service with signed sessi
         )
       ).status,
     ).toBe(403);
-    expect((await write(rep, { junk: "x".repeat(4096) })).status).toBe(413);
+    expect((await write(rep, { junk: "x".repeat(householdBodyLimit) })).status).toBe(413);
     expect((await get(rep, home, 0)).status).toBe(400);
   });
   it("bounds member pages and serializes the maximum contact count", async () => {

@@ -273,6 +273,7 @@ try {
   );
   await check("mobile: edit own contact details and persist visibility", async () => {
     await residentPage.goto(`${origin}/household/${householdId}`);
+    await residentPage.getByRole("link", { name: t.homeEditContacts, exact: true }).click();
     await button(residentPage, "homeAddContact").click();
     const phone = residentPage.getByLabel(t.phone, { exact: true });
     await phone.fill("0501234567");
@@ -318,16 +319,19 @@ try {
       .locator("label")
       .filter({ has: residentPage.getByRole("radio", { name: t.vis_project, exact: true }) })
       .click();
-    assert.equal(
-      await residentPage.getByRole("radio", { name: t.vis_project, exact: true }).isChecked(),
-      true,
-    );
+    await button(residentPage, "homeAddContact").click();
+    await residentPage.getByLabel(t.homeContactKind, { exact: true }).last().selectOption("email");
+    await residentPage.getByLabel(t.email, { exact: true }).fill("pilot-contact@example.test");
     await button(residentPage, "save").click();
-    await residentPage.getByText(t.homeSaved, { exact: true }).waitFor();
-    const data = await (
+    await residentPage.waitForURL(`${origin}/household/${householdId}`);
+    const { ownContacts } = await (
       await resident.request.get(`${origin}/api/households/${householdId}`)
     ).json();
-    assert.equal(data.ownContacts[0].visibility, "project");
+    assert.equal(ownContacts.find((contact) => contact.kind === "phone").visibility, "project");
+    assert.equal(
+      ownContacts.find((contact) => contact.kind === "email").value,
+      "pilot-contact@example.test",
+    );
   });
   let familyLink;
   await check(
